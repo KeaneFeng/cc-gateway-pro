@@ -13,7 +13,7 @@ use crate::error::AppError;
 /// - `dirs::home_dir()` 在 Windows 上使用 `SHGetKnownFolderPath(FOLDERID_Profile)`，
 ///   返回的是真实用户目录（类似 `C:\\Users\\Alice`），与 v3.10.2 行为一致。
 /// - 不要直接使用 `HOME` 环境变量：它可能由 Git/Cygwin/MSYS 等第三方工具注入，
-///   且不一定等于用户目录，可能导致 `.cc-gateway-pro.cc-gateway-pro.db` 路径变化，从而“看起来像数据丢失”。
+///   且不一定等于用户目录，可能导致 `~/.cc-gateway-pro/cc-gateway-pro.db` 路径变化，从而"看起来像数据丢失"。
 ///
 /// ## 测试隔离
 ///
@@ -100,13 +100,13 @@ pub fn get_app_config_dir() -> PathBuf {
     // 同时也避免新安装因为 `HOME` 被设置而写入非预期路径。
     #[cfg(windows)]
     {
-        let default_db = default_dir.join(.cc-gateway-pro.db");
+        let default_db = default_dir.join("cc-gateway-pro.db");
         if !default_db.exists() {
             if let Ok(home_env) = std::env::var("HOME") {
                 let trimmed = home_env.trim();
                 if !trimmed.is_empty() {
                     let legacy_dir = PathBuf::from(trimmed).join(".cc-gateway-pro");
-                    if legacy_dir.join(.cc-gateway-pro.db").exists() {
+                    if legacy_dir.join("cc-gateway-pro.db").exists() {
                         log::info!(
                             "Detected v3.10.3 legacy database at {}, using it instead of {}",
                             legacy_dir.display(),
