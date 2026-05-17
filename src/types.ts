@@ -185,6 +185,12 @@ export interface ProviderMeta {
   providerType?: string;
   // GitHub Copilot 关联账号 ID（旧字段，保留兼容读取）
   githubAccountId?: string;
+  // CC-Gateway-Pro: Vision Model - 请求包含图片时自动切换到此模型
+  visionModel?: string;
+  // CC-Gateway-Pro: Project-to-Provider 映射 (project_path -> provider_id)
+  projectProviders?: Record<string, string>;
+  // CC-Gateway-Pro: 要扫描的项目目录列表
+  projectDirs?: string[];
 }
 
 // Skill 同步方式

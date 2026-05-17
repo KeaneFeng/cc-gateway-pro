@@ -328,6 +328,25 @@ pub struct ProviderMeta {
     /// 用于多账号支持，关联到特定的 GitHub 账号
     #[serde(rename = "githubAccountId", skip_serializing_if = "Option::is_none")]
     pub github_account_id: Option<String>,
+    /// Vision Model：当请求包含图片内容时，自动切换到此模型。
+    /// 留空则使用默认 model 处理所有请求（含图片）。
+    #[serde(rename = "visionModel", skip_serializing_if = "Option::is_none")]
+    pub vision_model: Option<String>,
+    /// Project-to-Provider 映射：项目路径 -> provider_id
+    /// 当 Claude Code 从特定项目发送请求时，自动使用绑定的 provider
+    #[serde(
+        default,
+        rename = "projectProviders",
+        skip_serializing_if = "HashMap::is_empty"
+    )]
+    pub project_providers: HashMap<String, String>,
+    /// 要扫描的项目目录列表（用于自动发现 Claude Code 项目）
+    #[serde(
+        default,
+        rename = "projectDirs",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub project_dirs: Vec<String>,
 }
 
 impl ProviderMeta {

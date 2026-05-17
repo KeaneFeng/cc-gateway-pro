@@ -12,6 +12,8 @@ pub struct ModelMapping {
     pub sonnet_model: Option<String>,
     pub opus_model: Option<String>,
     pub default_model: Option<String>,
+    /// Vision Model：当请求包含图片内容时自动切换到此模型
+    pub vision_model: Option<String>,
 }
 
 impl ModelMapping {
@@ -19,7 +21,15 @@ impl ModelMapping {
     pub fn from_provider(provider: &Provider) -> Self {
         let env = provider.settings_config.get("env");
 
+        // 从 meta 中读取 vision_model（CC-Gateway-Pro 扩展字段）
+        let vision_model = provider
+            .meta
+            .as_ref()
+            .and_then(|m| m.vision_model.clone())
+            .filter(|s| !s.is_empty());
+
         Self {
+            vision_model,
             haiku_model: env
                 .and_then(|e| e.get("ANTHROPIC_DEFAULT_HAIKU_MODEL"))
                 .and_then(|v| v.as_str())
@@ -49,6 +59,35 @@ impl ModelMapping {
             || self.sonnet_model.is_some()
             || self.opus_model.is_some()
             || self.default_model.is_some()
+            || self.vision_model.is_some()
+    }
+
+    /// 检查请求是否包含图片内容（CC-Gateway-Pro vision routing）
+    pub fn has_image_content(body: &Value) -> bool {
+        let messages = match body.get("messages").and_then(|m| m.as_array()) {
+            Some(msgs) => msgs,
+            None => return false,
+        };
+        for msg in messages {
+            if let Some(content) = msg.get("content").and_then(|c| c.as_array()) {
+                for block in content {
+                    if block.get("type").and_then(|t| t.as_str()) == Some("image") {
+                        return true;
+                    }
+                    // 也检查 tool_result 中的 image block
+                    if block.get("type").and_then(|t| t.as_str()) == Some("tool_result") {
+                        if let Some(inner) = block.get("content").and_then(|c| c.as_array()) {
+                            for b in inner {
+                                if b.get("type").and_then(|t| t.as_str()) == Some("image") {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// 根据原始模型名称获取映射后的模型

@@ -734,7 +734,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cc-switch"
+name = "cc-gateway-pro"
 version = "3.15.0"
 dependencies = [
  "anyhow",

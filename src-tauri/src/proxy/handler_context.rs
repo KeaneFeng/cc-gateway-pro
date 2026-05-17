@@ -143,11 +143,57 @@ impl RequestContext {
             .cloned()
             .ok_or(ProxyError::NoAvailableProvider)?;
 
+        // CC-Gateway-Pro: Vision Model Auto-Routing
+        // 如果请求包含图片内容且 provider 配置了 vision_model，自动切换模型
+        let mut effective_model = request_model.clone();
+        let has_images =
+            crate::proxy::model_mapper::ModelMapping::has_image_content(body);
+        if has_images {
+            if let Some(vision) = provider
+                .meta
+                .as_ref()
+                .and_then(|m| m.vision_model.as_ref())
+                .filter(|s| !s.is_empty())
+            {
+                log::info!(
+                    "[{}] Vision routing: detected image content, switching model {} -> {}",
+                    tag,
+                    request_model,
+                    vision
+                );
+                effective_model = vision.clone();
+            }
+        }
+
+        // CC-Gateway-Pro: Project-Level Provider Binding
+        // 通过 session_id 查找关联的项目路径，再匹配 provider
+        let mut effective_provider = provider;
+        if let Some(target_id) = state
+            .session_project_router
+            .get_provider_for_session(&session_id)
+        {
+            if let Some(target_provider) = providers.iter().find(|p| p.id == target_id) {
+                let proj = state
+                    .session_project_router
+                    .get_project_for_session(&session_id)
+                    .unwrap_or_default();
+                log::info!(
+                    "[{}] Project routing: session {} (project {}) -> provider {} ({})",
+                    tag,
+                    session_id,
+                    proj,
+                    target_id,
+                    target_provider.name
+                );
+                effective_provider = target_provider.clone();
+            }
+        }
+
         log::debug!(
             "[{}] Provider: {}, model: {}, failover chain: {} providers, session: {}",
             tag,
-            provider.name,
-            request_model,
+            effective_provider.name,
+            effective_model,
             providers.len(),
             session_id
         );
@@ -155,10 +201,10 @@ impl RequestContext {
         Ok(Self {
             start_time,
             app_config,
-            provider,
+            provider: effective_provider,
             providers,
             current_provider_id,
-            request_model,
+            request_model: effective_model,
             tag,
             app_type_str,
             app_type,

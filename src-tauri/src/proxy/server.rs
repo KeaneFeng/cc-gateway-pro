@@ -10,8 +10,8 @@
 
 use super::{
     failover_switch::FailoverSwitchManager, handlers, log_codes::srv as log_srv,
-    provider_router::ProviderRouter, providers::gemini_shadow::GeminiShadowStore, types::*,
-    ProxyError,
+    provider_router::ProviderRouter, providers::gemini_shadow::GeminiShadowStore,
+    session_project_router::SessionProjectRouter, types::*, ProxyError,
 };
 use crate::database::Database;
 use axum::{
@@ -42,6 +42,8 @@ pub struct ProxyState {
     pub app_handle: Option<tauri::AppHandle>,
     /// 故障转移切换管理器
     pub failover_manager: Arc<FailoverSwitchManager>,
+    /// CC-Gateway-Pro: Session → Project 路由器
+    pub session_project_router: Arc<SessionProjectRouter>,
 }
 
 /// 代理HTTP服务器
@@ -64,6 +66,10 @@ impl ProxyServer {
         // 创建故障转移切换管理器
         let failover_manager = Arc::new(FailoverSwitchManager::new(db.clone()));
 
+        let session_project_router = Arc::new(SessionProjectRouter::new());
+        // Scan ~/.claude/projects/ to build session → project mapping
+        session_project_router.scan_projects();
+
         let state = ProxyState {
             db,
             config: Arc::new(RwLock::new(config.clone())),
@@ -74,6 +80,7 @@ impl ProxyServer {
             gemini_shadow: Arc::new(GeminiShadowStore::default()),
             app_handle,
             failover_manager,
+            session_project_router,
         };
 
         Self {
