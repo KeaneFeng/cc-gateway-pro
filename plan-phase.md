@@ -63,3 +63,7 @@
 - `update_project_providers()` 方法未使用（预留，provider meta 变更时可调用）
 - `project_dirs` 字段未使用（预留，可用于自动扫描项目目录）
 - 前端 Project Routing 的 provider 下拉选择器可优化（当前是手动输入路径）
+
+## Phase 3 补充: Tauri Dev 验证 ✅
+- **验证内容**: pnpm install ✅ | cargo check (631 crates) ✅ | Vite dev server ✅ | App 窗口正常打开 ✅
+- **环境**: Node 22.12.0 ~/.local/node-v22/ | pnpm 9.7.0 ~/.local/node-v22-global/

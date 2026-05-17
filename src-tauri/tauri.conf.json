@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm run dev:renderer",
-    "beforeBuildCommand": "pnpm run build:renderer"
+    "beforeDevCommand": "/Users/keane/.local/node-v22/bin/node /Users/keane/.local/node-v22-global/lib/node_modules/pnpm/bin/pnpm.cjs run dev:renderer",
+    "beforeBuildCommand": "/Users/keane/.local/node-v22/bin/node /Users/keane/.local/node-v22-global/lib/node_modules/pnpm/bin/pnpm.cjs run build:renderer"
   },
   "app": {
     "windows": [
