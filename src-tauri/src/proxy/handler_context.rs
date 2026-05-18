@@ -166,13 +166,14 @@ impl RequestContext {
         }
 
         // CC-Gateway-Pro: Project-Level Provider Binding
-        // 通过 session_id 查找关联的项目路径，再匹配 provider
+        // 通过 session_id 查找关联的项目路径，再从 DB 查目标 provider
         let mut effective_provider = provider;
         if let Some(target_id) = state
             .session_project_router
             .get_provider_for_session(&session_id)
         {
-            if let Some(target_provider) = providers.iter().find(|p| p.id == target_id) {
+            // 直接从 DB 查目标 provider（不在 providers 列表里找，因为可能不在当前/故障转移链中）
+            if let Ok(Some(target_provider)) = state.db.get_provider_by_id(&target_id, app_type_str) {
                 let proj = state
                     .session_project_router
                     .get_project_for_session(&session_id)
@@ -185,7 +186,12 @@ impl RequestContext {
                     target_id,
                     target_provider.name
                 );
-                effective_provider = target_provider.clone();
+                effective_provider = target_provider;
+            } else {
+                log::warn!(
+                    "[{}] Project routing: target provider {} not found in DB",
+                    tag, target_id
+                );
             }
         }
 
