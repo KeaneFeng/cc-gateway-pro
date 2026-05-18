@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ import {
   Shield,
   Cpu,
   LayoutDashboard,
+  Loader2,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Provider, VisibleApps } from "@/types";
@@ -231,9 +232,42 @@ function App() {
   } | null>(null);
   const [envConflicts, setEnvConflicts] = useState<EnvConflict[]>([]);
   const [showEnvBanner, setShowEnvBanner] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const effectiveEditingProvider = useLastValidValue(editingProvider);
   const effectiveUsageProvider = useLastValidValue(usageProvider);
+
+  // CC-Gateway-Pro: 从 cc-switch 同步供应商
+  const handleSyncFromCcSwitch = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const result: any = await invoke("sync_from_cc_switch");
+      if (result.success) {
+        toast.success(
+          t("settings.syncFromCcSwitchSuccess", {
+            defaultValue: `同步完成: ${result.syncedCount} 个供应商已导入`,
+          }),
+        );
+        queryClient.invalidateQueries({ queryKey: ["providers"] });
+      } else {
+        toast.error(
+          result.message ||
+            t("settings.syncFromCcSwitchFailed", {
+              defaultValue: "同步失败",
+            }),
+        );
+      }
+    } catch (err) {
+      console.error("[SyncFromCcSwitch]", err);
+      toast.error(
+        t("settings.syncFromCcSwitchFailed", {
+          defaultValue: "同步失败，请确认 cc-switch 已安装",
+        }),
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [t, queryClient]);
 
   const toolbarRef = useRef<HTMLDivElement>(null);
   const isToolbarCompact = useAutoCompact(toolbarRef);
@@ -1547,6 +1581,24 @@ function App() {
                         </motion.div>
                       </AnimatePresence>
                     </div>
+
+                    {/* CC-Gateway-Pro: 从 cc-switch 同步按钮 */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleSyncFromCcSwitch()}
+                      disabled={isSyncing}
+                      className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                      title={t("settings.syncFromCcSwitch", {
+                        defaultValue: "从 cc-switch 同步供应商",
+                      })}
+                    >
+                      {isSyncing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </Button>
 
                     <Button
                       onClick={() => setIsAddOpen(true)}
