@@ -11,6 +11,7 @@ use crate::commands::sync_support::{
 use crate::database::backup::BackupEntry;
 use crate::database::Database;
 use crate::error::AppError;
+use crate::provider::Provider;
 use crate::services::provider::ProviderService;
 use crate::store::AppState;
 
@@ -173,4 +174,114 @@ pub fn rename_db_backup(
 #[tauri::command]
 pub fn delete_db_backup(filename: String) -> Result<(), String> {
     Database::delete_backup(&filename).map_err(|e| e.to_string())
+}
+
+/// 从 cc-switch 同步供应商到 cc-gateway-pro
+#[tauri::command]
+pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, String> {
+    let db = state.db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        // 获取 cc-switch 数据库路径
+        let home = dirs::home_dir().ok_or_else(|| AppError::Config("无法获取用户主目录".to_string()))?;
+        let cc_switch_db_path = home.join(".cc-switch").join("cc-switch.db");
+
+        if !cc_switch_db_path.exists() {
+            return Err(AppError::Config(format!(
+                "cc-switch 数据库不存在: {}",
+                cc_switch_db_path.display()
+            )));
+        }
+
+        // 打开 cc-switch 数据库（只读）
+        let src_conn = rusqlite::Connection::open_with_flags(
+            &cc_switch_db_path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .map_err(|e| AppError::Database(format!("无法打开 cc-switch 数据库: {e}")))?;
+
+        // 查询 cc-switch 中的供应商
+        let mut stmt = src_conn
+            .prepare(
+                "SELECT id, name, settings_config, website_url, category, created_at, sort_index, notes, icon, icon_color, meta
+                 FROM providers WHERE app_type = 'claude'"
+            )
+            .map_err(|e| AppError::Database(format!("查询 cc-switch 供应商失败: {e}")))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,       // id
+                    row.get::<_, String>(1)?,       // name
+                    row.get::<_, String>(2)?,       // settings_config
+                    row.get::<_, Option<String>>(3)?, // website_url
+                    row.get::<_, Option<String>>(4)?, // category
+                    row.get::<_, Option<i64>>(5)?,   // created_at
+                    row.get::<_, Option<usize>>(6)?, // sort_index
+                    row.get::<_, Option<String>>(7)?, // notes
+                    row.get::<_, Option<String>>(8)?, // icon
+                    row.get::<_, Option<String>>(9)?, // icon_color
+                    row.get::<_, Option<String>>(10)?, // meta
+                ))
+            })
+            .map_err(|e| AppError::Database(format!("读取 cc-switch 供应商失败: {e}")))?;
+
+        let mut synced_count = 0;
+        let mut error_count = 0;
+
+        for row in rows {
+            match row {
+                Ok((id, name, settings_config_str, website_url, category, created_at, sort_index, notes, icon, icon_color, meta_str)) => {
+                    let settings_config: Value = serde_json::from_str(&settings_config_str)
+                        .unwrap_or(Value::Null);
+
+                    // 解析 meta，若 cc-switch 有 meta 字段则使用，否则用默认值
+                    let mut meta = meta_str
+                        .as_deref()
+                        .and_then(|s| serde_json::from_str::<crate::provider::ProviderMeta>(s).ok())
+                        .unwrap_or_default();
+
+                    // 清空 custom_endpoints，避免跨应用数据污染
+                    meta.custom_endpoints.clear();
+
+                    let provider = Provider {
+                        id: id.clone(),
+                        name,
+                        settings_config,
+                        website_url,
+                        category: category.or_else(|| Some("pro".to_string())),
+                        created_at,
+                        sort_index,
+                        notes,
+                        meta: Some(meta),
+                        icon,
+                        icon_color,
+                        in_failover_queue: false,
+                    };
+
+                    match db.save_provider("claude", &provider) {
+                        Ok(()) => synced_count += 1,
+                        Err(e) => {
+                            log::warn!("[SyncFromCcSwitch] 保存供应商 {id} 失败: {e}");
+                            error_count += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::warn!("[SyncFromCcSwitch] 读取行失败: {e}");
+                    error_count += 1;
+                }
+            }
+        }
+
+        log::info!("[SyncFromCcSwitch] 同步完成: 成功 {synced_count} 个, 失败 {error_count} 个");
+        Ok::<_, AppError>(json!({
+            "success": true,
+            "syncedCount": synced_count,
+            "errorCount": error_count,
+            "message": format!("同步完成: {} 个供应商已导入", synced_count)
+        }))
+    })
+    .await
+    .map_err(|e| format!("同步 cc-switch 供应商失败: {e}"))?
+    .map_err(|e: AppError| e.to_string())
 }

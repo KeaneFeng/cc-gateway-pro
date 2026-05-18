@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -6,9 +6,12 @@ import {
   Loader2,
   Save,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import type { ImportStatus } from "@/hooks/useImportExport";
 
 interface ImportExportSectionProps {
@@ -35,6 +38,40 @@ export function ImportExportSection({
   onClear,
 }: ImportExportSectionProps) {
   const { t } = useTranslation();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncFromCcSwitch = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const result: any = await invoke("sync_from_cc_switch");
+      if (result.success) {
+        toast.success(
+          t("settings.syncFromCcSwitchSuccess", {
+            defaultValue: `同步完成: ${result.syncedCount} 个供应商已导入`,
+          })
+        );
+      } else {
+        toast.error(
+          t("settings.syncFromCcSwitchFailed", {
+            defaultValue: "同步失败",
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("[SyncFromCcSwitch]", err);
+      toast.error(
+        t("settings.syncFromCcSwitchFailed", {
+          defaultValue: "同步失败",
+        }),
+        {
+          description: String(err),
+        }
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [t]);
 
   const selectedFileName = useMemo(() => {
     if (!selectedFile) return "";
@@ -118,6 +155,30 @@ export function ImportExportSection({
           errorMessage={errorMessage}
           backupId={backupId}
         />
+
+        {/* 从 cc-switch 同步按钮 */}
+        <div className="flex items-center gap-3 pt-2 border-t border-border/50">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={handleSyncFromCcSwitch}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            {isSyncing
+              ? t("settings.syncingFromCcSwitch", {
+                  defaultValue: "正在从 cc-switch 同步...",
+                })
+              : t("settings.syncFromCcSwitch", {
+                  defaultValue: "从 cc-switch 同步供应商",
+                })}
+          </Button>
+        </div>
       </div>
     </section>
   );
