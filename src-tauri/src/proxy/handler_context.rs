@@ -293,7 +293,19 @@ impl RequestContext {
     ///
     /// 返回在创建上下文时已选择的 providers，避免重复调用 select_providers()
     pub fn get_providers(&self) -> Vec<Provider> {
-        self.providers.clone()
+        let mut providers = self.providers.clone();
+        // CC-Gateway-Pro: 确保 project-routed provider 在列表最前面
+        // 如果 self.provider（可能是 project-routed）不在列表中，插入到首位
+        if !providers.iter().any(|p| p.id == self.provider.id) {
+            providers.insert(0, self.provider.clone());
+        } else {
+            // 如果已在列表中，移到最前面
+            if let Some(pos) = providers.iter().position(|p| p.id == self.provider.id) {
+                let p = providers.remove(pos);
+                providers.insert(0, p);
+            }
+        }
+        providers
     }
 
     /// 计算请求延迟（毫秒）
