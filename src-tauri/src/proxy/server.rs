@@ -66,7 +66,7 @@ impl ProxyServer {
         // 创建故障转移切换管理器
         let failover_manager = Arc::new(FailoverSwitchManager::new(db.clone()));
 
-        let session_project_router = Arc::new(SessionProjectRouter::new());
+        let session_project_router = Arc::new(SessionProjectRouter::new(db.clone()));
         // Scan ~/.claude/projects/ to build session → project mapping
         session_project_router.scan_projects();
 

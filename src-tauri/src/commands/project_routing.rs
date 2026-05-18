@@ -16,6 +16,8 @@ pub struct ProjectRoutingInfo {
     pub provider_id: Option<String>,
     /// 绑定的 Provider 名称（如果有）
     pub provider_name: Option<String>,
+    /// 绑定的 Provider 备注（如果有）
+    pub provider_notes: Option<String>,
     /// 该项目关联的会话数量
     pub session_count: usize,
 }
@@ -34,6 +36,8 @@ pub struct ProjectRoutingOverview {
 pub struct ProviderOption {
     pub id: String,
     pub name: String,
+    /// 备注信息（用于区分同名 provider）
+    pub notes: Option<String>,
 }
 
 /// 从 ~/.claude/projects/ 目录扫描所有项目路径
@@ -139,14 +143,19 @@ pub async fn get_project_routing(
             .get_all_providers("claude")
             .map_err(|e| format!("获取供应商列表失败: {e}"))?;
 
-        // 构建 provider_id -> provider_name 映射
+        // 构建 provider_id -> (name, notes) 映射
         let mut provider_names: HashMap<String, String> = HashMap::new();
+        let mut provider_notes_map: HashMap<String, String> = HashMap::new();
         let mut available_providers: Vec<ProviderOption> = Vec::new();
         for (id, provider) in &providers {
             provider_names.insert(id.clone(), provider.name.clone());
+            if let Some(ref notes) = provider.notes {
+                provider_notes_map.insert(id.clone(), notes.clone());
+            }
             available_providers.push(ProviderOption {
                 id: id.clone(),
                 name: provider.name.clone(),
+                notes: provider.notes.clone(),
             });
         }
 
@@ -175,10 +184,14 @@ pub async fn get_project_routing(
                 .and_then(|pid| provider_names.get(pid).cloned());
             let session_count = project_session_counts.get(project_path).copied().unwrap_or(0);
 
+            let provider_notes = provider_id
+                .as_ref()
+                .and_then(|pid| provider_notes_map.get(pid).cloned());
             projects.push(ProjectRoutingInfo {
                 project_path: project_path.clone(),
                 provider_id,
                 provider_name,
+                provider_notes,
                 session_count,
             });
         }

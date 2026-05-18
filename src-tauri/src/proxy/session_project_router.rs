@@ -5,22 +5,24 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
+
+use crate::database::Database;
 
 /// Maps session_id → project_path (e.g., "abc-123" → "/Users/keane/www/apd")
-#[derive(Debug, Default)]
 pub struct SessionProjectRouter {
     /// session_id → project directory path
     session_projects: RwLock<HashMap<String, String>>,
-    /// project_path → provider_id (from provider meta configuration)
-    project_providers: RwLock<HashMap<String, String>>,
-    /// Project directories to scan (from provider meta configuration)
-    project_dirs: RwLock<Vec<String>>,
+    /// Database reference for reading project_providers from settings table
+    db: Arc<Database>,
 }
 
 impl SessionProjectRouter {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(db: Arc<Database>) -> Self {
+        Self {
+            session_projects: RwLock::new(HashMap::new()),
+            db,
+        }
     }
 
     /// Scan ~/.claude/projects/ JSONL files to build session → project mapping
@@ -77,20 +79,18 @@ impl SessionProjectRouter {
         }
     }
 
-    /// Update project_providers mapping (called when provider meta changes)
-    pub fn update_project_providers(&self, mapping: HashMap<String, String>) {
-        if let Ok(mut map) = self.project_providers.write() {
-            *map = mapping;
-            log::info!("🗺️ Updated project_providers: {} entries", map.len());
-        }
-    }
-
     /// Look up the provider_id for a given session_id
+    /// Reads project_providers from DB settings table (same storage as UI)
     pub fn get_provider_for_session(&self, session_id: &str) -> Option<String> {
         let session_projects = self.session_projects.read().ok()?;
         let project_path = session_projects.get(session_id)?;
 
-        let project_providers = self.project_providers.read().ok()?;
+        // 从 DB settings 表读取 project_providers（和 UI 共享同一份数据）
+        let project_providers: HashMap<String, String> = match self.db.get_setting("project_providers") {
+            Ok(Some(json_str)) => serde_json::from_str(&json_str).unwrap_or_default(),
+            _ => return None,
+        };
+
         // Try canonical path first
         if let Some(provider_id) = project_providers.get(project_path) {
             return Some(provider_id.clone());
@@ -103,7 +103,7 @@ impl SessionProjectRouter {
             }
         }
         // Try prefix matching (for paths that are subdirectories)
-        for (proj, provider_id) in project_providers.iter() {
+        for (proj, provider_id) in &project_providers {
             if project_path.starts_with(proj) || proj.starts_with(project_path) {
                 return Some(provider_id.clone());
             }

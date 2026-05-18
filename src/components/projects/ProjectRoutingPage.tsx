@@ -41,6 +41,7 @@ interface ProjectRoutingInfo {
 interface ProviderOption {
   id: string;
   name: string;
+  notes?: string;
 }
 
 /** 项目路由概览响应 */
@@ -339,6 +340,11 @@ export function ProjectRoutingPage() {
                                 className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                               >
                                 {project.provider_name}
+                                {project.provider_notes && (
+                                  <span className="ml-1 opacity-70">
+                                    ({project.provider_notes})
+                                  </span>
+                                )}
                               </Badge>
                             ) : (
                               <Badge
@@ -375,13 +381,18 @@ export function ProjectRoutingPage() {
                                   )}
                                 />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="max-h-[300px] overflow-y-auto">
                                 {availableProviders.map((provider) => (
                                   <SelectItem
                                     key={provider.id}
                                     value={provider.id}
                                   >
                                     {provider.name}
+                                    {provider.notes && (
+                                      <span className="ml-1 text-muted-foreground text-[10px]">
+                                        ({provider.notes})
+                                      </span>
+                                    )}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
