@@ -1347,6 +1347,11 @@ pub fn run() {
             commands::enter_lightweight_mode,
             commands::exit_lightweight_mode,
             commands::is_lightweight_mode,
+            // Project routing management
+            commands::get_project_routing,
+            commands::set_project_provider,
+            commands::remove_project_provider,
+            commands::refresh_session_projects,
         ]);
 
     let app = builder

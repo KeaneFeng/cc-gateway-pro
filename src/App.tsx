@@ -23,6 +23,7 @@ import {
   FolderArchive,
   Search,
   FolderOpen,
+  FolderTree,
   KeyRound,
   Shield,
   Cpu,
@@ -80,6 +81,7 @@ import { UniversalProviderPanel } from "@/components/universal";
 import { McpIcon } from "@/components/BrandIcons";
 import { Button } from "@/components/ui/button";
 import { SessionManagerPage } from "@/components/sessions/SessionManagerPage";
+import { ProjectRoutingPage } from "@/components/projects/ProjectRoutingPage";
 import {
   useDisableCurrentOmo,
   useDisableCurrentOmoSlim,
@@ -102,6 +104,7 @@ type View =
   | "universal"
   | "sessions"
   | "workspace"
+  | "projectRouting"
   | "openclawEnv"
   | "openclawTools"
   | "openclawAgents"
@@ -147,6 +150,7 @@ const VALID_VIEWS: View[] = [
   "universal",
   "sessions",
   "workspace",
+  "projectRouting",
   "openclawEnv",
   "openclawTools",
   "openclawAgents",
@@ -997,6 +1001,8 @@ function App() {
               appId={sharedFeatureApp}
             />
           );
+        case "projectRouting":
+          return <ProjectRoutingPage />;
         case "workspace":
           return <WorkspaceFilesPanel />;
         case "openclawEnv":
@@ -1221,6 +1227,10 @@ function App() {
                       defaultValue: "统一供应商",
                     })}
                   {currentView === "sessions" && t("sessionManager.title")}
+                  {currentView === "projectRouting" &&
+                    t("projectRouting.title", {
+                      defaultValue: "项目路由",
+                    })}
                   {currentView === "workspace" && t("workspace.title")}
                   {currentView === "openclawEnv" && t("openclaw.env.title")}
                   {currentView === "openclawTools" && t("openclaw.tools.title")}
@@ -1576,6 +1586,18 @@ function App() {
                                 title={t("mcp.title")}
                               >
                                 <McpIcon size={16} />
+                              </Button>
+                              {/* 项目路由管理 - 仅 Claude 应用可见 */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentView("projectRouting")}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("projectRouting.title", {
+                                  defaultValue: "项目路由",
+                                })}
+                              >
+                                <FolderTree className="w-4 h-4" />
                               </Button>
                               {/* CC-Gateway-Pro: 从 cc-switch 同步 */}
                               <Button
