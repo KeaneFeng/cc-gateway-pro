@@ -6,7 +6,6 @@ import {
   FlaskConical,
   Coins,
   Eye,
-  FolderTree,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ProviderTestConfig } from "@/types";
 
@@ -38,9 +36,6 @@ interface ProviderAdvancedConfigProps {
   // CC-Gateway-Pro: Vision Model
   visionModel?: string;
   onVisionModelChange: (model: string) => void;
-  // CC-Gateway-Pro: Project Routing
-  projectProviders?: Record<string, string>;
-  onProjectProvidersChange: (mapping: Record<string, string>) => void;
 }
 
 export function ProviderAdvancedConfig({
@@ -50,8 +45,6 @@ export function ProviderAdvancedConfig({
   onPricingConfigChange,
   visionModel,
   onVisionModelChange,
-  projectProviders,
-  onProjectProvidersChange,
 }: ProviderAdvancedConfigProps) {
   const { t } = useTranslation();
   const [isTestConfigOpen, setIsTestConfigOpen] = useState(testConfig.enabled);
@@ -59,11 +52,6 @@ export function ProviderAdvancedConfig({
     pricingConfig.enabled,
   );
   const [isVisionOpen, setIsVisionOpen] = useState(!!visionModel);
-  const [isProjectOpen, setIsProjectOpen] = useState(
-    !!(projectProviders && Object.keys(projectProviders).length > 0),
-  );
-  const [newProjectPath, setNewProjectPath] = useState("");
-  const [newProjectProviderId, setNewProjectProviderId] = useState("");
 
   useEffect(() => {
     setIsTestConfigOpen(testConfig.enabled);
@@ -442,103 +430,6 @@ export function ProviderAdvancedConfig({
                   defaultValue: "e.g. gpt-4o, gemini-2.5-pro, mimo-v2.5",
                 })}
               />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CC-Gateway-Pro: Project-Level Provider Routing */}
-      <div className="rounded-lg border border-border/50 bg-muted/20">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-          onClick={() => setIsProjectOpen(!isProjectOpen)}
-        >
-          <div className="flex items-center gap-3">
-            <FolderTree className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">
-              {t("providerAdvanced.projectRouting", {
-                defaultValue: "项目路由 (Project Routing)",
-              })}
-            </span>
-            {projectProviders && Object.keys(projectProviders).length > 0 && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                {Object.keys(projectProviders).length}{" "}
-                {t("providerAdvanced.projectCount", { defaultValue: "个项目" })}
-              </span>
-            )}
-          </div>
-          {isProjectOpen ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
-        <div
-          className={cn(
-            "overflow-hidden transition-all duration-200",
-            isProjectOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0",
-          )}
-        >
-          <div className="border-t border-border/50 p-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {t("providerAdvanced.projectRoutingDesc", {
-                defaultValue:
-                  "将项目目录绑定到此 Provider。当 Claude Code 从匹配的项目发送请求时，自动使用此 Provider。",
-              })}
-            </p>
-            {/* Existing project mappings */}
-            {projectProviders &&
-              Object.entries(projectProviders).map(([path, providerId]) => (
-                <div
-                  key={path}
-                  className="flex items-center gap-2 text-sm bg-muted/50 rounded p-2"
-                >
-                  <span className="flex-1 truncate font-mono text-xs">
-                    {path}
-                  </span>
-                  <span className="text-xs text-muted-foreground">→</span>
-                  <span className="text-xs">{providerId}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => {
-                      const updated = { ...projectProviders };
-                      delete updated[path];
-                      onProjectProvidersChange(updated);
-                    }}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-            {/* Add new mapping */}
-            <div className="flex gap-2">
-              <Input
-                placeholder={t("providerAdvanced.projectPathPlaceholder", {
-                  defaultValue: "/Users/you/project",
-                })}
-                value={newProjectPath}
-                onChange={(e) => setNewProjectPath(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!newProjectPath}
-                onClick={() => {
-                  if (newProjectPath) {
-                    onProjectProvidersChange({
-                      ...(projectProviders || {}),
-                      [newProjectPath]: "self",
-                    });
-                    setNewProjectPath("");
-                  }
-                }}
-              >
-                {t("common.add", { defaultValue: "添加" })}
-              </Button>
             </div>
           </div>
         </div>

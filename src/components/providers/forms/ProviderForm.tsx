@@ -233,11 +233,6 @@ function ProviderFormFull({
     () => initialData?.meta?.visionModel ?? "",
   );
 
-  // CC-Gateway-Pro: Project Providers state
-  const [projectProviders, setProjectProviders] = useState<
-    Record<string, string>
-  >(() => initialData?.meta?.projectProviders ?? {});
-
   const { category } = useProviderCategory({
     appId,
     selectedPresetId,
@@ -270,7 +265,6 @@ function ProviderFormFull({
       ),
     });
     setVisionModel(initialData?.meta?.visionModel ?? "");
-    setProjectProviders(initialData?.meta?.projectProviders ?? {});
   }, [appId, initialData, supportsFullUrl]);
 
   const defaultValues: ProviderFormData = useMemo(
@@ -1254,11 +1248,6 @@ function ProviderFormFull({
           : undefined,
       // CC-Gateway-Pro: Vision Model
       visionModel: visionModel || undefined,
-      // CC-Gateway-Pro: Project Providers
-      projectProviders:
-        projectProviders && Object.keys(projectProviders).length > 0
-          ? projectProviders
-          : undefined,
     };
 
     if (!isCodexOauthProvider && "codexFastMode" in nextMeta) {
@@ -2146,8 +2135,6 @@ function ProviderFormFull({
                 onPricingConfigChange={setPricingConfig}
                 visionModel={visionModel}
                 onVisionModelChange={setVisionModel}
-                projectProviders={projectProviders}
-                onProjectProvidersChange={setProjectProviders}
               />
             )}
 

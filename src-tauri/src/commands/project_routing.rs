@@ -66,7 +66,7 @@ fn scan_project_dirs() -> Vec<String> {
                             for line in content.lines() {
                                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
                                     if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
-                                        if !project_paths.contains(&cwd.to_string()) {
+                                        if !cwd.is_empty() && !project_paths.contains(&cwd.to_string()) {
                                             project_paths.push(cwd.to_string());
                                         }
                                     }
@@ -110,9 +110,11 @@ fn scan_session_projects() -> HashMap<String, String> {
                                         json.get("sessionId").and_then(|v| v.as_str()),
                                         json.get("cwd").and_then(|v| v.as_str()),
                                     ) {
-                                        session_projects
-                                            .entry(sid.to_string())
-                                            .or_insert_with(|| cwd.to_string());
+                                        if !cwd.is_empty() {
+                                            session_projects
+                                                .entry(sid.to_string())
+                                                .or_insert_with(|| cwd.to_string());
+                                        }
                                     }
                                 }
                             }

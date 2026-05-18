@@ -54,9 +54,12 @@ impl SessionProjectRouter {
                                             json.get("sessionId").and_then(|v| v.as_str()),
                                             json.get("cwd").and_then(|v| v.as_str()),
                                         ) {
-                                            discovered
-                                                .entry(sid.to_string())
-                                                .or_insert_with(|| cwd.to_string());
+                                            // 只在 cwd 非空时插入（permission-mode 行有 sessionId 但无 cwd）
+                                            if !cwd.is_empty() {
+                                                discovered
+                                                    .entry(sid.to_string())
+                                                    .or_insert_with(|| cwd.to_string());
+                                            }
                                         }
                                     }
                                 }
