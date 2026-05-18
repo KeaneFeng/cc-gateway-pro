@@ -233,6 +233,7 @@ function App() {
   const [envConflicts, setEnvConflicts] = useState<EnvConflict[]>([]);
   const [showEnvBanner, setShowEnvBanner] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
 
   const effectiveEditingProvider = useLastValidValue(editingProvider);
   const effectiveUsageProvider = useLastValidValue(usageProvider);
@@ -1576,29 +1577,28 @@ function App() {
                               >
                                 <McpIcon size={16} />
                               </Button>
+                              {/* CC-Gateway-Pro: 从 cc-switch 同步 */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowSyncConfirm(true)}
+                                disabled={isSyncing}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("settings.syncFromCcSwitch", {
+                                  defaultValue: "从 cc-switch 同步供应商",
+                                })}
+                              >
+                                {isSyncing ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4" />
+                                )}
+                              </Button>
                             </>
                           )}
                         </motion.div>
                       </AnimatePresence>
                     </div>
-
-                    {/* CC-Gateway-Pro: 从 cc-switch 同步按钮 */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void handleSyncFromCcSwitch()}
-                      disabled={isSyncing}
-                      className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
-                      title={t("settings.syncFromCcSwitch", {
-                        defaultValue: "从 cc-switch 同步供应商",
-                      })}
-                    >
-                      {isSyncing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                    </Button>
 
                     <Button
                       onClick={() => setIsAddOpen(true)}
@@ -1699,6 +1699,27 @@ function App() {
           })();
         }}
         onCancel={() => setLaunchDashboardOpen(false)}
+      />
+
+      {/* CC-Gateway-Pro: 从 cc-switch 同步确认弹窗 */}
+      <ConfirmDialog
+        isOpen={showSyncConfirm}
+        variant="info"
+        title={t("settings.syncFromCcSwitchConfirmTitle", {
+          defaultValue: "从 cc-switch 同步供应商",
+        })}
+        message={t("settings.syncFromCcSwitchConfirmMessage", {
+          defaultValue:
+            "将从 ~/.cc-switch/cc-switch.db 读取所有 Claude 供应商并导入到 cc-gateway-pro。已存在的同名供应商会被覆盖。确认同步？",
+        })}
+        confirmText={t("settings.syncFromCcSwitchConfirmAction", {
+          defaultValue: "确认同步",
+        })}
+        onConfirm={() => {
+          setShowSyncConfirm(false);
+          void handleSyncFromCcSwitch();
+        }}
+        onCancel={() => setShowSyncConfirm(false)}
       />
 
       <DeepLinkImportDialog />
