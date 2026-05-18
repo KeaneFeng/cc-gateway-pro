@@ -132,6 +132,17 @@ async fn handle_messages_for_app(
     let mut ctx =
         RequestContext::new(&state, &body, &headers, app_type.clone(), tag, app_type_str).await?;
 
+    // CC-Gateway-Pro: Vision routing 修改了 ctx.request_model，需要同步到 body
+    let mut body = body;
+    let body_model = body.get("model").and_then(|m| m.as_str()).unwrap_or("");
+    if ctx.request_model != body_model {
+        log::info!(
+            "[{}] Vision routing: updating body model {} -> {}",
+            tag, body_model, ctx.request_model
+        );
+        body["model"] = serde_json::json!(ctx.request_model);
+    }
+
     let raw_endpoint = uri
         .path_and_query()
         .map(|path_and_query| path_and_query.as_str())
