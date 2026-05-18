@@ -34,20 +34,29 @@ impl SessionProjectRouter {
 
         let mut discovered: HashMap<String, String> = HashMap::new();
 
+        // 目录结构: ~/.claude/projects/<encoded-path>/<session-id>.jsonl
         if let Ok(entries) = std::fs::read_dir(&projects_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        for line in content.lines() {
-                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                                if let (Some(sid), Some(cwd)) = (
-                                    json.get("sessionId").and_then(|v| v.as_str()),
-                                    json.get("cwd").and_then(|v| v.as_str()),
-                                ) {
-                                    discovered
-                                        .entry(sid.to_string())
-                                        .or_insert_with(|| cwd.to_string());
+                if !path.is_dir() {
+                    continue;
+                }
+                if let Ok(files) = std::fs::read_dir(&path) {
+                    for file in files.flatten() {
+                        let fpath = file.path();
+                        if fpath.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                            if let Ok(content) = std::fs::read_to_string(&fpath) {
+                                for line in content.lines() {
+                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+                                        if let (Some(sid), Some(cwd)) = (
+                                            json.get("sessionId").and_then(|v| v.as_str()),
+                                            json.get("cwd").and_then(|v| v.as_str()),
+                                        ) {
+                                            discovered
+                                                .entry(sid.to_string())
+                                                .or_insert_with(|| cwd.to_string());
+                                        }
+                                    }
                                 }
                             }
                         }
