@@ -36,12 +36,13 @@ pub enum SyncMethod {
 
 /// Skill 存储位置（SSOT 目录选择）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
 pub enum SkillStorageLocation {
     /// CC-Gateway-Pro 管理目录 (~/.cc-gateway-pro/skills/)
     #[default]
-    CcSwitch,
+    #[serde(rename = "cc_gateway_pro", alias = "cc_gateway_pro")]
+    CcGatewayPro,
     /// Agent Skills 统一标准目录 (~/.agents/skills/)
+    #[serde(rename = "unified")]
     Unified,
 }
 
@@ -479,7 +480,7 @@ impl SkillService {
     pub fn get_ssot_dir() -> Result<PathBuf> {
         let location = crate::settings::get_skill_storage_location();
         let dir = match location {
-            SkillStorageLocation::CcSwitch => get_app_config_dir().join("skills"),
+            SkillStorageLocation::CcGatewayPro => get_app_config_dir().join("skills"),
             SkillStorageLocation::Unified => {
                 let home = dirs::home_dir().context(format_skill_error(
                     "GET_HOME_DIR_FAILED",
@@ -1164,7 +1165,7 @@ impl SkillService {
         // 1. 解析旧目录和新目录（不改设置）
         let old_dir = Self::get_ssot_dir()?;
         let new_dir = match target {
-            SkillStorageLocation::CcSwitch => get_app_config_dir().join("skills"),
+            SkillStorageLocation::CcGatewayPro => get_app_config_dir().join("skills"),
             SkillStorageLocation::Unified => {
                 let home = dirs::home_dir().context("Cannot determine home directory")?;
                 home.join(".agents").join("skills")

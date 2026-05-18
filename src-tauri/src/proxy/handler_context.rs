@@ -166,7 +166,7 @@ impl RequestContext {
         }
 
         // CC-Gateway-Pro: Project-Level Provider Binding
-        // 通过 session_id 查找关联的项目路径，再从 DB 查目标 provider
+        log::info!("[ProjectRouter] Checking session: '{}' for project routing", session_id);
         let mut effective_provider = provider;
         if let Some(target_id) = state
             .session_project_router

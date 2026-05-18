@@ -20,6 +20,7 @@ import {
   History,
   BarChart2,
   Download,
+  CloudDownload,
   FolderArchive,
   Search,
   FolderOpen,
@@ -214,6 +215,7 @@ function App() {
   }, [visibleApps, activeApp]);
 
   // Fallback from sessions view when switching to an app without session support
+  // Also fallback from projectRouting (Claude Code only)
   useEffect(() => {
     if (
       currentView === "sessions" &&
@@ -224,6 +226,9 @@ function App() {
       sharedFeatureApp !== "gemini" &&
       sharedFeatureApp !== "hermes"
     ) {
+      setCurrentView("providers");
+    }
+    if (currentView === "projectRouting" && activeApp !== "claude") {
       setCurrentView("providers");
     }
   }, [sharedFeatureApp, currentView]);
@@ -1587,18 +1592,24 @@ function App() {
                               >
                                 <McpIcon size={16} />
                               </Button>
-                              {/* 项目路由管理 - 仅 Claude 应用可见 */}
+                              {/* 项目路由管理 - 仅 Claude Code 可见 */}
+                              {activeApp === "claude" && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("projectRouting")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className={cn(
+                                  "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                  "transition-all duration-200 ease-in-out overflow-hidden",
+                                  "opacity-100 w-8 scale-100 px-2",
+                                )}
                                 title={t("projectRouting.title", {
                                   defaultValue: "项目路由",
                                 })}
                               >
                                 <FolderTree className="w-4 h-4" />
                               </Button>
+                              )}
                               {/* CC-Gateway-Pro: 从 cc-switch 同步 */}
                               <Button
                                 variant="ghost"
@@ -1613,7 +1624,7 @@ function App() {
                                 {isSyncing ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                  <RefreshCw className="w-4 h-4" />
+                                  <CloudDownload className="w-4 h-4" />
                                 )}
                               </Button>
                             </>

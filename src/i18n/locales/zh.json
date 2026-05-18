@@ -570,9 +570,9 @@
     "skillStorage": {
       "title": "Skills 存储位置",
       "description": "选择 CC-Gateway-Pro 存放 Skills 主副本的目录",
-      "ccSwitch": "CC-Gateway-Pro",
+      "ccGatewayPro": "CC-Gateway-Pro",
       "unified": "~/.agents/skills",
-      "ccSwitchHint": "技能存储在 ~/.cc-gateway-pro/skills/，由 CC-Gateway-Pro 统一管理并同步到各应用。",
+      "ccGatewayProHint": "技能存储在 ~/.cc-gateway-pro/skills/，由 CC-Gateway-Pro 统一管理并同步到各应用。",
       "unifiedHint": "技能存储在 ~/.agents/skills/，遵循 Agent Skills 开放标准。兼容的工具（Claude Code、Codex、Gemini CLI 等）可直接发现此目录中的技能。",
       "confirmTitle": "迁移技能存储",
       "confirmMessage": "将移动 {{count}} 个技能到新位置，是否继续？",

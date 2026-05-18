@@ -34,6 +34,7 @@ interface ProjectRoutingInfo {
   project_path: string;
   provider_id: string | null;
   provider_name: string | null;
+  provider_notes?: string | null;
   session_count: number;
 }
 

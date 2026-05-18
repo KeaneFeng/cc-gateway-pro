@@ -69,7 +69,7 @@ export function ProviderEmptyState({
         </p>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        {/* CC-Gateway-Pro: 从 cc-switch 同步 */}
+        {/* 从 cc-switch 同步供应商 */}
         <Button
           onClick={handleSyncFromCcSwitch}
           disabled={isSyncing}

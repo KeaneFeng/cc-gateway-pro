@@ -83,7 +83,7 @@ export function SkillStorageLocationSettings({
           disabled={isMigrating}
           onClick={() => handleSelect("cc_gateway_pro")}
         >
-          {t("settings.skillStorage.ccSwitch")}
+          {t("settings.skillStorage.ccGatewayPro")}
         </StorageButton>
         <StorageButton
           active={value === "unified"}
@@ -99,7 +99,7 @@ export function SkillStorageLocationSettings({
       <p className="text-xs text-muted-foreground">
         {value === "unified"
           ? t("settings.skillStorage.unifiedHint")
-          : t("settings.skillStorage.ccSwitchHint")}
+          : t("settings.skillStorage.ccGatewayProHint")}
       </p>
 
       {/* 迁移确认对话框 */}

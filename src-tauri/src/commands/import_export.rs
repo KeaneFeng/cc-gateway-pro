@@ -181,20 +181,20 @@ pub fn delete_db_backup(filename: String) -> Result<(), String> {
 pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, String> {
     let db = state.db.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        // 获取 cc-switch 数据库路径
+        // 获取 cc-switch 数据库路径（旧版应用）
         let home = dirs::home_dir().ok_or_else(|| AppError::Config("无法获取用户主目录".to_string()))?;
-        let cc_switch_db_path = home.join(".cc-switch").join("cc-switch.db");
+        let legacy_db_path = home.join(".cc-switch").join("cc-switch.db");
 
-        if !cc_switch_db_path.exists() {
+        if !legacy_db_path.exists() {
             return Err(AppError::Config(format!(
                 "cc-switch 数据库不存在: {}",
-                cc_switch_db_path.display()
+                legacy_db_path.display()
             )));
         }
 
         // 打开 cc-switch 数据库（只读）
         let src_conn = rusqlite::Connection::open_with_flags(
-            &cc_switch_db_path,
+            &legacy_db_path,
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .map_err(|e| AppError::Database(format!("无法打开 cc-switch 数据库: {e}")))?;

@@ -819,6 +819,7 @@ mod tests {
     use crate::proxy::failover_switch::FailoverSwitchManager;
     use crate::proxy::provider_router::ProviderRouter;
     use crate::proxy::providers::gemini_shadow::GeminiShadowStore;
+    use crate::proxy::session_project_router::SessionProjectRouter;
     use crate::proxy::types::{ProxyConfig, ProxyStatus};
     use rust_decimal::Decimal;
     use std::collections::HashMap;
@@ -941,7 +942,8 @@ mod tests {
             provider_router: Arc::new(ProviderRouter::new(db.clone())),
             gemini_shadow: Arc::new(GeminiShadowStore::default()),
             app_handle: None,
-            failover_manager: Arc::new(FailoverSwitchManager::new(db)),
+            failover_manager: Arc::new(FailoverSwitchManager::new(db.clone())),
+            session_project_router: Arc::new(SessionProjectRouter::new(db)),
         }
     }
 

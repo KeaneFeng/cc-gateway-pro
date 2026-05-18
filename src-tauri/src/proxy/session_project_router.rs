@@ -87,30 +87,49 @@ impl SessionProjectRouter {
     pub fn get_provider_for_session(&self, session_id: &str) -> Option<String> {
         let session_projects = self.session_projects.read().ok()?;
         let project_path = session_projects.get(session_id)?;
+        log::info!("[ProjectRouter] session {} -> project {}", session_id, project_path);
 
         // 从 DB settings 表读取 project_providers（和 UI 共享同一份数据）
         let project_providers: HashMap<String, String> = match self.db.get_setting("project_providers") {
-            Ok(Some(json_str)) => serde_json::from_str(&json_str).unwrap_or_default(),
-            _ => return None,
+            Ok(Some(json_str)) => {
+                let pp: HashMap<String, String> = serde_json::from_str(&json_str).unwrap_or_default();
+                log::info!("[ProjectRouter] DB project_providers: {} entries", pp.len());
+                for (k, v) in &pp {
+                    log::info!("[ProjectRouter]   {} -> {}", k, v);
+                }
+                pp
+            }
+            Ok(None) => {
+                log::warn!("[ProjectRouter] No project_providers in DB settings!");
+                return None;
+            }
+            Err(e) => {
+                log::error!("[ProjectRouter] DB error reading project_providers: {}", e);
+                return None;
+            }
         };
 
         // Try canonical path first
         if let Some(provider_id) = project_providers.get(project_path) {
+            log::info!("[ProjectRouter] Direct match: {} -> {}", project_path, provider_id);
             return Some(provider_id.clone());
         }
         // Try canonicalizing
         if let Ok(canonical) = std::fs::canonicalize(project_path) {
             let canon_str = canonical.to_string_lossy().to_string();
             if let Some(provider_id) = project_providers.get(&canon_str) {
+                log::info!("[ProjectRouter] Canonical match: {} -> {}", canon_str, provider_id);
                 return Some(provider_id.clone());
             }
         }
-        // Try prefix matching (for paths that are subdirectories)
+        // Try prefix matching
         for (proj, provider_id) in &project_providers {
             if project_path.starts_with(proj) || proj.starts_with(project_path) {
+                log::info!("[ProjectRouter] Prefix match: {} <-> {} -> {}", project_path, proj, provider_id);
                 return Some(provider_id.clone());
             }
         }
+        log::warn!("[ProjectRouter] No match for project: {}", project_path);
         None
     }
 
