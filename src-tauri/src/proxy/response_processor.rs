@@ -586,7 +586,12 @@ fn spawn_log_usage(
     let state = state.clone();
     let provider_id = ctx.provider.id.clone();
     let app_type_str = ctx.app_type_str.to_string();
-    let model = model.to_string();
+    // Vision routing: 如果模型被 vision routing 修改，加前缀
+    let model = if ctx.original_model != ctx.request_model {
+        format!("vision_model -> {}", model)
+    } else {
+        model.to_string()
+    };
     let request_model = request_model.to_string();
     let latency_ms = ctx.latency_ms();
     let session_id = ctx.session_id.clone();

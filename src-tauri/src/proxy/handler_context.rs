@@ -46,8 +46,10 @@ pub struct RequestContext {
     /// 这里使用本地 settings 的设备级 current provider。
     /// 代理模式下如果实际使用的 provider 与此不一致，会触发切换以确保 UI 始终准确。
     pub current_provider_id: String,
-    /// 请求中的模型名称
+    /// 请求中的模型名称（可能被 vision routing 修改）
     pub request_model: String,
+    /// 原始请求模型名称（vision routing 修改前的值，用于 usage 日志显示）
+    pub original_model: String,
     /// 日志标签（如 "Claude"、"Codex"、"Gemini"）
     pub tag: &'static str,
     /// 应用类型字符串（如 "claude"、"codex"、"gemini"）
@@ -239,6 +241,7 @@ impl RequestContext {
             providers,
             current_provider_id,
             request_model: effective_model,
+            original_model: request_model,
             tag,
             app_type_str,
             app_type,
