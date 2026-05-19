@@ -1373,7 +1373,8 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   {
     name: "CrazyRouter",
     websiteUrl: "https://www.crazyrouter.com",
-    apiKeyUrl: "https://www.crazyrouter.com/register?aff=OZcm&ref=cc-gateway-pro",
+    apiKeyUrl:
+      "https://www.crazyrouter.com/register?aff=OZcm&ref=cc-gateway-pro",
     settingsConfig: {
       npm: "@ai-sdk/anthropic",
       name: "CrazyRouter",

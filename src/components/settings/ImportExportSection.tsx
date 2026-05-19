@@ -49,13 +49,13 @@ export function ImportExportSection({
         toast.success(
           t("settings.syncFromCcSwitchSuccess", {
             defaultValue: `同步完成: ${result.syncedCount} 个供应商已导入`,
-          })
+          }),
         );
       } else {
         toast.error(
           t("settings.syncFromCcSwitchFailed", {
             defaultValue: "同步失败",
-          })
+          }),
         );
       }
     } catch (err: any) {
@@ -66,7 +66,7 @@ export function ImportExportSection({
         }),
         {
           description: String(err),
-        }
+        },
       );
     } finally {
       setIsSyncing(false);

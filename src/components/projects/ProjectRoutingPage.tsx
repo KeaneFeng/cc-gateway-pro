@@ -63,13 +63,17 @@ export function ProjectRoutingPage() {
   /** 加载项目路由数据 */
   const loadData = useCallback(async () => {
     try {
-      const result = await invoke<ProjectRoutingOverview>("get_project_routing");
+      const result = await invoke<ProjectRoutingOverview>(
+        "get_project_routing",
+      );
       setOverview(result);
     } catch (err) {
       toast.error(
         t("projectRouting.loadFailed", {
           defaultValue: "加载项目路由失败",
-        }) + ": " + extractErrorMessage(err),
+        }) +
+          ": " +
+          extractErrorMessage(err),
       );
     } finally {
       setIsLoading(false);
