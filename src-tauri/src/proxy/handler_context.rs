@@ -102,7 +102,7 @@ impl RequestContext {
         let optimizer_config = state.db.get_optimizer_config().unwrap_or_default();
         let copilot_optimizer_config = state.db.get_copilot_optimizer_config().unwrap_or_default();
 
-        let current_provider_id =
+        let mut current_provider_id =
             crate::settings::get_current_provider(&app_type).unwrap_or_default();
 
         // 从请求体提取模型名称
@@ -168,6 +168,7 @@ impl RequestContext {
         // CC-Gateway-Pro: Project-Level Provider Binding
         log::info!("[ProjectRouter] Checking session: '{}' for project routing", session_id);
         let mut effective_provider = provider;
+        let mut project_routed = false;
         if let Some(target_id) = state
             .session_project_router
             .get_provider_for_session(&session_id)
@@ -187,12 +188,20 @@ impl RequestContext {
                     target_provider.name
                 );
                 effective_provider = target_provider;
+                project_routed = true;
             } else {
                 log::warn!(
                     "[{}] Project routing: target provider {} not found in DB",
                     tag, target_id
                 );
             }
+        }
+
+        // Project routing: 同步 current_provider_id，防止 forwarder 误判为 failover 切换
+        // 当 project routing 选了不同的 provider 时，必须更新 current_provider_id
+        // 否则 forwarder 的 should_switch 判断会触发永久切换默认 provider 的 bug
+        if project_routed && current_provider_id != effective_provider.id {
+            current_provider_id = effective_provider.id.clone();
         }
 
         log::debug!(
