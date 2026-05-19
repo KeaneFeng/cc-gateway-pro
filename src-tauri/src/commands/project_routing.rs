@@ -171,7 +171,7 @@ pub async fn get_project_routing(
 
         // 统计每个项目的会话数量
         let mut project_session_counts: HashMap<String, usize> = HashMap::new();
-        for (_, project_path) in &session_projects {
+        for project_path in session_projects.values() {
             *project_session_counts
                 .entry(project_path.clone())
                 .or_insert(0) += 1;
