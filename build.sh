@@ -212,20 +212,34 @@ brew_release() {
     git push origin "$TAG" 2>&1
     log "Tag 已推送"
 
-    # 提示
+    # 等待 CI 完成并自动更新 Homebrew
     echo ""
     echo -e "${GREEN}=== 发布已触发 ===${NC}"
     echo -e "  版本: ${NEW_VERSION}"
     echo -e "  CI 进度: https://github.com/KeaneFeng/cc-gateway-pro/actions"
     echo ""
-    echo -e "${BLUE}GitHub Actions 将自动:${NC}"
-    echo "  1. 跨平台构建 (macOS/Windows/Linux)"
-    echo "  2. Apple 签名 + 公证"
-    echo "  3. 生成 latest.json (应用内更新检测)"
-    echo "  4. 上传所有安装包"
-    echo ""
-    echo -e "${YELLOW}CI 完成后更新 Homebrew:${NC}"
-    echo "  ./build.sh --update-sha $NEW_VERSION"
+    log "等待 CI 完成..."
+    
+    # 获取 run ID
+    sleep 10
+    RUN_ID=$(gh run list --workflow=Release --branch "$TAG" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null)
+    
+    if [ -n "$RUN_ID" ]; then
+        log "CI Run ID: $RUN_ID"
+        log "等待构建完成（约 15 分钟）..."
+        gh run watch "$RUN_ID" --exit-status 2>&1 || {
+            warn "CI 构建失败，请检查: https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/$RUN_ID"
+            exit 1
+        }
+        log "CI 构建成功！"
+        
+        # 自动更新 Homebrew SHA256
+        echo ""
+        log "自动更新 Homebrew Cask..."
+        update_sha "$NEW_VERSION"
+    else
+        warn "无法获取 CI Run ID，请手动更新: ./build.sh --update-sha $NEW_VERSION"
+    fi
 }
 
 # ========== CI 完成后更新 Homebrew SHA ==========
