@@ -1594,21 +1594,23 @@ function App() {
                               </Button>
                               {/* 项目路由管理 - 仅 Claude Code 可见 */}
                               {activeApp === "claude" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setCurrentView("projectRouting")}
-                                className={cn(
-                                  "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
-                                  "transition-all duration-200 ease-in-out overflow-hidden",
-                                  "opacity-100 w-8 scale-100 px-2",
-                                )}
-                                title={t("projectRouting.title", {
-                                  defaultValue: "项目路由",
-                                })}
-                              >
-                                <FolderTree className="w-4 h-4" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setCurrentView("projectRouting")
+                                  }
+                                  className={cn(
+                                    "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                    "transition-all duration-200 ease-in-out overflow-hidden",
+                                    "opacity-100 w-8 scale-100 px-2",
+                                  )}
+                                  title={t("projectRouting.title", {
+                                    defaultValue: "项目路由",
+                                  })}
+                                >
+                                  <FolderTree className="w-4 h-4" />
+                                </Button>
                               )}
                               {/* CC-Gateway-Pro: 从 cc-switch 同步 */}
                               <Button
