@@ -165,10 +165,12 @@ brew_release() {
     done
     [ -z "$version_mode" ] && version_mode="patch"
 
-    CURRENT_VERSION=$(get_version)
-
+    # 从 GitHub 获取最新 release tag（线上版本）
     log "=== 发布流程 ==="
-    log "当前版本: $CURRENT_VERSION"
+    log "获取线上最新版本..."
+    LATEST_TAG=$(gh release view --json tagName --jq '.tagName' 2>/dev/null || echo "v0.0.0")
+    CURRENT_VERSION=${LATEST_TAG#v}  # 移除 v 前缀
+    log "线上最新版本: $CURRENT_VERSION"
 
     # 计算新版本号
     if [[ "$version_mode" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
