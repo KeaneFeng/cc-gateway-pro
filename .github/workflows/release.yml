@@ -86,3 +86,61 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download macOS DMG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          DMG_NAME="CC.Gateway.Pro_${VERSION}_aarch64.dmg"
+          gh release download "${{ github.ref_name }}" --pattern "${DMG_NAME}" --dir .
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          DMG_NAME="CC.Gateway.Pro_${{ steps.version.outputs.VERSION }}_aarch64.dmg"
+          SHA256=$(sha256sum "$DMG_NAME" | cut -d' ' -f1)
+          echo "SHA256=$SHA256" >> $GITHUB_OUTPUT
+          echo "SHA256: $SHA256"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v6
+        with:
+          repository: KeaneFeng/homebrew-cc-gateway-pro
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update Cask
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          SHA256="${{ steps.sha.outputs.SHA256 }}"
+          DMG_NAME="CC.Gateway.Pro_${VERSION}_aarch64.dmg"
+          CASK_FILE="tap/Casks/cc-gateway-pro.rb"
+
+          # Update version
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" "$CASK_FILE"
+
+          # Update SHA256
+          sed -i "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "$CASK_FILE"
+
+          # Update DMG filename in URL (handle both dot and hyphen separators)
+          sed -i "s/CC[.-]Gateway[.-]Pro_[^\"]*\.dmg/${DMG_NAME}/g" "$CASK_FILE"
+
+          cat "$CASK_FILE"
+
+      - name: Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Update cc-gateway-pro to v${{ steps.version.outputs.VERSION }}" || echo "No changes"
+          git push

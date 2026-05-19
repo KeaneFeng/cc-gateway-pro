@@ -251,7 +251,8 @@ update_sha() {
     TAG="v${version}"
     log "从 GitHub Release $TAG 下载 DMG 计算 SHA256..."
 
-    DMG_NAME="CC-Gateway-Pro_${version}_aarch64.dmg"
+    # GitHub release 上的实际文件名（点号分隔）
+    DMG_NAME="CC.Gateway.Pro_${version}_aarch64.dmg"
     DMG_URL="https://github.com/KeaneFeng/cc-gateway-pro/releases/download/${TAG}/${DMG_NAME}"
     TMP_DMG="/tmp/${DMG_NAME}"
 
@@ -266,7 +267,8 @@ import re
 content = open('$HOMEBREW_TAP').read()
 content = re.sub(r'version \"[^\"]+\"', 'version \"${version}\"', content)
 content = re.sub(r'sha256 \"[^\"]+\"', 'sha256 \"${SHA}\"', content)
-content = re.sub(r'CC-Gateway-Pro_[^\"]+\.dmg', '${DMG_NAME}', content)
+# URL 也需要用点号分隔的文件名
+content = re.sub(r'CC[.-]Gateway[.-]Pro_[^\"]+\.dmg', '${DMG_NAME}', content)
 open('$HOMEBREW_TAP', 'w').write(content)
 "
         cd "$(dirname "$HOMEBREW_TAP")"
