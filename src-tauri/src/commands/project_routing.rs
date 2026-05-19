@@ -66,7 +66,9 @@ fn scan_project_dirs() -> Vec<String> {
                             for line in content.lines() {
                                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
                                     if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
-                                        if !cwd.is_empty() && !project_paths.contains(&cwd.to_string()) {
+                                        if !cwd.is_empty()
+                                            && !project_paths.contains(&cwd.to_string())
+                                        {
                                             project_paths.push(cwd.to_string());
                                         }
                                     }
@@ -163,9 +165,7 @@ pub async fn get_project_routing(
 
         // 从数据库设置中获取 project_providers 映射
         let project_providers: HashMap<String, String> = match db.get_setting("project_providers") {
-            Ok(Some(json_str)) => {
-                serde_json::from_str(&json_str).unwrap_or_default()
-            }
+            Ok(Some(json_str)) => serde_json::from_str(&json_str).unwrap_or_default(),
             _ => HashMap::new(),
         };
 
@@ -184,7 +184,10 @@ pub async fn get_project_routing(
             let provider_name = provider_id
                 .as_ref()
                 .and_then(|pid| provider_names.get(pid).cloned());
-            let session_count = project_session_counts.get(project_path).copied().unwrap_or(0);
+            let session_count = project_session_counts
+                .get(project_path)
+                .copied()
+                .unwrap_or(0);
 
             let provider_notes = provider_id
                 .as_ref()

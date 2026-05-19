@@ -49,7 +49,9 @@ impl SessionProjectRouter {
                         if fpath.extension().and_then(|e| e.to_str()) == Some("jsonl") {
                             if let Ok(content) = std::fs::read_to_string(&fpath) {
                                 for line in content.lines() {
-                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+                                    if let Ok(json) =
+                                        serde_json::from_str::<serde_json::Value>(line)
+                                    {
                                         if let (Some(sid), Some(cwd)) = (
                                             json.get("sessionId").and_then(|v| v.as_str()),
                                             json.get("cwd").and_then(|v| v.as_str()),
@@ -75,7 +77,10 @@ impl SessionProjectRouter {
             for (sid, cwd) in discovered {
                 map.entry(sid).or_insert(cwd);
             }
-            log::info!("🗺️ SessionProjectRouter: loaded {} session→project mappings", map.len());
+            log::info!(
+                "🗺️ SessionProjectRouter: loaded {} session→project mappings",
+                map.len()
+            );
         }
         if count > 0 {
             log::info!("🗺️ Scanned {} session mappings from JSONL files", count);
@@ -101,45 +106,64 @@ impl SessionProjectRouter {
             }
         };
 
-        log::info!("[ProjectRouter] session {} -> project {}", session_id, project_path);
+        log::info!(
+            "[ProjectRouter] session {} -> project {}",
+            session_id,
+            project_path
+        );
 
         // 从 DB settings 表读取 project_providers（和 UI 共享同一份数据）
-        let project_providers: HashMap<String, String> = match self.db.get_setting("project_providers") {
-            Ok(Some(json_str)) => {
-                let pp: HashMap<String, String> = serde_json::from_str(&json_str).unwrap_or_default();
-                log::info!("[ProjectRouter] DB project_providers: {} entries", pp.len());
-                for (k, v) in &pp {
-                    log::info!("[ProjectRouter]   {} -> {}", k, v);
+        let project_providers: HashMap<String, String> =
+            match self.db.get_setting("project_providers") {
+                Ok(Some(json_str)) => {
+                    let pp: HashMap<String, String> =
+                        serde_json::from_str(&json_str).unwrap_or_default();
+                    log::info!("[ProjectRouter] DB project_providers: {} entries", pp.len());
+                    for (k, v) in &pp {
+                        log::info!("[ProjectRouter]   {} -> {}", k, v);
+                    }
+                    pp
                 }
-                pp
-            }
-            Ok(None) => {
-                log::warn!("[ProjectRouter] No project_providers in DB settings!");
-                return None;
-            }
-            Err(e) => {
-                log::error!("[ProjectRouter] DB error reading project_providers: {}", e);
-                return None;
-            }
-        };
+                Ok(None) => {
+                    log::warn!("[ProjectRouter] No project_providers in DB settings!");
+                    return None;
+                }
+                Err(e) => {
+                    log::error!("[ProjectRouter] DB error reading project_providers: {}", e);
+                    return None;
+                }
+            };
 
         // Try canonical path first
         if let Some(provider_id) = project_providers.get(&project_path) {
-            log::info!("[ProjectRouter] Direct match: {} -> {}", project_path, provider_id);
+            log::info!(
+                "[ProjectRouter] Direct match: {} -> {}",
+                project_path,
+                provider_id
+            );
             return Some(provider_id.clone());
         }
         // Try canonicalizing
         if let Ok(canonical) = std::fs::canonicalize(&project_path) {
             let canon_str = canonical.to_string_lossy().to_string();
             if let Some(provider_id) = project_providers.get(&canon_str) {
-                log::info!("[ProjectRouter] Canonical match: {} -> {}", canon_str, provider_id);
+                log::info!(
+                    "[ProjectRouter] Canonical match: {} -> {}",
+                    canon_str,
+                    provider_id
+                );
                 return Some(provider_id.clone());
             }
         }
         // Try prefix matching
         for (proj, provider_id) in &project_providers {
             if project_path.starts_with(proj.as_str()) || proj.starts_with(project_path.as_str()) {
-                log::info!("[ProjectRouter] Prefix match: {} <-> {} -> {}", project_path, proj, provider_id);
+                log::info!(
+                    "[ProjectRouter] Prefix match: {} <-> {} -> {}",
+                    project_path,
+                    proj,
+                    provider_id
+                );
                 return Some(provider_id.clone());
             }
         }

@@ -341,11 +341,7 @@ pub struct ProviderMeta {
     )]
     pub project_providers: HashMap<String, String>,
     /// 要扫描的项目目录列表（用于自动发现 Claude Code 项目）
-    #[serde(
-        default,
-        rename = "projectDirs",
-        skip_serializing_if = "Vec::is_empty"
-    )]
+    #[serde(default, rename = "projectDirs", skip_serializing_if = "Vec::is_empty")]
     pub project_dirs: Vec<String>,
 }
 

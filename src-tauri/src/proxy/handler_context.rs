@@ -144,7 +144,10 @@ impl RequestContext {
             .ok_or(ProxyError::NoAvailableProvider)?;
 
         // CC-Gateway-Pro: Project-Level Provider Binding
-        log::info!("[ProjectRouter] Checking session: '{}' for project routing", session_id);
+        log::info!(
+            "[ProjectRouter] Checking session: '{}' for project routing",
+            session_id
+        );
         let mut effective_provider = provider;
         let mut project_routed = false;
         if let Some(target_id) = state
@@ -152,7 +155,8 @@ impl RequestContext {
             .get_provider_for_session(&session_id)
         {
             // 直接从 DB 查目标 provider（不在 providers 列表里找，因为可能不在当前/故障转移链中）
-            if let Ok(Some(target_provider)) = state.db.get_provider_by_id(&target_id, app_type_str) {
+            if let Ok(Some(target_provider)) = state.db.get_provider_by_id(&target_id, app_type_str)
+            {
                 let proj = state
                     .session_project_router
                     .get_project_for_session(&session_id)
@@ -170,7 +174,8 @@ impl RequestContext {
             } else {
                 log::warn!(
                     "[{}] Project routing: target provider {} not found in DB",
-                    tag, target_id
+                    tag,
+                    target_id
                 );
             }
         }
@@ -183,14 +188,16 @@ impl RequestContext {
         // CC-Gateway-Pro: Vision Model Auto-Routing
         // 在 project routing 之后执行，确保检查的是最终 provider 的 vision_model
         let mut effective_model = request_model.clone();
-        let has_images =
-            crate::proxy::model_mapper::ModelMapping::has_image_content(body);
+        let has_images = crate::proxy::model_mapper::ModelMapping::has_image_content(body);
         log::info!(
             "[{}] Vision check: has_images={}, provider={}, vision_model={:?}",
             tag,
             has_images,
             effective_provider.name,
-            effective_provider.meta.as_ref().and_then(|m| m.vision_model.as_deref())
+            effective_provider
+                .meta
+                .as_ref()
+                .and_then(|m| m.vision_model.as_deref())
         );
         if has_images {
             if let Some(vision) = effective_provider

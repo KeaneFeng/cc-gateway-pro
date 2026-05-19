@@ -185,8 +185,8 @@ command = "say"
         "live auth.json should reflect new provider"
     );
 
-    let config_text =
-        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
+    let config_text = std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path())
+        .expect("read config.toml");
     assert!(
         config_text.contains("mcp_servers.echo-server"),
         "config.toml should contain synced MCP servers"
@@ -303,8 +303,8 @@ requires_openai_auth = true
     ProviderService::switch(&state, AppType::Codex, "new-provider")
         .expect("switch provider should succeed");
 
-    let config_text =
-        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
+    let config_text = std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path())
+        .expect("read config.toml");
     let parsed: toml::Value = toml::from_str(&config_text).expect("parse config.toml");
 
     assert_eq!(

@@ -138,7 +138,9 @@ async fn handle_messages_for_app(
     if ctx.request_model != body_model {
         log::info!(
             "[{}] Vision routing: updating body model {} -> {}",
-            tag, body_model, ctx.request_model
+            tag,
+            body_model,
+            ctx.request_model
         );
         body["model"] = serde_json::json!(ctx.request_model);
     }
