@@ -85,8 +85,22 @@ impl SessionProjectRouter {
     /// Look up the provider_id for a given session_id
     /// Reads project_providers from DB settings table (same storage as UI)
     pub fn get_provider_for_session(&self, session_id: &str) -> Option<String> {
-        let session_projects = self.session_projects.read().ok()?;
-        let project_path = session_projects.get(session_id)?;
+        // First check cache
+        let project_path = {
+            let map = self.session_projects.read().ok()?;
+            map.get(session_id).cloned()
+        };
+
+        let project_path = match project_path {
+            Some(p) => p,
+            None => {
+                // Unknown session: try incremental scan (for sessions created after app startup)
+                self.scan_session_incremental(session_id);
+                let map = self.session_projects.read().ok()?;
+                map.get(session_id).cloned()?
+            }
+        };
+
         log::info!("[ProjectRouter] session {} -> project {}", session_id, project_path);
 
         // 从 DB settings 表读取 project_providers（和 UI 共享同一份数据）
@@ -110,12 +124,12 @@ impl SessionProjectRouter {
         };
 
         // Try canonical path first
-        if let Some(provider_id) = project_providers.get(project_path) {
+        if let Some(provider_id) = project_providers.get(&project_path) {
             log::info!("[ProjectRouter] Direct match: {} -> {}", project_path, provider_id);
             return Some(provider_id.clone());
         }
         // Try canonicalizing
-        if let Ok(canonical) = std::fs::canonicalize(project_path) {
+        if let Ok(canonical) = std::fs::canonicalize(&project_path) {
             let canon_str = canonical.to_string_lossy().to_string();
             if let Some(provider_id) = project_providers.get(&canon_str) {
                 log::info!("[ProjectRouter] Canonical match: {} -> {}", canon_str, provider_id);
@@ -124,7 +138,7 @@ impl SessionProjectRouter {
         }
         // Try prefix matching
         for (proj, provider_id) in &project_providers {
-            if project_path.starts_with(proj) || proj.starts_with(project_path) {
+            if project_path.starts_with(proj.as_str()) || proj.starts_with(project_path.as_str()) {
                 log::info!("[ProjectRouter] Prefix match: {} <-> {} -> {}", project_path, proj, provider_id);
                 return Some(provider_id.clone());
             }
@@ -139,5 +153,67 @@ impl SessionProjectRouter {
             .read()
             .ok()
             .and_then(|map| map.get(session_id).cloned())
+    }
+
+    /// Incremental scan: find the JSONL file containing this session_id
+    /// Used when a session is not in the startup cache (created after app started)
+    fn scan_session_incremental(&self, session_id: &str) {
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        let projects_dir = home.join(".claude").join("projects");
+        if !projects_dir.exists() {
+            return;
+        }
+
+        let mut found_cwd: Option<String> = None;
+
+        if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+            'outer: for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() {
+                    continue;
+                }
+                if let Ok(files) = std::fs::read_dir(&path) {
+                    for file in files.flatten() {
+                        let fpath = file.path();
+                        if fpath.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                            if let Ok(content) = std::fs::read_to_string(&fpath) {
+                                for line in content.lines() {
+                                    if let Ok(json) =
+                                        serde_json::from_str::<serde_json::Value>(line)
+                                    {
+                                        if let (Some(sid), Some(cwd)) = (
+                                            json.get("sessionId").and_then(|v| v.as_str()),
+                                            json.get("cwd").and_then(|v| v.as_str()),
+                                        ) {
+                                            if sid == session_id && !cwd.is_empty() {
+                                                found_cwd = Some(cwd.to_string());
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if found_cwd.is_some() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                if found_cwd.is_some() {
+                    break 'outer;
+                }
+            }
+        }
+
+        if let Some(cwd) = found_cwd {
+            log::info!(
+                "🗺️ SessionProjectRouter: discovered new session {} → {}",
+                session_id,
+                cwd
+            );
+            if let Ok(mut map) = self.session_projects.write() {
+                map.entry(session_id.to_string()).or_insert(cwd);
+            }
+        }
     }
 }
