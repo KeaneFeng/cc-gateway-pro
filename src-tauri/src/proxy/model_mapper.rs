@@ -63,36 +63,51 @@ impl ModelMapping {
     }
 
     /// 检查请求是否包含图片内容（CC-Gateway-Pro vision routing）
+    /// 递归检查，支持 tool_result 中嵌套的 image block
     pub fn has_image_content(body: &Value) -> bool {
         let messages = match body.get("messages").and_then(|m| m.as_array()) {
             Some(msgs) => msgs,
             None => return false,
         };
         for msg in messages {
-            if let Some(content) = msg.get("content").and_then(|c| c.as_array()) {
-                for block in content {
-                    if block.get("type").and_then(|t| t.as_str()) == Some("image") {
-                        return true;
-                    }
-                    // 也检查 tool_result 中的 image block
-                    if block.get("type").and_then(|t| t.as_str()) == Some("tool_result") {
-                        if let Some(inner) = block.get("content").and_then(|c| c.as_array()) {
-                            for b in inner {
-                                if b.get("type").and_then(|t| t.as_str()) == Some("image") {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
+            if Self::has_image_in_content(msg.get("content")) {
+                return true;
             }
         }
         false
     }
 
+    /// 递归检查 content 是否包含图片（处理嵌套 tool_result）
+    fn has_image_in_content(content: Option<&Value>) -> bool {
+        match content {
+            Some(Value::Array(arr)) => {
+                for item in arr {
+                    if let Some(t) = item.get("type").and_then(|t| t.as_str()) {
+                        if t == "image" || t == "image_url" {
+                            return true;
+                        }
+                    }
+                    // 递归检查嵌套 content（tool_result 中的 image）
+                    if Self::has_image_in_content(item.get("content")) {
+                        return true;
+                    }
+                }
+                false
+            }
+            _ => false,
+        }
+    }
+
     /// 根据原始模型名称获取映射后的模型
     pub fn map_model(&self, original_model: &str) -> String {
         let model_lower = original_model.to_lowercase();
+
+        // 0. Vision Model 已被 vision routing 设置 → 不覆盖
+        if let Some(ref vm) = self.vision_model {
+            if model_lower == vm.to_lowercase() {
+                return original_model.to_string();
+            }
+        }
 
         // 1. 按模型类型匹配
         if model_lower.contains("haiku") {
@@ -140,6 +155,17 @@ pub fn apply_model_mapping(
     let original_model = body.get("model").and_then(|m| m.as_str()).map(String::from);
 
     if let Some(ref original) = original_model {
+        // Vision Model 已被 vision routing 设置 → 跳过映射
+        if let Some(ref vm) = mapping.vision_model {
+            if original.to_lowercase() == vm.to_lowercase() {
+                log::info!(
+                    "[ModelMapper] Vision model preserved: {} (skipping mapping)",
+                    original
+                );
+                return (body, Some(original.clone()), None);
+            }
+        }
+
         let mapped = mapping.map_model(original);
 
         if mapped != *original {

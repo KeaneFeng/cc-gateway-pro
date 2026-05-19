@@ -143,28 +143,6 @@ impl RequestContext {
             .cloned()
             .ok_or(ProxyError::NoAvailableProvider)?;
 
-        // CC-Gateway-Pro: Vision Model Auto-Routing
-        // 如果请求包含图片内容且 provider 配置了 vision_model，自动切换模型
-        let mut effective_model = request_model.clone();
-        let has_images =
-            crate::proxy::model_mapper::ModelMapping::has_image_content(body);
-        if has_images {
-            if let Some(vision) = provider
-                .meta
-                .as_ref()
-                .and_then(|m| m.vision_model.as_ref())
-                .filter(|s| !s.is_empty())
-            {
-                log::info!(
-                    "[{}] Vision routing: detected image content, switching model {} -> {}",
-                    tag,
-                    request_model,
-                    vision
-                );
-                effective_model = vision.clone();
-            }
-        }
-
         // CC-Gateway-Pro: Project-Level Provider Binding
         log::info!("[ProjectRouter] Checking session: '{}' for project routing", session_id);
         let mut effective_provider = provider;
@@ -198,10 +176,44 @@ impl RequestContext {
         }
 
         // Project routing: 同步 current_provider_id，防止 forwarder 误判为 failover 切换
-        // 当 project routing 选了不同的 provider 时，必须更新 current_provider_id
-        // 否则 forwarder 的 should_switch 判断会触发永久切换默认 provider 的 bug
         if project_routed && current_provider_id != effective_provider.id {
             current_provider_id = effective_provider.id.clone();
+        }
+
+        // CC-Gateway-Pro: Vision Model Auto-Routing
+        // 在 project routing 之后执行，确保检查的是最终 provider 的 vision_model
+        let mut effective_model = request_model.clone();
+        let has_images =
+            crate::proxy::model_mapper::ModelMapping::has_image_content(body);
+        log::info!(
+            "[{}] Vision check: has_images={}, provider={}, vision_model={:?}",
+            tag,
+            has_images,
+            effective_provider.name,
+            effective_provider.meta.as_ref().and_then(|m| m.vision_model.as_deref())
+        );
+        if has_images {
+            if let Some(vision) = effective_provider
+                .meta
+                .as_ref()
+                .and_then(|m| m.vision_model.as_ref())
+                .filter(|s| !s.is_empty())
+            {
+                log::info!(
+                    "[{}] Vision routing: detected image content, switching model {} -> {} (provider: {})",
+                    tag,
+                    request_model,
+                    vision,
+                    effective_provider.name
+                );
+                effective_model = vision.clone();
+            } else {
+                log::warn!(
+                    "[{}] Vision routing: image detected but provider {} has no vision_model configured, using default model",
+                    tag,
+                    effective_provider.name
+                );
+            }
         }
 
         log::debug!(
