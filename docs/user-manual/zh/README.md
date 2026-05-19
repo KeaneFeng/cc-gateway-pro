@@ -127,5 +127,5 @@
 
 欢迎提交 Issue 或 PR 改进文档：
 
-- [GitHub Issues](https://github.com/farion1231/cc-gateway-pro/issues)
-- [GitHub Repository](https://github.com/farion1231/cc-gateway-pro)
+- [GitHub Issues](https://github.com/KeaneFeng/cc-gateway-pro/issues)
+- [GitHub Repository](https://github.com/KeaneFeng/cc-gateway-pro)

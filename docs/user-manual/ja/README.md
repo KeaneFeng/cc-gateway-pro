@@ -127,5 +127,5 @@ CC-Gateway-Pro ユーザーマニュアル
 
 Issue や PR でドキュメントの改善にご協力ください：
 
-- [GitHub Issues](https://github.com/farion1231/cc-gateway-pro/issues)
-- [GitHub Repository](https://github.com/farion1231/cc-gateway-pro)
+- [GitHub Issues](https://github.com/KeaneFeng/cc-gateway-pro/issues)
+- [GitHub Repository](https://github.com/KeaneFeng/cc-gateway-pro)

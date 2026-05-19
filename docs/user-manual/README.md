@@ -18,5 +18,5 @@
 
 ## Links
 
-- [GitHub Issues](https://github.com/farion1231/cc-gateway-pro/issues)
-- [GitHub Repository](https://github.com/farion1231/cc-gateway-pro)
+- [GitHub Issues](https://github.com/KeaneFeng/cc-gateway-pro/issues)
+- [GitHub Repository](https://github.com/KeaneFeng/cc-gateway-pro)
