@@ -75,6 +75,7 @@ impl ProxyService {
         }
     }
 
+    #[cfg(test)]
     fn apply_claude_takeover_fields(config: &mut Value, proxy_url: &str) {
         Self::apply_claude_takeover_fields_with_policy(
             config,
