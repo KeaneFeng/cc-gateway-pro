@@ -32,6 +32,8 @@ use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::RwLock;
 
+const PROXY_AUTH_PLACEHOLDER: &str = "PROXY_MANAGED";
+
 pub struct ForwardResult {
     pub response: ProxyResponse,
     pub provider: Provider,
@@ -1562,6 +1564,8 @@ impl RequestForwarder {
             );
         }
 
+        reject_proxy_placeholder_for_managed_account_upstream(&url, &ordered_headers)?;
+
         // 输出请求信息日志
         let tag = adapter.name();
         let request_model = filtered_body
@@ -2188,6 +2192,43 @@ fn is_streaming_request(endpoint: &str, body: &Value, headers: &axum::http::Head
         .and_then(|value| value.to_str().ok())
         .map(|accept| accept.contains("text/event-stream"))
         .unwrap_or(false)
+}
+
+fn reject_proxy_placeholder_for_managed_account_upstream(
+    url: &str,
+    headers: &http::HeaderMap,
+) -> Result<(), ProxyError> {
+    if !is_managed_account_upstream_url(url) || !headers_contain_proxy_placeholder(headers) {
+        return Ok(());
+    }
+
+    Err(ProxyError::AuthError(
+        "Managed account proxy auth was not resolved; PROXY_MANAGED must not be sent upstream"
+            .to_string(),
+    ))
+}
+
+fn is_managed_account_upstream_url(url: &str) -> bool {
+    let Ok(uri) = url.parse::<http::Uri>() else {
+        return false;
+    };
+
+    let Some(host) = uri.host().map(str::to_ascii_lowercase) else {
+        return false;
+    };
+
+    host == "githubcopilot.com"
+        || host.ends_with(".githubcopilot.com")
+        || (host == "chatgpt.com" && uri.path().starts_with("/backend-api/codex"))
+}
+
+fn headers_contain_proxy_placeholder(headers: &http::HeaderMap) -> bool {
+    headers.values().any(|value| {
+        value
+            .to_str()
+            .map(|value| value.contains(PROXY_AUTH_PLACEHOLDER))
+            .unwrap_or(false)
+    })
 }
 
 #[cfg(test)]

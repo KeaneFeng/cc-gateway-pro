@@ -194,20 +194,16 @@ export const SkillsPage = forwardRef<SkillsPageHandle, SkillsPageProps>(
       readmeUrl: s.readmeUrl,
     });
 
-    const handleInstall = async (directory: string) => {
+    const handleInstall = async (key: string) => {
       let skill: DiscoverableSkill | undefined;
 
       if (searchSource === "skillssh") {
-        const found = accumulatedResults.find((s) => s.directory === directory);
+        const found = accumulatedResults.find((s) => s.key === key);
         if (found) {
           skill = toDiscoverableSkill(found);
         }
       } else {
-        skill = discoverableSkills?.find(
-          (s) =>
-            s.directory === directory ||
-            s.directory.split("/").pop() === directory,
-        );
+        skill = discoverableSkills?.find((s) => s.key === key);
       }
 
       if (!skill) {
@@ -239,7 +235,7 @@ export const SkillsPage = forwardRef<SkillsPageHandle, SkillsPageProps>(
       }
     };
 
-    const handleUninstall = async (_directory: string) => {
+    const handleUninstall = async (_key: string) => {
       // 在发现面板中，不支持卸载，需要在主面板中操作
       toast.info(t("skills.uninstallInMainPanel"));
     };

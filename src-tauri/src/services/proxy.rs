@@ -59,6 +59,12 @@ pub struct HotSwitchOutcome {
     pub logical_target_changed: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClaudeTakeoverAuthPolicy {
+    PreserveExistingOrAuthToken,
+    ManagedAccount,
+}
+
 impl ProxyService {
     pub fn new(db: Arc<Database>) -> Self {
         Self {
@@ -70,6 +76,32 @@ impl ProxyService {
     }
 
     fn apply_claude_takeover_fields(config: &mut Value, proxy_url: &str) {
+        Self::apply_claude_takeover_fields_with_policy(
+            config,
+            proxy_url,
+            ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken,
+        );
+    }
+
+    fn apply_claude_takeover_fields_for_provider(
+        config: &mut Value,
+        proxy_url: &str,
+        provider: &Provider,
+    ) {
+        let auth_policy = if provider.uses_managed_account_auth() {
+            ClaudeTakeoverAuthPolicy::ManagedAccount
+        } else {
+            ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken
+        };
+
+        Self::apply_claude_takeover_fields_with_policy(config, proxy_url, auth_policy);
+    }
+
+    fn apply_claude_takeover_fields_with_policy(
+        config: &mut Value,
+        proxy_url: &str,
+        auth_policy: ClaudeTakeoverAuthPolicy,
+    ) {
         // 必须在 remove/insert 前 snapshot：避免读到自己刚写入的接管别名。
         let takeover_model_fields = Self::build_claude_takeover_model_fields(config);
 
@@ -105,19 +137,32 @@ impl ProxyService {
             "OPENAI_API_KEY",
         ];
 
-        let mut replaced_any = false;
-        for key in token_keys {
-            if env.contains_key(key) {
-                env.insert(key.to_string(), json!(PROXY_TOKEN_PLACEHOLDER));
-                replaced_any = true;
-            }
-        }
+        match auth_policy {
+            ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken => {
+                let mut replaced_any = false;
+                for key in token_keys {
+                    if env.contains_key(key) {
+                        env.insert(key.to_string(), json!(PROXY_TOKEN_PLACEHOLDER));
+                        replaced_any = true;
+                    }
+                }
 
-        if !replaced_any {
-            env.insert(
-                "ANTHROPIC_AUTH_TOKEN".to_string(),
-                json!(PROXY_TOKEN_PLACEHOLDER),
-            );
+                if !replaced_any {
+                    env.insert(
+                        "ANTHROPIC_AUTH_TOKEN".to_string(),
+                        json!(PROXY_TOKEN_PLACEHOLDER),
+                    );
+                }
+            }
+            ClaudeTakeoverAuthPolicy::ManagedAccount => {
+                for key in token_keys {
+                    env.remove(key);
+                }
+                env.insert(
+                    "ANTHROPIC_API_KEY".to_string(),
+                    json!(PROXY_TOKEN_PLACEHOLDER),
+                );
+            }
         }
     }
 
@@ -228,9 +273,30 @@ impl ProxyService {
         .map_err(|e| format!("构建 claude 有效配置失败: {e}"))?;
         let (proxy_url, _) = self.build_proxy_urls().await?;
 
-        Self::apply_claude_takeover_fields(&mut effective_settings, &proxy_url);
+        Self::apply_claude_takeover_fields_for_provider(
+            &mut effective_settings,
+            &proxy_url,
+            provider,
+        );
         self.write_claude_live(&effective_settings)?;
         Ok(())
+    }
+
+    fn get_current_provider_for_app(&self, app_type: &AppType) -> Result<Option<Provider>, String> {
+        let Some(current_id) = crate::settings::get_effective_current_provider(&self.db, app_type)
+            .map_err(|e| format!("获取 {app_type:?} 当前供应商失败: {e}"))?
+        else {
+            return Ok(None);
+        };
+
+        self.db
+            .get_provider_by_id(&current_id, app_type.as_str())
+            .map_err(|e| format!("读取 {app_type:?} 当前供应商失败: {e}"))
+    }
+
+    fn require_current_provider_for_app(&self, app_type: &AppType) -> Result<Provider, String> {
+        self.get_current_provider_for_app(app_type)?
+            .ok_or_else(|| format!("{app_type:?} 当前供应商不存在，无法接管 Live 配置"))
     }
 
     /// 设置 AppHandle（在应用初始化时调用）
@@ -1007,7 +1073,12 @@ impl ProxyService {
 
         // Claude: 修改 ANTHROPIC_BASE_URL，使用占位符替代真实 Token（代理会注入真实 Token）
         if let Ok(mut live_config) = self.read_claude_live() {
-            Self::apply_claude_takeover_fields(&mut live_config, &proxy_url);
+            let claude_provider = self.require_current_provider_for_app(&AppType::Claude)?;
+            Self::apply_claude_takeover_fields_for_provider(
+                &mut live_config,
+                &proxy_url,
+                &claude_provider,
+            );
             self.write_claude_live(&live_config)?;
             log::info!("Claude Live 配置已接管，代理地址: {proxy_url}");
         }
@@ -1057,7 +1128,12 @@ impl ProxyService {
         match app_type {
             AppType::Claude => {
                 let mut live_config = self.read_claude_live()?;
-                Self::apply_claude_takeover_fields(&mut live_config, &proxy_url);
+                let claude_provider = self.require_current_provider_for_app(&AppType::Claude)?;
+                Self::apply_claude_takeover_fields_for_provider(
+                    &mut live_config,
+                    &proxy_url,
+                    &claude_provider,
+                );
                 self.write_claude_live(&live_config)?;
                 log::info!("Claude Live 配置已接管，代理地址: {proxy_url}");
             }
@@ -1107,7 +1183,23 @@ impl ProxyService {
         match app_type {
             AppType::Claude => {
                 if let Ok(mut live_config) = self.read_claude_live() {
-                    Self::apply_claude_takeover_fields(&mut live_config, &proxy_url);
+                    let claude_provider = self
+                        .get_current_provider_for_app(&AppType::Claude)
+                        .ok()
+                        .flatten();
+                    if let Some(provider) = claude_provider.as_ref() {
+                        Self::apply_claude_takeover_fields_for_provider(
+                            &mut live_config,
+                            &proxy_url,
+                            provider,
+                        );
+                    } else {
+                        Self::apply_claude_takeover_fields_with_policy(
+                            &mut live_config,
+                            &proxy_url,
+                            ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken,
+                        );
+                    }
                     let _ = self.write_claude_live(&live_config);
                 }
             }

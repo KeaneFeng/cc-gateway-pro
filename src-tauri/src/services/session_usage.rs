@@ -107,7 +107,11 @@ pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppE
     Ok(result)
 }
 
-/// 收集目录下所有 .jsonl 文件
+/// 收集目录下所有 .jsonl 文件（含子 agent 文件）
+///
+/// 扫描三层固定深度，不使用递归，避免死循环：
+///   projects_dir/项目目录/*.jsonl                          (主会话)
+///   projects_dir/项目目录/SESSION_ID/subagents/*.jsonl      (子 agent)
 fn collect_jsonl_files(projects_dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
 
@@ -126,7 +130,22 @@ fn collect_jsonl_files(projects_dir: &Path) -> Vec<PathBuf> {
             for sub_entry in sub_entries.flatten() {
                 let sub_path = sub_entry.path();
                 if sub_path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                    // 主会话 JSONL 文件
                     files.push(sub_path);
+                } else if sub_path.is_dir() {
+                    // 扫描子 agent 目录: 项目/SESSION_ID/subagents/*.jsonl
+                    let subagents_dir = sub_path.join("subagents");
+                    if subagents_dir.is_dir() {
+                        if let Ok(agent_entries) = fs::read_dir(&subagents_dir) {
+                            for agent_entry in agent_entries.flatten() {
+                                let agent_path = agent_entry.path();
+                                if agent_path.extension().and_then(|e| e.to_str()) == Some("jsonl")
+                                {
+                                    files.push(agent_path);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
