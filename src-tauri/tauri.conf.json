@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CC Gateway Pro",
-  "version": "3.15.11",
+  "version": "3.15.12",
   "identifier": "com.ccgatewaypro.desktop",
   "build": {
     "frontendDist": "../dist",
