@@ -59,13 +59,23 @@ pub use store::AppState;
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 #[cfg(target_os = "macos")]
 use tauri::image::Image;
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::RunEvent;
 use tauri::{Emitter, Manager};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+
+static IS_RESTARTING_APP: AtomicBool = AtomicBool::new(false);
+
+pub fn prepare_for_app_restart(app_handle: &tauri::AppHandle) {
+    save_window_state_before_exit(app_handle);
+    IS_RESTARTING_APP.store(true, Ordering::SeqCst);
+}
 
 fn redact_url_for_log(url_str: &str) -> String {
     match url::Url::parse(url_str) {
@@ -484,7 +494,7 @@ pub fn run() {
             // 落成 "default" provider 设为 current，再追加官方预设（is_current=false）。
             // 这样用户切到官方预设时，回填机制会保护原 live 配置不丢失。
             //
-            // 捕获首次运行快照：所有全新装用户都会看到欢迎弹窗介绍 CC-Gateway-Pro 的工作方式。
+            // 捕获首次运行快照：所有全新装用户都会看到欢迎弹窗介绍 CC Gateway Pro 的工作方式。
             // 读失败时默认不弹，宁可漏弹也不要因为故障打扰用户。
             let first_run_already_confirmed = crate::settings::get_settings()
                 .first_run_notice_confirmed
@@ -769,7 +779,7 @@ pub fn run() {
 
             // 构建托盘
             let mut tray_builder = TrayIconBuilder::with_id(tray::TRAY_ID)
-                .tooltip("CC-Gateway-Pro") // 鼠标悬停提示
+                .tooltip("CC Gateway Pro") // 鼠标悬停提示
                 .on_tray_icon_event(|tray, event| match event {
                     // 鼠标悬停/点击到托盘图标时，后台异步刷新用量缓存，
                     // 让用户下一次（或快速打开菜单的那一刻）看到较新的数字。
@@ -1361,6 +1371,11 @@ pub fn run() {
     app.run(|app_handle, event| {
         // 处理退出请求（所有平台）
         if let RunEvent::ExitRequested { api, code, .. } = &event {
+            if IS_RESTARTING_APP.load(Ordering::SeqCst) {
+                log::info!("应用正在重启，允许 Tauri 正常退出以完成 relaunch/restart");
+                return;
+            }
+
             // code 为 None 表示运行时自动触发（如隐藏窗口的 WebView 被回收导致无存活窗口），
             // 此时应仅阻止退出、保持托盘后台运行；
             // code 为 Some(_) 表示用户主动调用 app.exit() 退出（如托盘菜单"退出"），
@@ -1681,7 +1696,7 @@ fn show_migration_error_dialog(app: &tauri::AppHandle, error: &str) -> bool {
         format!(
             "从旧版本迁移配置时发生错误：\n\n{error}\n\n\
             您的数据尚未丢失，旧配置文件仍然保留。\n\
-            建议回退到旧版本 CC-Gateway-Pro 以保护数据。\n\n\
+            建议回退到旧版本 CC Gateway Pro 以保护数据。\n\n\
             点击「重试」重新尝试迁移\n\
             点击「退出」关闭程序（可回退版本后重新打开）"
         )
@@ -1689,7 +1704,7 @@ fn show_migration_error_dialog(app: &tauri::AppHandle, error: &str) -> bool {
         format!(
             "An error occurred while migrating configuration:\n\n{error}\n\n\
             Your data is NOT lost - the old config file is still preserved.\n\
-            Consider rolling back to an older CC-Gateway-Pro version.\n\n\
+            Consider rolling back to an older CC Gateway Pro version.\n\n\
             Click 'Retry' to attempt migration again\n\
             Click 'Exit' to close the program"
         )
@@ -1754,7 +1769,7 @@ fn show_database_init_error_dialog(
             Common causes include: newer database version, corrupted file, permission issues, or low disk space.\n\n\
             Suggestions:\n\
             1) Back up the entire config directory (including cc-gateway-pro.db)\n\
-            2) If you see “database version is newer”, please upgrade CC-Gateway-Pro\n\
+            2) If you see “database version is newer”, please upgrade CC Gateway Pro\n\
             3) If this happened right after upgrading, consider rolling back to export/backup then upgrade again\n\n\
             Click 'Retry' to attempt initialization again\n\
             Click 'Exit' to close the program",
