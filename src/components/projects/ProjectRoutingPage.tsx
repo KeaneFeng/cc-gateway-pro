@@ -11,6 +11,7 @@ import {
   Trash2,
   ChevronRight,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,10 @@ export function ProjectRoutingPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
+  // 临时添加的项目（用户选择但还未绑定供应商）
+  const [pendingProjects, setPendingProjects] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Sessions 相关状态
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
@@ -99,6 +104,12 @@ export function ProjectRoutingPage({
   const handleSetProvider = async (projectPath: string, providerId: string) => {
     try {
       await projectRoutingApi.setProjectProvider(app, projectPath, providerId);
+      // 从临时列表移除
+      setPendingProjects((prev) => {
+        const next = new Set(prev);
+        next.delete(projectPath);
+        return next;
+      });
       await loadData();
       setEditingProject(null);
       toast.success(
@@ -134,13 +145,23 @@ export function ProjectRoutingPage({
         }),
       });
       if (selected) {
+        const path = selected as string;
+        // 检查是否已在已配置列表中
+        const existingProjects = overview?.projects ?? [];
+        const isAlreadyConfigured = existingProjects.some(
+          (p) => p.project_path === path,
+        );
+        if (!isAlreadyConfigured) {
+          // 添加到临时列表
+          setPendingProjects((prev) => new Set(prev).add(path));
+        }
         toast.success(
           t("projectRouting.folderSelected", {
             defaultValue: "已选择项目路径，请选择供应商以完成添加",
           }),
         );
-        await handleRefresh();
-        setEditingProject(selected as string);
+        // 设置编辑状态，让用户选择 provider
+        setEditingProject(path);
       }
     } catch (err) {
       toast.error(extractErrorMessage(err));
@@ -216,8 +237,24 @@ export function ProjectRoutingPage({
     );
   }
 
-  const projects = overview?.projects ?? [];
+  const configuredProjects = overview?.projects ?? [];
   const availableProviders = overview?.available_providers ?? [];
+
+  // 合并已配置项目和临时项目
+  const allProjects = [
+    ...configuredProjects,
+    ...Array.from(pendingProjects)
+      .filter(
+        (path) => !configuredProjects.some((p) => p.project_path === path),
+      )
+      .map((path) => ({
+        project_path: path,
+        provider_id: null,
+        provider_name: null,
+        provider_notes: null,
+        session_count: 0,
+      })),
+  ];
 
   return (
     <TooltipProvider>
@@ -229,7 +266,7 @@ export function ProjectRoutingPage({
               <Badge variant="secondary" className="text-xs">
                 {t("projectRouting.projectCount", {
                   defaultValue: "{{count}} 个项目",
-                  count: projects.length,
+                  count: allProjects.length,
                 })}
               </Badge>
             </div>
@@ -283,7 +320,7 @@ export function ProjectRoutingPage({
 
           {/* 项目列表 */}
           <ScrollArea className="flex-1 min-h-0">
-            {projects.length === 0 ? (
+            {allProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <FolderOpen className="w-12 h-12 mb-4 opacity-50" />
                 <p className="text-sm text-center max-w-md">
@@ -308,7 +345,7 @@ export function ProjectRoutingPage({
               </div>
             ) : (
               <div className="grid gap-3 pb-4">
-                {projects.map((project) => (
+                {allProjects.map((project) => (
                   <Card
                     key={project.project_path}
                     className="transition-colors hover:border-primary/30"
@@ -422,7 +459,7 @@ export function ProjectRoutingPage({
                                   }
                                   className="h-8 w-8 p-0"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
+                                  <Pencil className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>

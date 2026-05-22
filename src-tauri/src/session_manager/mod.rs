@@ -101,15 +101,11 @@ pub fn scan_sessions_for_project(app: &str, project_path: &str) -> Vec<SessionMe
                 "codex" => s.provider_id == "codex",
                 _ => true,
             };
-            // 按 project 路径过滤
+            // 按 project 路径严格匹配
             let project_match = s
                 .project_dir
                 .as_ref()
-                .map(|dir| {
-                    dir == project_path
-                        || dir.starts_with(&format!("{}/", project_path))
-                        || project_path.starts_with(&format!("{}/", dir))
-                })
+                .map(|dir| dir == project_path)
                 .unwrap_or(false);
             app_match && project_match
         })

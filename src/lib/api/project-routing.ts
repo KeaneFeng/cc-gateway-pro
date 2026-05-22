@@ -23,7 +23,9 @@ export interface ProjectRoutingOverview {
 export type AppType = "claude" | "codex";
 
 export const projectRoutingApi = {
-  async getProjectRouting(app: AppType = "claude"): Promise<ProjectRoutingOverview> {
+  async getProjectRouting(
+    app: AppType = "claude",
+  ): Promise<ProjectRoutingOverview> {
     return await invoke("get_project_routing_for_app", { app });
   },
 

@@ -142,6 +142,24 @@ export const useSessionsQuery = () => {
   });
 };
 
+export const useSessionsForProjectQuery = (
+  app: string,
+  projectPath: string,
+) => {
+  return useQuery<SessionMeta[]>({
+    queryKey: ["sessions", app, projectPath],
+    queryFn: async () => {
+      const { projectRoutingApi } = await import("@/lib/api/project-routing");
+      return projectRoutingApi.getSessionsForProject(
+        app as "claude" | "codex",
+        projectPath,
+      );
+    },
+    staleTime: 30 * 1000,
+    enabled: !!projectPath,
+  });
+};
+
 export const useSessionMessagesQuery = (
   providerId?: string,
   sourcePath?: string,
