@@ -33,9 +33,10 @@ interface ProviderAdvancedConfigProps {
   pricingConfig: ProviderPricingConfig;
   onTestConfigChange: (config: ProviderTestConfig) => void;
   onPricingConfigChange: (config: ProviderPricingConfig) => void;
-  // CC-Gateway-Pro: Vision Model
+  // CC-Gateway-Pro: Vision Model (仅 Claude 可用)
   visionModel?: string;
   onVisionModelChange: (model: string) => void;
+  showVisionModel?: boolean;
 }
 
 export function ProviderAdvancedConfig({
@@ -45,6 +46,7 @@ export function ProviderAdvancedConfig({
   onPricingConfigChange,
   visionModel,
   onVisionModelChange,
+  showVisionModel = false,
 }: ProviderAdvancedConfigProps) {
   const { t } = useTranslation();
   const [isTestConfigOpen, setIsTestConfigOpen] = useState(testConfig.enabled);
@@ -377,7 +379,8 @@ export function ProviderAdvancedConfig({
         </div>
       </div>
 
-      {/* CC-Gateway-Pro: Vision Model Auto-Routing */}
+      {/* CC-Gateway-Pro: Vision Model Auto-Routing (仅 Claude 可用) */}
+      {showVisionModel && (
       <div className="rounded-lg border border-border/50 bg-muted/20">
         <button
           type="button"
@@ -434,6 +437,7 @@ export function ProviderAdvancedConfig({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -42,8 +42,10 @@ pub struct ProxyState {
     pub app_handle: Option<tauri::AppHandle>,
     /// 故障转移切换管理器
     pub failover_manager: Arc<FailoverSwitchManager>,
-    /// CC-Gateway-Pro: Session → Project 路由器
+    /// CC-Gateway-Pro: Session → Project 路由器 (Claude)
     pub session_project_router: Arc<SessionProjectRouter>,
+    /// CC-Gateway-Pro: Session → Project 路由器 (Codex)
+    pub codex_session_project_router: Arc<crate::proxy::project_router::ProjectRouter>,
 }
 
 /// 代理HTTP服务器
@@ -70,6 +72,12 @@ impl ProxyServer {
         // Scan ~/.claude/projects/ to build session → project mapping
         session_project_router.scan_projects();
 
+        // 创建 Codex 项目路由器
+        let codex_session_project_router = Arc::new(
+            crate::proxy::project_router::ProjectRouter::new_codex(db.clone()),
+        );
+        codex_session_project_router.scan_projects();
+
         let state = ProxyState {
             db,
             config: Arc::new(RwLock::new(config.clone())),
@@ -81,6 +89,7 @@ impl ProxyServer {
             app_handle,
             failover_manager,
             session_project_router,
+            codex_session_project_router,
         };
 
         Self {
