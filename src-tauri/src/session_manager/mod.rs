@@ -90,6 +90,32 @@ pub fn scan_sessions() -> Vec<SessionMeta> {
     sessions
 }
 
+pub fn scan_sessions_for_project(app: &str, project_path: &str) -> Vec<SessionMeta> {
+    let sessions = scan_sessions();
+    sessions
+        .into_iter()
+        .filter(|s| {
+            // 按 app 类型过滤
+            let app_match = match app {
+                "claude" => s.provider_id == "claude",
+                "codex" => s.provider_id == "codex",
+                _ => true,
+            };
+            // 按 project 路径过滤
+            let project_match = s
+                .project_dir
+                .as_ref()
+                .map(|dir| {
+                    dir == project_path
+                        || dir.starts_with(&format!("{}/", project_path))
+                        || project_path.starts_with(&format!("{}/", dir))
+                })
+                .unwrap_or(false);
+            app_match && project_match
+        })
+        .collect()
+}
+
 pub fn load_messages(provider_id: &str, source_path: &str) -> Result<Vec<SessionMessage>, String> {
     // SQLite sessions use a "sqlite:" prefixed source_path
     if provider_id == "opencode" && source_path.starts_with("sqlite:") {

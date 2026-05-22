@@ -1026,9 +1026,9 @@ function App() {
             />
           );
         case "projectRouting":
-          return <ProjectRoutingPage />;
+          return <ProjectRoutingPage app="claude" />;
         case "codexProjectRouting":
-          return <CodexProjectRoutingPage />;
+          return <CodexProjectRoutingPage app="codex" />;
         case "workspace":
           return <WorkspaceFilesPanel />;
         case "openclawEnv":
