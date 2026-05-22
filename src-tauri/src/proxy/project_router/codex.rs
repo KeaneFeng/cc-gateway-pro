@@ -132,7 +132,8 @@ impl SessionProjectScanner for CodexScanner {
                 continue;
             }
             if let Some(cwd) = Self::extract_cwd_from_file(&path) {
-                map.insert(sid, cwd);
+                // 加 "codex_" 前缀，与 session.rs 的 extract_codex_session 一致
+                map.insert(format!("codex_{sid}"), cwd);
             }
         }
         map
@@ -144,12 +145,15 @@ impl SessionProjectScanner for CodexScanner {
             return None;
         }
 
-        // 遍历所有文件，匹配文件名含 session_id
+        // session_id 可能带 "codex_" 前缀，提取原始 UUID
+        let raw_session_id = session_id.strip_prefix("codex_").unwrap_or(session_id);
+
+        // 遍历所有文件，匹配文件名含原始 UUID
         for path in Self::iter_rollout_files(&root) {
             let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
                 continue;
             };
-            if !filename.contains(session_id) {
+            if !filename.contains(raw_session_id) {
                 continue;
             }
             if let Some(cwd) = Self::extract_cwd_from_file(&path) {
