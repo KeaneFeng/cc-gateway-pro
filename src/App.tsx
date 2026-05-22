@@ -377,34 +377,42 @@ function App() {
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
+    let active = true;
 
     const setupListener = async () => {
       try {
-        unsubscribe = await providersApi.onSwitched(
+        const off = await providersApi.onSwitched(
           async (event: ProviderSwitchEvent) => {
             if (event.appType === activeApp) {
               await refetch();
             }
           },
         );
+        if (!active) {
+          off();
+          return;
+        }
+        unsubscribe = off;
       } catch (error) {
         console.error("[App] Failed to subscribe provider switch event", error);
       }
     };
 
-    setupListener();
+    void setupListener();
     return () => {
+      active = false;
       unsubscribe?.();
     };
   }, [activeApp, refetch]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
+    let active = true;
 
     const setupListener = async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        unsubscribe = await listen("universal-provider-synced", async () => {
+        const off = await listen("universal-provider-synced", async () => {
           await queryClient.invalidateQueries({ queryKey: ["providers"] });
           try {
             await providersApi.updateTrayMenu();
@@ -412,6 +420,11 @@ function App() {
             console.error("[App] Failed to update tray menu", error);
           }
         });
+        if (!active) {
+          off();
+          return;
+        }
+        unsubscribe = off;
       } catch (error) {
         console.error(
           "[App] Failed to subscribe universal-provider-synced event",
@@ -420,8 +433,9 @@ function App() {
       }
     };
 
-    setupListener();
+    void setupListener();
     return () => {
+      active = false;
       unsubscribe?.();
     };
   }, [queryClient]);
