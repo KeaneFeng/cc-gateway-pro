@@ -106,6 +106,7 @@ type View =
   | "sessions"
   | "workspace"
   | "projectRouting"
+  | "codexProjectRouting"
   | "openclawEnv"
   | "openclawTools"
   | "openclawAgents"
@@ -229,6 +230,9 @@ function App() {
       setCurrentView("providers");
     }
     if (currentView === "projectRouting" && activeApp !== "claude") {
+      setCurrentView("providers");
+    }
+    if (currentView === "codexProjectRouting" && activeApp !== "codex") {
       setCurrentView("providers");
     }
   }, [sharedFeatureApp, currentView]);
@@ -1021,7 +1025,9 @@ function App() {
             />
           );
         case "projectRouting":
-          return <ProjectRoutingPage />;
+          return <ProjectRoutingPage app="claude" />;
+        case "codexProjectRouting":
+          return <ProjectRoutingPage app="codex" />;
         case "workspace":
           return <WorkspaceFilesPanel />;
         case "openclawEnv":
@@ -1613,6 +1619,26 @@ function App() {
                                   size="sm"
                                   onClick={() =>
                                     setCurrentView("projectRouting")
+                                  }
+                                  className={cn(
+                                    "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                    "transition-all duration-200 ease-in-out overflow-hidden",
+                                    "opacity-100 w-8 scale-100 px-2",
+                                  )}
+                                  title={t("projectRouting.title", {
+                                    defaultValue: "项目路由",
+                                  })}
+                                >
+                                  <FolderTree className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {/* 项目路由管理 - Codex 可见 */}
+                              {activeApp === "codex" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setCurrentView("codexProjectRouting")
                                   }
                                   className={cn(
                                     "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",

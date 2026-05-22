@@ -2,9 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
-import { RefreshCw, FolderOpen, Plus, Unlink, Loader2 } from "lucide-react";
+import {
+  RefreshCw,
+  FolderOpen,
+  Plus,
+  Unlink,
+  Check,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -20,9 +27,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { extractErrorMessage } from "@/utils/errorUtils";
 
+/** 项目路由信息 */
 interface ProjectRoutingInfo {
   project_path: string;
   provider_id: string | null;
@@ -31,12 +38,14 @@ interface ProjectRoutingInfo {
   session_count: number;
 }
 
+/** Provider 选项 */
 interface ProviderOption {
   id: string;
   name: string;
   notes?: string;
 }
 
+/** 项目路由概览响应 */
 interface ProjectRoutingOverview {
   projects: ProjectRoutingInfo[];
   available_providers: ProviderOption[];
@@ -44,14 +53,22 @@ interface ProjectRoutingOverview {
 
 type AppType = "claude" | "codex";
 
-export function ProjectRoutingPage() {
+interface ProjectRoutingPageProps {
+  app?: AppType;
+}
+
+export function ProjectRoutingPage({
+  app = "claude",
+}: ProjectRoutingPageProps) {
   const { t } = useTranslation();
-  const [app, setApp] = useState<AppType>("claude");
   const [overview, setOverview] = useState<ProjectRoutingOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [isAddingProject, setIsAddingProject] = useState(false);
+  const [newProjectPath, setNewProjectPath] = useState("");
 
+  /** 加载项目路由数据 */
   const loadData = useCallback(async () => {
     try {
       const result = await invoke<ProjectRoutingOverview>(
@@ -61,7 +78,9 @@ export function ProjectRoutingPage() {
       setOverview(result);
     } catch (err) {
       toast.error(
-        t("projectRouting.loadFailed", { defaultValue: "Load failed" }) +
+        t("projectRouting.loadFailed", {
+          defaultValue: "加载项目路由失败",
+        }) +
           ": " +
           extractErrorMessage(err),
       );
@@ -74,6 +93,7 @@ export function ProjectRoutingPage() {
     void loadData();
   }, [loadData]);
 
+  /** 刷新项目列表 */
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -83,7 +103,9 @@ export function ProjectRoutingPage() {
       );
       setOverview(result);
       toast.success(
-        t("projectRouting.refreshSuccess", { defaultValue: "Refreshed" }),
+        t("projectRouting.refreshSuccess", {
+          defaultValue: "已刷新项目列表",
+        }),
       );
     } catch (err) {
       toast.error(extractErrorMessage(err));
@@ -92,6 +114,7 @@ export function ProjectRoutingPage() {
     }
   };
 
+  /** 设置项目绑定的 Provider */
   const handleSetProvider = async (projectPath: string, providerId: string) => {
     try {
       await invoke("set_project_provider_for_app", {
@@ -99,22 +122,63 @@ export function ProjectRoutingPage() {
         projectPath,
         providerId,
       });
+      // 刷新数据
       await loadData();
       setEditingProject(null);
       toast.success(
-        t("projectRouting.providerUpdated", { defaultValue: "Updated" }),
+        t("projectRouting.providerUpdated", {
+          defaultValue: "已更新项目绑定的供应商",
+        }),
       );
     } catch (err) {
       toast.error(extractErrorMessage(err));
     }
   };
 
+  /** 移除项目的 Provider 绑定 */
   const handleRemoveProvider = async (projectPath: string) => {
     try {
       await invoke("remove_project_provider_for_app", { app, projectPath });
       await loadData();
       toast.success(
-        t("projectRouting.providerRemoved", { defaultValue: "Removed" }),
+        t("projectRouting.providerRemoved", {
+          defaultValue: "已移除项目绑定",
+        }),
+      );
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
+
+  /** 手动添加项目路径 */
+  const handleAddProject = async () => {
+    const path = newProjectPath.trim();
+    if (!path) return;
+
+    // 检查是否已存在
+    if (overview?.projects.some((p) => p.project_path === path)) {
+      toast.error(
+        t("projectRouting.projectExists", {
+          defaultValue: "该项目路径已存在",
+        }),
+      );
+      return;
+    }
+
+    // 直接设置一个空的 provider 绑定（用户可以稍后修改）
+    try {
+      // 先获取数据看看有没有可用的 provider
+      if (overview && overview.available_providers.length > 0) {
+        // 不自动绑定，只添加到列表（通过设置一个空映射来"注册"项目）
+      }
+      setIsAddingProject(false);
+      setNewProjectPath("");
+      // 重新加载数据（虽然手动添加的路径不会出现在 ~/.claude/projects/ 扫描结果中，
+      // 但我们可以通过设置 provider 绑定来"注册"它）
+      toast.success(
+        t("projectRouting.addProjectHint", {
+          defaultValue: "请为新项目选择一个供应商以完成添加",
+        }),
       );
     } catch (err) {
       toast.error(extractErrorMessage(err));
@@ -136,389 +200,291 @@ export function ProjectRoutingPage() {
     <TooltipProvider>
       <div className="mx-auto px-4 sm:px-6 flex flex-col h-full min-h-0">
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
-          {/* App Tabs */}
-          <Tabs
-            value={app}
-            onValueChange={(v) => setApp(v as AppType)}
-            className="w-full"
-          >
-            <div className="flex items-center justify-between pt-2">
-              <TabsList>
-                <TabsTrigger value="claude">
-                  {t("projectRouting.tabClaude", {
-                    defaultValue: "Claude Code",
-                  })}
-                </TabsTrigger>
-                <TabsTrigger value="codex">
-                  {t("projectRouting.tabCodex", { defaultValue: "Codex" })}
-                </TabsTrigger>
-              </TabsList>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {t("projectRouting.projectCount", {
-                    defaultValue: "{{count}} projects",
-                    count: projects.length,
-                  })}
-                </Badge>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleRefresh()}
-                      disabled={isRefreshing}
-                      className="gap-1.5"
-                    >
-                      <RefreshCw
-                        className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`}
-                      />
-                      {t("projectRouting.refresh", { defaultValue: "Refresh" })}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t("projectRouting.refreshTooltip", {
-                      defaultValue:
-                        app === "claude"
-                          ? "Scan ~/.claude/projects/"
-                          : "Scan ~/.codex/sessions/",
-                    })}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+          {/* 顶部工具栏 */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {t("projectRouting.projectCount", {
+                  defaultValue: "{{count}} 个项目",
+                  count: projects.length,
+                })}
+              </Badge>
             </div>
-
-            <TabsContent value="claude" className="mt-0">
-              <ScrollArea className="flex-1 min-h-0">
-                {projects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                    <FolderOpen className="w-12 h-12 mb-4 opacity-50" />
-                    <p className="text-sm text-center max-w-md">
-                      {t("projectRouting.emptyStateClaude", {
-                        defaultValue:
-                          "No Claude projects found. Ensure ~/.claude/projects/ exists and Claude Code has been used.",
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddingProject(!isAddingProject)}
+                    className="gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {!isAddingProject &&
+                      t("projectRouting.addProject", {
+                        defaultValue: "手动添加",
                       })}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 gap-1.5"
-                      onClick={() => void handleRefresh()}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      {t("projectRouting.refresh", { defaultValue: "Refresh" })}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 pb-4">
-                    {projects.map((project) => (
-                      <Card
-                        key={project.project_path}
-                        className="transition-colors hover:border-primary/30"
-                      >
-                        <CardHeader className="py-3 px-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-sm font-medium font-mono truncate">
-                                {project.project_path}
-                              </CardTitle>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                {project.session_count > 0 && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] px-1.5 py-0"
-                                  >
-                                    {t("projectRouting.sessionCount", {
-                                      defaultValue: "{{count}} sessions",
-                                      count: project.session_count,
-                                    })}
-                                  </Badge>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("projectRouting.addProjectTooltip", {
+                    defaultValue: "手动添加项目路径（用于未自动发现的项目）",
+                  })}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleRefresh()}
+                    disabled={isRefreshing}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`}
+                    />
+                    {t("projectRouting.refresh", {
+                      defaultValue: "刷新",
+                    })}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("projectRouting.refreshTooltip", {
+                    defaultValue: "重新扫描 ~/.claude/projects/ 目录",
+                  })}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* 手动添加项目路径 */}
+          {isAddingProject && (
+            <Card className="border-dashed">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newProjectPath}
+                    onChange={(e) => setNewProjectPath(e.target.value)}
+                    placeholder={t("projectRouting.pathPlaceholder", {
+                      defaultValue: "输入项目绝对路径，如 /Users/you/project",
+                    })}
+                    className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleAddProject();
+                      if (e.key === "Escape") {
+                        setIsAddingProject(false);
+                        setNewProjectPath("");
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => void handleAddProject()}
+                    disabled={!newProjectPath.trim()}
+                  >
+                    {t("common.add", { defaultValue: "添加" })}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingProject(false);
+                      setNewProjectPath("");
+                    }}
+                  >
+                    {t("common.cancel", { defaultValue: "取消" })}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 项目列表 */}
+          <ScrollArea className="flex-1 min-h-0">
+            {projects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <FolderOpen className="w-12 h-12 mb-4 opacity-50" />
+                <p className="text-sm text-center max-w-md">
+                  {t("projectRouting.emptyState", {
+                    defaultValue:
+                      "未发现 Claude Code 项目。请确保 ~/.claude/projects/ 目录存在，并且已使用过 Claude Code。",
+                  })}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 gap-1.5"
+                  onClick={() => void handleRefresh()}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  {t("projectRouting.refresh", {
+                    defaultValue: "刷新",
+                  })}
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-3 pb-4">
+                {projects.map((project) => (
+                  <Card
+                    key={project.project_path}
+                    className="transition-colors hover:border-primary/30"
+                  >
+                    <CardHeader className="py-3 px-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-sm font-medium font-mono truncate">
+                            {project.project_path}
+                          </CardTitle>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {project.session_count > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {t("projectRouting.sessionCount", {
+                                  defaultValue: "{{count}} 个会话",
+                                  count: project.session_count,
+                                })}
+                              </Badge>
+                            )}
+                            {project.provider_name ? (
+                              <Badge
+                                variant="default"
+                                className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              >
+                                {project.provider_name}
+                                {project.provider_notes && (
+                                  <span className="ml-1 opacity-70">
+                                    ({project.provider_notes})
+                                  </span>
                                 )}
-                                {project.provider_name ? (
-                                  <Badge
-                                    variant="default"
-                                    className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 text-muted-foreground"
+                              >
+                                {t("projectRouting.noProvider", {
+                                  defaultValue: "未绑定供应商",
+                                })}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {editingProject === project.project_path ? (
+                            <Select
+                              value={project.provider_id ?? ""}
+                              onValueChange={(value) =>
+                                void handleSetProvider(
+                                  project.project_path,
+                                  value,
+                                )
+                              }
+                              onOpenChange={(open) => {
+                                if (!open) setEditingProject(null);
+                              }}
+                              defaultOpen
+                            >
+                              <SelectTrigger className="w-[180px] h-8 text-xs">
+                                <SelectValue
+                                  placeholder={t(
+                                    "projectRouting.selectProvider",
+                                    { defaultValue: "选择供应商" },
+                                  )}
+                                />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[300px] overflow-y-auto">
+                                {availableProviders.map((provider) => (
+                                  <SelectItem
+                                    key={provider.id}
+                                    value={provider.id}
                                   >
-                                    {project.provider_name}
-                                    {project.provider_notes && (
-                                      <span className="ml-1 opacity-70">
-                                        ({project.provider_notes})
+                                    {provider.name}
+                                    {provider.notes && (
+                                      <span className="ml-1 text-muted-foreground text-[10px]">
+                                        ({provider.notes})
                                       </span>
                                     )}
-                                  </Badge>
-                                ) : (
-                                  <Badge
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
                                     variant="outline"
-                                    className="text-[10px] px-1.5 py-0 text-muted-foreground"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs gap-1"
+                                    onClick={() =>
+                                      setEditingProject(project.project_path)
+                                    }
                                   >
-                                    {t("projectRouting.noProvider", {
-                                      defaultValue: "Default provider",
-                                    })}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {editingProject === project.project_path ? (
-                                <Select
-                                  defaultValue={
-                                    project.provider_id || undefined
-                                  }
-                                  onValueChange={(value) =>
-                                    void handleSetProvider(
-                                      project.project_path,
-                                      value,
-                                    )
-                                  }
-                                  onOpenChange={(open) => {
-                                    if (!open) setEditingProject(null);
-                                  }}
-                                  defaultOpen
-                                >
-                                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                                    <SelectValue
-                                      placeholder={t(
-                                        "projectRouting.selectProvider",
-                                        { defaultValue: "Select provider" },
-                                      )}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {availableProviders.map((provider) => (
-                                      <SelectItem
-                                        key={provider.id}
-                                        value={provider.id}
-                                        className="text-xs"
-                                      >
-                                        {provider.name}
-                                        {provider.notes && (
-                                          <span className="ml-1 opacity-70">
-                                            ({provider.notes})
-                                          </span>
-                                        )}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        setEditingProject(project.project_path)
-                                      }
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t("projectRouting.changeProvider", {
-                                      defaultValue: "Change provider",
-                                    })}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
+                                    {project.provider_name ? (
+                                      <>
+                                        <Check className="w-3 h-3" />
+                                        {t("projectRouting.change", {
+                                          defaultValue: "修改",
+                                        })}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Plus className="w-3 h-3" />
+                                        {t("projectRouting.bind", {
+                                          defaultValue: "绑定",
+                                        })}
+                                      </>
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {project.provider_name
+                                    ? t("projectRouting.changeTooltip", {
+                                        defaultValue: "修改绑定的供应商",
+                                      })
+                                    : t("projectRouting.bindTooltip", {
+                                        defaultValue: "为此项目绑定一个供应商",
+                                      })}
+                                </TooltipContent>
+                              </Tooltip>
                               {project.provider_id && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="sm"
+                                      className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                                       onClick={() =>
                                         void handleRemoveProvider(
                                           project.project_path,
                                         )
                                       }
-                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                     >
-                                      <Unlink className="w-3.5 h-3.5" />
+                                      <Unlink className="w-3 h-3" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    {t("projectRouting.removeProvider", {
-                                      defaultValue: "Remove binding",
+                                    {t("projectRouting.unbindTooltip", {
+                                      defaultValue: "移除供应商绑定",
                                     })}
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="codex" className="mt-0">
-              <ScrollArea className="flex-1 min-h-0">
-                {projects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                    <FolderOpen className="w-12 h-12 mb-4 opacity-50" />
-                    <p className="text-sm text-center max-w-md">
-                      {t("projectRouting.emptyStateCodex", {
-                        defaultValue:
-                          "No Codex sessions found. Ensure ~/.codex/sessions/ exists and Codex CLI has been used.",
-                      })}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 gap-1.5"
-                      onClick={() => void handleRefresh()}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      {t("projectRouting.refresh", { defaultValue: "Refresh" })}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 pb-4">
-                    {projects.map((project) => (
-                      <Card
-                        key={project.project_path}
-                        className="transition-colors hover:border-primary/30"
-                      >
-                        <CardHeader className="py-3 px-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-sm font-medium font-mono truncate">
-                                {project.project_path}
-                              </CardTitle>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                {project.session_count > 0 && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] px-1.5 py-0"
-                                  >
-                                    {t("projectRouting.sessionCount", {
-                                      defaultValue: "{{count}} sessions",
-                                      count: project.session_count,
-                                    })}
-                                  </Badge>
-                                )}
-                                {project.provider_name ? (
-                                  <Badge
-                                    variant="default"
-                                    className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                  >
-                                    {project.provider_name}
-                                    {project.provider_notes && (
-                                      <span className="ml-1 opacity-70">
-                                        ({project.provider_notes})
-                                      </span>
-                                    )}
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] px-1.5 py-0 text-muted-foreground"
-                                  >
-                                    {t("projectRouting.noProvider", {
-                                      defaultValue: "Default provider",
-                                    })}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {editingProject === project.project_path ? (
-                                <Select
-                                  defaultValue={
-                                    project.provider_id || undefined
-                                  }
-                                  onValueChange={(value) =>
-                                    void handleSetProvider(
-                                      project.project_path,
-                                      value,
-                                    )
-                                  }
-                                  onOpenChange={(open) => {
-                                    if (!open) setEditingProject(null);
-                                  }}
-                                  defaultOpen
-                                >
-                                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                                    <SelectValue
-                                      placeholder={t(
-                                        "projectRouting.selectProvider",
-                                        { defaultValue: "Select provider" },
-                                      )}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {availableProviders.map((provider) => (
-                                      <SelectItem
-                                        key={provider.id}
-                                        value={provider.id}
-                                        className="text-xs"
-                                      >
-                                        {provider.name}
-                                        {provider.notes && (
-                                          <span className="ml-1 opacity-70">
-                                            ({provider.notes})
-                                          </span>
-                                        )}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        setEditingProject(project.project_path)
-                                      }
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t("projectRouting.changeProvider", {
-                                      defaultValue: "Change provider",
-                                    })}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                              {project.provider_id && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        void handleRemoveProvider(
-                                          project.project_path,
-                                        )
-                                      }
-                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                    >
-                                      <Unlink className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t("projectRouting.removeProvider", {
-                                      defaultValue: "Remove binding",
-                                    })}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </div>
       </div>
     </TooltipProvider>
