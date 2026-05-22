@@ -2628,3 +2628,23 @@
     "refresh": "刷新"
   }
 }
+  },
+  "projectRouting": {
+    "tabClaude": "Claude Code",
+    "tabCodex": "Codex",
+    "projectCount": "{{count}} 个项目",
+    "sessionCount": "{{count}} 个会话",
+    "refresh": "刷新",
+    "refreshTooltip": "重新扫描项目目录",
+    "refreshSuccess": "已刷新项目列表",
+    "loadFailed": "加载项目路由失败",
+    "noProvider": "使用默认供应商",
+    "selectProvider": "选择供应商",
+    "changeProvider": "更改供应商",
+    "removeProvider": "移除绑定",
+    "providerUpdated": "已更新项目绑定的供应商",
+    "providerRemoved": "已移除项目绑定",
+    "emptyStateClaude": "未发现 Claude Code 项目。请确保 ~/.claude/projects/ 目录存在，并且已使用过 Claude Code。",
+    "emptyStateCodex": "未发现 Codex 会话。请确保 ~/.codex/sessions/ 目录存在，并且已使用过 Codex CLI。"
+  }
+}
