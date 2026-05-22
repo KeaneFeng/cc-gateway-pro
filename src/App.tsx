@@ -1745,7 +1745,7 @@ function App() {
         })}
         message={t("settings.syncFromCcSwitchConfirmMessage", {
           defaultValue:
-            "将从 ~/.cc-switch/cc-switch.db 读取所有 Claude 供应商并导入到 cc-gateway-pro。已存在的同名供应商会被覆盖。确认同步？",
+            "将从 ~/.cc-switch/cc-switch.db 读取所有应用（Claude Code / Codex / Gemini / OpenCode / Hermes）的供应商并导入到 cc-gateway-pro。已存在的同名供应商会被覆盖。确认同步？",
         })}
         confirmText={t("settings.syncFromCcSwitchConfirmAction", {
           defaultValue: "确认同步",
