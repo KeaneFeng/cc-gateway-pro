@@ -83,6 +83,7 @@ import { McpIcon } from "@/components/BrandIcons";
 import { Button } from "@/components/ui/button";
 import { SessionManagerPage } from "@/components/sessions/SessionManagerPage";
 import { ProjectRoutingPage } from "@/components/projects/ProjectRoutingPage";
+import { CodexProjectRoutingPage } from "@/components/projects/CodexProjectRoutingPage";
 import {
   useDisableCurrentOmo,
   useDisableCurrentOmoSlim,
@@ -1025,9 +1026,9 @@ function App() {
             />
           );
         case "projectRouting":
-          return <ProjectRoutingPage app="claude" />;
+          return <ProjectRoutingPage />;
         case "codexProjectRouting":
-          return <ProjectRoutingPage app="codex" />;
+          return <CodexProjectRoutingPage />;
         case "workspace":
           return <WorkspaceFilesPanel />;
         case "openclawEnv":

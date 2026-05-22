@@ -51,7 +51,7 @@ interface ProjectRoutingOverview {
   available_providers: ProviderOption[];
 }
 
-export function ProjectRoutingPage() {
+export function CodexProjectRoutingPage() {
   const { t } = useTranslation();
   const [overview, setOverview] = useState<ProjectRoutingOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +64,8 @@ export function ProjectRoutingPage() {
   const loadData = useCallback(async () => {
     try {
       const result = await invoke<ProjectRoutingOverview>(
-        "get_project_routing",
+        "get_project_routing_for_app",
+        { app: "codex" },
       );
       setOverview(result);
     } catch (err) {
@@ -89,7 +90,8 @@ export function ProjectRoutingPage() {
     setIsRefreshing(true);
     try {
       const result = await invoke<ProjectRoutingOverview>(
-        "refresh_session_projects",
+        "get_project_routing_for_app",
+        { app: "codex" },
       );
       setOverview(result);
       toast.success(
@@ -107,7 +109,8 @@ export function ProjectRoutingPage() {
   /** 设置项目绑定的 Provider */
   const handleSetProvider = async (projectPath: string, providerId: string) => {
     try {
-      await invoke("set_project_provider", {
+      await invoke("set_project_provider_for_app", {
+        app: "codex",
         projectPath,
         providerId,
       });
@@ -127,7 +130,10 @@ export function ProjectRoutingPage() {
   /** 移除项目的 Provider 绑定 */
   const handleRemoveProvider = async (projectPath: string) => {
     try {
-      await invoke("remove_project_provider", { projectPath });
+      await invoke("remove_project_provider_for_app", {
+        app: "codex",
+        projectPath,
+      });
       await loadData();
       toast.success(
         t("projectRouting.providerRemoved", {
@@ -299,7 +305,7 @@ export function ProjectRoutingPage() {
                 <p className="text-sm text-center max-w-md">
                   {t("projectRouting.emptyState", {
                     defaultValue:
-                      "未发现 Claude Code 项目。请确保 ~/.claude/projects/ 目录存在，并且已使用过 Claude Code。",
+                      "未发现 Codex 会话。请确保 ~/.codex/sessions/ 目录存在，并且已使用过 Codex CLI。",
                   })}
                 </p>
                 <Button
