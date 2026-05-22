@@ -2135,6 +2135,7 @@ function ProviderFormFull({
                 onPricingConfigChange={setPricingConfig}
                 visionModel={visionModel}
                 onVisionModelChange={setVisionModel}
+                showVisionModel={appId === "claude"}
               />
             )}
 

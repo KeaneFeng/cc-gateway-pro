@@ -146,23 +146,40 @@ impl RequestContext {
             .ok_or(ProxyError::NoAvailableProvider)?;
 
         // CC-Gateway-Pro: Project-Level Provider Binding
+        // 按 app_type 选 router：claude 走原 router，codex 走新 router
         log::info!(
-            "[ProjectRouter] Checking session: '{}' for project routing",
-            session_id
+            "[{}] Checking session '{}' for project routing (app={})",
+            tag,
+            session_id,
+            app_type_str
         );
         let mut effective_provider = provider;
         let mut project_routed = false;
-        if let Some(target_id) = state
-            .session_project_router
-            .get_provider_for_session(&session_id)
-        {
+
+        let project_router_result: Option<String> = match app_type_str {
+            "claude" => state
+                .session_project_router
+                .get_provider_for_session(&session_id),
+            "codex" => state
+                .codex_session_project_router
+                .get_provider_for_session(&session_id),
+            _ => None,
+        };
+
+        if let Some(target_id) = project_router_result {
             // 直接从 DB 查目标 provider（不在 providers 列表里找，因为可能不在当前/故障转移链中）
             if let Ok(Some(target_provider)) = state.db.get_provider_by_id(&target_id, app_type_str)
             {
-                let proj = state
-                    .session_project_router
-                    .get_project_for_session(&session_id)
-                    .unwrap_or_default();
+                let proj = match app_type_str {
+                    "claude" => state
+                        .session_project_router
+                        .get_project_for_session(&session_id),
+                    "codex" => state
+                        .codex_session_project_router
+                        .get_project_for_session(&session_id),
+                    _ => None,
+                }
+                .unwrap_or_default();
                 log::info!(
                     "[{}] Project routing: session {} (project {}) -> provider {} ({})",
                     tag,

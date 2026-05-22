@@ -948,7 +948,10 @@ mod tests {
             gemini_shadow: Arc::new(GeminiShadowStore::default()),
             app_handle: None,
             failover_manager: Arc::new(FailoverSwitchManager::new(db.clone())),
-            session_project_router: Arc::new(SessionProjectRouter::new(db)),
+            session_project_router: Arc::new(SessionProjectRouter::new(db.clone())),
+            codex_session_project_router: Arc::new(
+                crate::proxy::project_router::ProjectRouter::new_codex(db),
+            ),
         }
     }
 
