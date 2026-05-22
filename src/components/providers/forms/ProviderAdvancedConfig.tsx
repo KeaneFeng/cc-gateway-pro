@@ -381,62 +381,62 @@ export function ProviderAdvancedConfig({
 
       {/* CC-Gateway-Pro: Vision Model Auto-Routing (仅 Claude 可用) */}
       {showVisionModel && (
-      <div className="rounded-lg border border-border/50 bg-muted/20">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-          onClick={() => setIsVisionOpen(!isVisionOpen)}
-        >
-          <div className="flex items-center gap-3">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">
-              {t("providerAdvanced.visionModel", {
-                defaultValue: "Vision Model (图片路由)",
-              })}
-            </span>
-            {visionModel && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                {visionModel}
+        <div className="rounded-lg border border-border/50 bg-muted/20">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+            onClick={() => setIsVisionOpen(!isVisionOpen)}
+          >
+            <div className="flex items-center gap-3">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">
+                {t("providerAdvanced.visionModel", {
+                  defaultValue: "Vision Model (图片路由)",
+                })}
               </span>
+              {visionModel && (
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  {visionModel}
+                </span>
+              )}
+            </div>
+            {isVisionOpen ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-          </div>
-          {isVisionOpen ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
-        <div
-          className={cn(
-            "overflow-hidden transition-all duration-200",
-            isVisionOpen ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0",
-          )}
-        >
-          <div className="border-t border-border/50 p-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {t("providerAdvanced.visionModelDesc", {
-                defaultValue:
-                  "当请求包含图片内容时，自动切换到此模型。留空则使用默认模型处理所有请求。",
-              })}
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="vision-model">
-                {t("providerAdvanced.visionModelLabel", {
-                  defaultValue: "Vision Model ID",
+          </button>
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-200",
+              isVisionOpen ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0",
+            )}
+          >
+            <div className="border-t border-border/50 p-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t("providerAdvanced.visionModelDesc", {
+                  defaultValue:
+                    "当请求包含图片内容时，自动切换到此模型。留空则使用默认模型处理所有请求。",
                 })}
-              </Label>
-              <Input
-                id="vision-model"
-                value={visionModel || ""}
-                onChange={(e) => onVisionModelChange(e.target.value)}
-                placeholder={t("providerAdvanced.visionModelPlaceholder", {
-                  defaultValue: "e.g. gpt-4o, gemini-2.5-pro, mimo-v2.5",
-                })}
-              />
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="vision-model">
+                  {t("providerAdvanced.visionModelLabel", {
+                    defaultValue: "Vision Model ID",
+                  })}
+                </Label>
+                <Input
+                  id="vision-model"
+                  value={visionModel || ""}
+                  onChange={(e) => onVisionModelChange(e.target.value)}
+                  placeholder={t("providerAdvanced.visionModelPlaceholder", {
+                    defaultValue: "e.g. gpt-4o, gemini-2.5-pro, mimo-v2.5",
+                  })}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );
