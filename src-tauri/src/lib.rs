@@ -1362,6 +1362,9 @@ pub fn run() {
             commands::set_project_provider,
             commands::remove_project_provider,
             commands::refresh_session_projects,
+            commands::get_project_routing_for_app,
+            commands::set_project_provider_for_app,
+            commands::remove_project_provider_for_app,
         ]);
 
     let app = builder
