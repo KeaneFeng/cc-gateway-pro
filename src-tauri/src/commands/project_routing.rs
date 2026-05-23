@@ -50,7 +50,9 @@ fn scan_project_dirs() -> Vec<String> {
                             for line in content.lines() {
                                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
                                     if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
+                                        // 过滤掉 .claude 目录下的路径（如 .claude/skills）
                                         if !cwd.is_empty()
+                                            && !cwd.contains("/.claude/")
                                             && !project_paths.contains(&cwd.to_string())
                                         {
                                             project_paths.push(cwd.to_string());
