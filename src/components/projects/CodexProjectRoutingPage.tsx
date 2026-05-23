@@ -3,12 +3,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   RefreshCw,
-  FolderOpen,
-  Plus,
   Unlink,
   Loader2,
-  MessageSquare,
-  Trash2,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -30,11 +26,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { projectRoutingApi, type AppType } from "@/lib/api/project-routing";
-import type { SessionMeta } from "@/types";
-import { open } from "@tauri-apps/plugin-dialog";
+import { ProjectSessionList } from "./ProjectSessionList";
+
+interface ProjectRoutingInfo {
+  project_path: string;
+  provider_id: string | null;
+  provider_name: string | null;
+  provider_notes?: string | null;
+  session_count: number;
+}
+
+interface ProviderOption {
+  id: string;
+  name: string;
+  notes?: string;
+}
+
+interface ProjectRoutingOverview {
+  projects: ProjectRoutingInfo[];
+  available_providers: ProviderOption[];
+}
 
 interface ProjectRoutingPageProps {
   app: AppType;
@@ -44,28 +57,11 @@ export function CodexProjectRoutingPage({
   app = "claude",
 }: ProjectRoutingPageProps) {
   const { t } = useTranslation();
-  const [overview, setOverview] = useState<Awaited<
-    ReturnType<typeof projectRoutingApi.getProjectRouting>
-  > | null>(null);
+  const [overview, setOverview] = useState<ProjectRoutingOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
-  // 临时添加的项目（用户选择但还未绑定供应商）
-  const [pendingProjects, setPendingProjects] = useState<Set<string>>(
-    new Set(),
-  );
-
-  // Sessions 相关状态
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
-  const [projectSessions, setProjectSessions] = useState<
-    Record<string, SessionMeta[]>
-  >({});
-  const [loadingSessions, setLoadingSessions] = useState<Set<string>>(
-    new Set(),
-  );
-  const [deleteTarget, setDeleteTarget] = useState<SessionMeta | null>(null);
-
-  const appLabel = app === "claude" ? "Claude Code" : "Codex";
 
   const loadData = useCallback(async () => {
     try {
@@ -104,12 +100,6 @@ export function CodexProjectRoutingPage({
   const handleSetProvider = async (projectPath: string, providerId: string) => {
     try {
       await projectRoutingApi.setProjectProvider(app, projectPath, providerId);
-      // 从临时列表移除
-      setPendingProjects((prev) => {
-        const next = new Set(prev);
-        next.delete(projectPath);
-        return next;
-      });
       await loadData();
       setEditingProject(null);
       toast.success(
@@ -134,101 +124,6 @@ export function CodexProjectRoutingPage({
     }
   };
 
-  // 打开 Finder 选择项目路径
-  const handleSelectFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: t("projectRouting.selectFolder", {
-          defaultValue: `选择${appLabel}项目目录`,
-        }),
-      });
-      if (selected) {
-        const path = selected as string;
-        // 检查是否已在已配置列表中
-        const existingProjects = overview?.projects ?? [];
-        const isAlreadyConfigured = existingProjects.some(
-          (p) => p.project_path === path,
-        );
-        if (!isAlreadyConfigured) {
-          // 添加到临时列表
-          setPendingProjects((prev) => new Set(prev).add(path));
-        }
-        toast.success(
-          t("projectRouting.folderSelected", {
-            defaultValue: "已选择项目路径，请选择供应商以完成添加",
-          }),
-        );
-        // 设置编辑状态，让用户选择 provider
-        setEditingProject(path);
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err));
-    }
-  };
-
-  // 加载项目的 sessions
-  const handleToggleSessions = async (projectPath: string) => {
-    if (expandedProject === projectPath) {
-      setExpandedProject(null);
-      return;
-    }
-
-    setExpandedProject(projectPath);
-
-    if (projectSessions[projectPath]) {
-      return;
-    }
-
-    setLoadingSessions((prev) => new Set(prev).add(projectPath));
-    try {
-      const sessions = await projectRoutingApi.getSessionsForProject(
-        app,
-        projectPath,
-      );
-      setProjectSessions((prev) => ({ ...prev, [projectPath]: sessions }));
-    } catch (err) {
-      toast.error(extractErrorMessage(err));
-    } finally {
-      setLoadingSessions((prev) => {
-        const next = new Set(prev);
-        next.delete(projectPath);
-        return next;
-      });
-    }
-  };
-
-  // 删除 session
-  const handleDeleteSession = async () => {
-    if (!deleteTarget) return;
-
-    try {
-      await projectRoutingApi.deleteSession(
-        deleteTarget.providerId,
-        deleteTarget.sessionId,
-        deleteTarget.sourcePath || "",
-      );
-      toast.success(
-        t("projectRouting.sessionDeleted", { defaultValue: "会话已删除" }),
-      );
-      if (expandedProject) {
-        const sessions = await projectRoutingApi.getSessionsForProject(
-          app,
-          expandedProject,
-        );
-        setProjectSessions((prev) => ({
-          ...prev,
-          [expandedProject]: sessions,
-        }));
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err));
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -237,24 +132,8 @@ export function CodexProjectRoutingPage({
     );
   }
 
-  const configuredProjects = overview?.projects ?? [];
+  const projects = overview?.projects ?? [];
   const availableProviders = overview?.available_providers ?? [];
-
-  // 合并已配置项目和临时项目
-  const allProjects = [
-    ...configuredProjects,
-    ...Array.from(pendingProjects)
-      .filter(
-        (path) => !configuredProjects.some((p) => p.project_path === path),
-      )
-      .map((path) => ({
-        project_path: path,
-        provider_id: null,
-        provider_name: null,
-        provider_notes: null,
-        session_count: 0,
-      })),
-  ];
 
   return (
     <TooltipProvider>
@@ -266,31 +145,11 @@ export function CodexProjectRoutingPage({
               <Badge variant="secondary" className="text-xs">
                 {t("projectRouting.projectCount", {
                   defaultValue: "{{count}} 个项目",
-                  count: allProjects.length,
+                  count: projects.length,
                 })}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectFolder}
-                    className="gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    {t("projectRouting.addProject", {
-                      defaultValue: "添加项目",
-                    })}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("projectRouting.addProjectTooltip", {
-                    defaultValue: "打开 Finder 选择项目目录",
-                  })}
-                </TooltipContent>
-              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -308,10 +167,7 @@ export function CodexProjectRoutingPage({
                 </TooltipTrigger>
                 <TooltipContent>
                   {t("projectRouting.refreshTooltip", {
-                    defaultValue:
-                      app === "claude"
-                        ? "重新扫描 ~/.claude/projects/ 目录"
-                        : "重新扫描 ~/.codex/sessions/ 目录",
+                    defaultValue: "重新扫描项目目录",
                   })}
                 </TooltipContent>
               </Tooltip>
@@ -320,32 +176,18 @@ export function CodexProjectRoutingPage({
 
           {/* 项目列表 */}
           <ScrollArea className="flex-1 min-h-0">
-            {allProjects.length === 0 ? (
+            {projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <FolderOpen className="w-12 h-12 mb-4 opacity-50" />
                 <p className="text-sm text-center max-w-md">
                   {t("projectRouting.emptyState", {
                     defaultValue:
-                      app === "claude"
-                        ? "未发现 Claude Code 项目。请确保 ~/.claude/projects/ 目录存在，并且已使用过 Claude Code。"
-                        : "未发现 Codex 会话。请确保 ~/.codex/sessions/ 目录存在，并且已使用过 Codex CLI。",
+                      "未发现项目。请确保目录存在，并且已使用过对应工具。",
                   })}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 gap-1.5"
-                  onClick={handleSelectFolder}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {t("projectRouting.addProject", {
-                    defaultValue: "添加项目",
-                  })}
-                </Button>
               </div>
             ) : (
               <div className="grid gap-3 pb-4">
-                {allProjects.map((project) => (
+                {projects.map((project) => (
                   <Card
                     key={project.project_path}
                     className="transition-colors hover:border-primary/30"
@@ -359,7 +201,11 @@ export function CodexProjectRoutingPage({
                               size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() =>
-                                void handleToggleSessions(project.project_path)
+                                setExpandedProject(
+                                  expandedProject === project.project_path
+                                    ? null
+                                    : project.project_path,
+                                )
                               }
                             >
                               {expandedProject === project.project_path ? (
@@ -418,8 +264,8 @@ export function CodexProjectRoutingPage({
                                   value,
                                 )
                               }
-                              onOpenChange={(isOpen) => {
-                                if (!isOpen) setEditingProject(null);
+                              onOpenChange={(open) => {
+                                if (!open) setEditingProject(null);
                               }}
                               defaultOpen
                             >
@@ -498,60 +344,10 @@ export function CodexProjectRoutingPage({
                       {/* Sessions 列表 */}
                       {expandedProject === project.project_path && (
                         <div className="mt-3 ml-8 border-l-2 border-muted pl-4">
-                          {loadingSessions.has(project.project_path) ? (
-                            <div className="flex items-center gap-2 py-2 text-muted-foreground">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span className="text-xs">
-                                {t("projectRouting.loadingSessions", {
-                                  defaultValue: "加载会话中...",
-                                })}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {(projectSessions[project.project_path] ?? [])
-                                .length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-2">
-                                  {t("projectRouting.noSessions", {
-                                    defaultValue: "该项目暂无会话",
-                                  })}
-                                </p>
-                              ) : (
-                                (
-                                  projectSessions[project.project_path] ?? []
-                                ).map((session) => (
-                                  <div
-                                    key={session.sessionId}
-                                    className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50"
-                                  >
-                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-xs font-medium truncate">
-                                          {session.title || session.sessionId}
-                                        </p>
-                                        {session.projectDir && (
-                                          <p className="text-[10px] text-muted-foreground truncate">
-                                            {session.projectDir}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                        onClick={() => setDeleteTarget(session)}
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
+                          <ProjectSessionList
+                            app={app}
+                            projectPath={project.project_path}
+                          />
                         </div>
                       )}
                     </CardHeader>
@@ -562,21 +358,6 @@ export function CodexProjectRoutingPage({
           </ScrollArea>
         </div>
       </div>
-
-      {/* 删除确认对话框 */}
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        title={t("projectRouting.deleteSessionTitle", {
-          defaultValue: "删除会话",
-        })}
-        message={t("projectRouting.deleteSessionDescription", {
-          defaultValue: "此操作将永久删除该会话文件，无法恢复。是否继续？",
-        })}
-        confirmText={t("common.delete", { defaultValue: "删除" })}
-        variant="destructive"
-        onConfirm={() => void handleDeleteSession()}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </TooltipProvider>
   );
 }
