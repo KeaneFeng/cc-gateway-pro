@@ -94,8 +94,19 @@ impl ProxyService {
         } else {
             ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken
         };
+        // Copilot/Codex 接管时 live config 可能还是旧供应商；显示模型必须跟随目标 provider。
+        let takeover_model_fields = if provider.uses_managed_account_auth() {
+            Self::build_claude_takeover_model_fields(&provider.settings_config)
+        } else {
+            Self::build_claude_takeover_model_fields(config)
+        };
 
-        Self::apply_claude_takeover_fields_with_policy(config, proxy_url, auth_policy);
+        Self::apply_claude_takeover_fields_with_policy_and_models(
+            config,
+            proxy_url,
+            auth_policy,
+            takeover_model_fields,
+        );
     }
 
     fn apply_claude_takeover_fields_with_policy(
@@ -105,6 +116,21 @@ impl ProxyService {
     ) {
         // 必须在 remove/insert 前 snapshot：避免读到自己刚写入的接管别名。
         let takeover_model_fields = Self::build_claude_takeover_model_fields(config);
+
+        Self::apply_claude_takeover_fields_with_policy_and_models(
+            config,
+            proxy_url,
+            auth_policy,
+            takeover_model_fields,
+        );
+    }
+
+    fn apply_claude_takeover_fields_with_policy_and_models(
+        config: &mut Value,
+        proxy_url: &str,
+        auth_policy: ClaudeTakeoverAuthPolicy,
+        takeover_model_fields: Vec<(&'static str, String)>,
+    ) {
 
         if !config.is_object() {
             *config = json!({});

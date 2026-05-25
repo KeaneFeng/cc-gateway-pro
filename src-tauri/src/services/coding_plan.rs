@@ -185,12 +185,12 @@ async fn query_kimi(api_key: &str) -> SubscriptionQuota {
 
 /// 把智谱 `data` 里的 `limits[]` 解析成 tier 列表。
 ///
-/// 按 `nextResetTime` 升序后：第 0 条 = 五小时桶（`five_hour`）、
-/// 第 1 条 = 每周桶（`weekly_limit`）。老套餐（2026-02-12 前订阅）只回 1 条
+/// 双桶响应中，5 小时桶在 0% 等状态下可能没有 `nextResetTime`；
+/// 这类无 reset 条目应优先归为五小时桶。其余条目按 `nextResetTime` 升序。
+/// 老套餐（2026-02-12 前订阅）只回 1 条
 /// `TOKENS_LIMIT`，自然降级为仅展示 `five_hour`；新套餐回 2 条。
-/// 缺失 `nextResetTime` 时按 `i64::MAX` 排到末位。
 fn parse_zhipu_token_tiers(data: &serde_json::Value) -> Vec<QuotaTier> {
-    let mut token_limits: Vec<(i64, f64, Option<String>)> = Vec::new();
+    let mut token_limits: Vec<(Option<i64>, f64, Option<String>)> = Vec::new();
     if let Some(limits) = data.get("limits").and_then(|v| v.as_array()) {
         for limit_item in limits {
             let limit_type = limit_item
@@ -205,19 +205,12 @@ fn parse_zhipu_token_tiers(data: &serde_json::Value) -> Vec<QuotaTier> {
                 .get("percentage")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            let reset_ms = limit_item
-                .get("nextResetTime")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(i64::MAX);
-            let reset_iso = if reset_ms == i64::MAX {
-                None
-            } else {
-                millis_to_iso8601(reset_ms)
-            };
+            let reset_ms = limit_item.get("nextResetTime").and_then(|v| v.as_i64());
+            let reset_iso = reset_ms.and_then(millis_to_iso8601);
             token_limits.push((reset_ms, percentage, reset_iso));
         }
     }
-    token_limits.sort_by_key(|(reset, _, _)| *reset);
+    token_limits.sort_by_key(|(reset, _, _)| (reset.is_some(), reset.unwrap_or(i64::MIN)));
 
     token_limits
         .into_iter()
