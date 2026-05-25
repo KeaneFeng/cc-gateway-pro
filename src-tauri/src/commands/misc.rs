@@ -1083,6 +1083,36 @@ fn launch_macos_iterm2(script_file: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
+/// macOS: 使用 open -na 启动 Ghostty（需要特殊参数格式）
+#[cfg(target_os = "macos")]
+fn launch_macos_ghostty(script_file: &std::path::Path) -> Result<(), String> {
+    use std::process::Command;
+
+    let output = Command::new("open")
+        .args([
+            "-na",
+            "Ghostty",
+            "--args",
+            "--quit-after-last-window-closed=true",
+            "-e",
+            "bash",
+        ])
+        .arg(script_file)
+        .output()
+        .map_err(|e| format!("启动 Ghostty 失败: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "Ghostty 启动失败 (exit code: {:?}): {}",
+            output.status.code(),
+            stderr
+        ));
+    }
+
+    Ok(())
+}
+
 /// macOS: 使用 open -a 启动支持 --args 参数的终端（Alacritty/Kitty/Ghostty）
 #[cfg(target_os = "macos")]
 fn launch_macos_open_app(
