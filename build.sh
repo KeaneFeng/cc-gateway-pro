@@ -50,13 +50,13 @@ build_dev() {
 
 build_release() {
     log "Building in release mode (this may take 5-10 minutes)..."
-    node $PNPM tauri build
+    node $PNPM tauri build --bundles app
     log "Build complete! Check src-tauri/target/release/bundle/"
 }
 
 build_dmg() {
     log "Building DMG..."
-    node $PNPM tauri build
+    node $PNPM tauri build --bundles dmg
     DMG_PATH=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' 2>/dev/null | head -1)
     if [ -n "$DMG_PATH" ]; then
         log "DMG created: $DMG_PATH"
