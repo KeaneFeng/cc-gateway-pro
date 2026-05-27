@@ -40,7 +40,9 @@
     "deleting": "删除中...",
     "auto": "自动",
     "enabled": "已开启",
-    "notSet": "未设置"
+    "notSet": "未设置",
+    "install": "安装",
+    "update": "更新"
   },
   "firstRunNotice": {
     "title": "欢迎使用 CC Gateway Pro",
@@ -667,6 +669,14 @@
       "macos": "macOS",
       "linux": "Linux"
     },
+    "toolActionInstallSuccess": "{{tool}} 安装成功",
+    "toolActionUpdateSuccess": "{{tool}} 更新成功",
+    "toolActionFailed": "{{tool}} 操作失败: {{error}}",
+    "toolActionUpdateAllSuccess": "已更新 {{count}} 个工具",
+    "toolActionUpdateAllFailed": "所有工具更新失败",
+    "toolActionPartial": "部分成功: {{success}} 个成功, 失败: {{failed}}",
+    "allToolsUpToDate": "所有工具已是最新版本",
+    "updateAll": "全部更新",
     "wslShell": "Shell",
     "wslShellFlag": "标志",
     "installCommandsCopied": "安装命令已复制",
@@ -809,8 +819,7 @@
     "checkUpdateFailed": "检查更新失败:",
     "openConfigFolderFailed": "打开配置文件夹失败:",
     "selectConfigDirFailed": "选择配置目录失败:",
-    "getDefaultConfigDirFailed": "获取默认配置目录失败:",
-    "openReleaseNotesFailed": "打开更新日志失败:"
+    "getDefaultConfigDirFailed": "获取默认配置目录失败:"
   },
   "providerForm": {
     "supplierName": "供应商名称",

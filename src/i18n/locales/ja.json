@@ -40,7 +40,9 @@
     "deleting": "削除中...",
     "auto": "自動",
     "enabled": "有効",
-    "notSet": "未設定"
+    "notSet": "未設定",
+    "install": "インストール",
+    "update": "更新"
   },
   "firstRunNotice": {
     "title": "CC Gateway Pro へようこそ",
@@ -667,6 +669,14 @@
       "macos": "macOS",
       "linux": "Linux"
     },
+    "toolActionInstallSuccess": "{{tool}} のインストールが完了しました",
+    "toolActionUpdateSuccess": "{{tool}} の更新が完了しました",
+    "toolActionFailed": "{{tool}} の操作に失敗しました: {{error}}",
+    "toolActionUpdateAllSuccess": "{{count}} 個のツールを更新しました",
+    "toolActionUpdateAllFailed": "すべてのツールの更新に失敗しました",
+    "toolActionPartial": "部分的に成功: {{success}} 個成功, 失敗: {{failed}}",
+    "allToolsUpToDate": "すべてのツールは最新です",
+    "updateAll": "すべて更新",
     "wslShell": "Shell",
     "wslShellFlag": "フラグ",
     "installCommandsCopied": "インストールコマンドをコピーしました",
@@ -809,8 +819,7 @@
     "checkUpdateFailed": "更新確認に失敗:",
     "openConfigFolderFailed": "設定フォルダを開けませんでした:",
     "selectConfigDirFailed": "設定ディレクトリの選択に失敗:",
-    "getDefaultConfigDirFailed": "デフォルト設定ディレクトリの取得に失敗:",
-    "openReleaseNotesFailed": "リリースノートを開けませんでした:"
+    "getDefaultConfigDirFailed": "デフォルト設定ディレクトリの取得に失敗:"
   },
   "providerForm": {
     "supplierName": "プロバイダー名",

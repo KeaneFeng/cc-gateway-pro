@@ -192,6 +192,21 @@ export const settingsApi = {
     return await invoke("get_tool_versions", { tools, wslShellByTool });
   },
 
+  async runToolLifecycleAction(
+    tools: string[],
+    action: "install" | "update",
+    wslShellByTool?: Record<
+      string,
+      { wslShell?: string | null; wslShellFlag?: string | null }
+    >,
+  ): Promise<void> {
+    return await invoke("run_tool_lifecycle_action", {
+      tools,
+      action,
+      wslShellByTool,
+    });
+  },
+
   async getRectifierConfig(): Promise<RectifierConfig> {
     return await invoke("get_rectifier_config");
   },

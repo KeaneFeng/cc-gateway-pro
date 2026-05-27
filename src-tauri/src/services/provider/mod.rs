@@ -361,6 +361,12 @@ base_url = "http://localhost:8080"
         let db = Arc::new(Database::memory().expect("init db"));
         let state = AppState::new(db.clone());
 
+        // Use a random available port to avoid conflicts with running proxy
+        let test_port = {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind random port");
+            listener.local_addr().expect("get addr").port()
+        };
+
         let original = Provider::with_id(
             "p1".into(),
             "Claude A".into(),
@@ -383,6 +389,7 @@ base_url = "http://localhost:8080"
 
         db.update_proxy_config(ProxyConfig {
             live_takeover_active: true,
+            listen_port: test_port,
             ..Default::default()
         })
         .await
@@ -402,7 +409,7 @@ base_url = "http://localhost:8080"
             &get_claude_settings_path(),
             &json!({
                 "env": {
-                    "ANTHROPIC_BASE_URL": "http://127.0.0.1:15721",
+                    "ANTHROPIC_BASE_URL": format!("http://127.0.0.1:{test_port}"),
                     "ANTHROPIC_API_KEY": "PROXY_MANAGED",
                     "ANTHROPIC_MODEL": "stale-model"
                 },
@@ -464,7 +471,7 @@ base_url = "http://localhost:8080"
             live.get("env")
                 .and_then(|env| env.get("ANTHROPIC_BASE_URL"))
                 .and_then(|v| v.as_str()),
-            Some("http://127.0.0.1:15721"),
+            Some(format!("http://127.0.0.1:{test_port}").as_str()),
             "proxy base URL should stay intact"
         );
         assert!(
@@ -1244,12 +1251,16 @@ impl ProviderService {
             let should_sync_via_proxy = is_proxy_running && (has_live_backup || live_taken_over);
 
             if should_sync_via_proxy {
-                futures::executor::block_on(
-                    state
-                        .proxy_service
-                        .update_live_backup_from_provider(app_type.as_str(), &provider),
-                )
-                .map_err(|e| AppError::Message(format!("更新 Live 备份失败: {e}")))?;
+                if matches!(app_type, AppType::ClaudeDesktop) {
+                    write_live_with_common_config(state.db.as_ref(), &app_type, &provider)?;
+                } else {
+                    futures::executor::block_on(
+                        state
+                            .proxy_service
+                            .update_live_backup_from_provider(app_type.as_str(), &provider),
+                    )
+                    .map_err(|e| AppError::Message(format!("更新 Live 备份失败: {e}")))?;
+                }
 
                 if matches!(app_type, AppType::Claude) {
                     futures::executor::block_on(
@@ -1658,6 +1669,11 @@ impl ProviderService {
             .detect_takeover_in_live_config_for_app(&app_type);
 
         if takeover_enabled && (has_live_backup || live_taken_over) {
+            if matches!(app_type, AppType::ClaudeDesktop) {
+                write_live_with_common_config(state.db.as_ref(), &app_type, provider)?;
+                return Ok(());
+            }
+
             futures::executor::block_on(
                 state
                     .proxy_service

@@ -138,6 +138,10 @@ interface ClaudeFormFieldsProps {
   // Full URL mode
   isFullUrl: boolean;
   onFullUrlChange: (value: boolean) => void;
+
+  // CC-Gateway-Pro: Vision Model (图片路由)
+  visionModel?: string;
+  onVisionModelChange?: (model: string) => void;
 }
 
 export function ClaudeFormFields({
@@ -190,6 +194,8 @@ export function ClaudeFormFields({
   onApiKeyFieldChange,
   isFullUrl,
   onFullUrlChange,
+  visionModel,
+  onVisionModelChange,
 }: ClaudeFormFieldsProps) {
   const { t } = useTranslation();
   const hasAnyAdvancedValue = !!(
@@ -933,6 +939,32 @@ export function ClaudeFormFields({
                 })}
               </p>
             </div>
+
+            {/* CC-Gateway-Pro: Vision Model (图片路由) */}
+            {onVisionModelChange && (
+              <div className="space-y-2 border-t pt-4">
+                <FormLabel htmlFor="visionModel">
+                  {t("providerAdvanced.visionModel", {
+                    defaultValue: "Vision Model (图片路由)",
+                  })}
+                </FormLabel>
+                {renderModelInput(
+                  "visionModel",
+                  visionModel || claudeModel || "",
+                  "VISION_MODEL",
+                  t("providerAdvanced.visionModelPlaceholder", {
+                    defaultValue: "e.g. gpt-4o, gemini-2.5-pro, mimo-v2.5",
+                  }),
+                  onVisionModelChange,
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t("providerAdvanced.visionModelDesc", {
+                    defaultValue:
+                      "当请求包含图片内容时，自动切换到此模型。留空则使用兜底模型处理所有请求。",
+                  })}
+                </p>
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       )}

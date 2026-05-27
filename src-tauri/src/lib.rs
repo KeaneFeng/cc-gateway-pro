@@ -1268,6 +1268,7 @@ pub fn run() {
             commands::delete_sessions,
             commands::launch_session_terminal,
             commands::get_tool_versions,
+            commands::run_tool_lifecycle_action,
             // Provider terminal
             commands::open_provider_terminal,
             // Universal Provider management

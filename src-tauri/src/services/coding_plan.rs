@@ -522,21 +522,23 @@ mod tests {
     }
 
     #[test]
-    fn zhipu_missing_reset_time_sorts_last() {
-        // 防御性：没有 nextResetTime 的条目排到末位，避免抢占 five_hour 槽位。
+    fn zhipu_missing_reset_time_is_five_hour_when_weekly_has_reset() {
+        // 真实反馈：5 小时桶为 0% 时可能没有 nextResetTime；每周桶带 reset。
+        // 这种形态不能按 reset 升序把每周桶误判为 five_hour。
         let data = json!({
             "limits": [
-                { "type": "TOKENS_LIMIT", "percentage": 99.0 },
-                { "type": "TOKENS_LIMIT", "percentage": 10.0, "nextResetTime": 1_000_000_000_000_i64 }
+                { "type": "TOKENS_LIMIT", "percentage": 25.0, "nextResetTime": 2_000_000_000_000_i64 },
+                { "type": "TOKENS_LIMIT", "percentage": 0.0 }
             ]
         });
         let tiers = parse_zhipu_token_tiers(&data);
         assert_eq!(tiers.len(), 2);
         assert_eq!(tiers[0].name, TIER_FIVE_HOUR);
-        assert_eq!(tiers[0].utilization, 10.0);
+        assert_eq!(tiers[0].utilization, 0.0);
+        assert!(tiers[0].resets_at.is_none());
         assert_eq!(tiers[1].name, TIER_WEEKLY_LIMIT);
-        assert_eq!(tiers[1].utilization, 99.0);
-        assert!(tiers[1].resets_at.is_none());
+        assert_eq!(tiers[1].utilization, 25.0);
+        assert!(tiers[1].resets_at.is_some());
     }
 
     #[test]

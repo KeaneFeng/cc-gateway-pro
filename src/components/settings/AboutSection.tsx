@@ -43,7 +43,14 @@ interface ToolVersion {
   wsl_distro: string | null;
 }
 
-const TOOL_NAMES = ["claude", "codex", "gemini", "opencode"] as const;
+const TOOL_NAMES = [
+  "claude",
+  "codex",
+  "gemini",
+  "opencode",
+  "openclaw",
+  "hermes",
+] as const;
 type ToolName = (typeof TOOL_NAMES)[number];
 
 type WslShellPreference = {
@@ -194,6 +201,114 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     setWslShellByTool((prev) => ({ ...prev, [toolName]: nextPref }));
     await refreshToolVersions([toolName], { [toolName]: nextPref });
   };
+
+  // Tool lifecycle actions (install/update)
+  const [busyTools, setBusyTools] = useState<Record<string, boolean>>({});
+  const isAnyBusy = Object.values(busyTools).some(Boolean);
+
+  const handleToolAction = useCallback(
+    async (toolName: ToolName, action: "install" | "update") => {
+      setBusyTools((prev) => ({ ...prev, [toolName]: true }));
+      try {
+        await settingsApi.runToolLifecycleAction(
+          [toolName],
+          action,
+          wslShellByTool,
+        );
+        toast.success(
+          t(
+            action === "install"
+              ? "settings.toolActionInstallSuccess"
+              : "settings.toolActionUpdateSuccess",
+            { tool: toolName },
+          ),
+        );
+        // Refresh version after action
+        await refreshToolVersions([toolName]);
+      } catch (error) {
+        console.error(
+          `[AboutSection] Tool ${action} failed for ${toolName}`,
+          error,
+        );
+        toast.error(
+          t("settings.toolActionFailed", {
+            tool: toolName,
+            error: String(error),
+          }),
+        );
+      } finally {
+        setBusyTools((prev) => ({ ...prev, [toolName]: false }));
+      }
+    },
+    [wslShellByTool, refreshToolVersions, t],
+  );
+
+  const handleUpdateAll = useCallback(async () => {
+    const toolsToUpdate = toolVersions
+      .filter(
+        (tv) =>
+          tv.latest_version &&
+          tv.version !== tv.latest_version &&
+          !busyTools[tv.name],
+      )
+      .map((tv) => tv.name as ToolName);
+
+    if (toolsToUpdate.length === 0) {
+      toast.info(t("settings.allToolsUpToDate"));
+      return;
+    }
+
+    setBusyTools((prev) => {
+      const next = { ...prev };
+      for (const name of toolsToUpdate) next[name] = true;
+      return next;
+    });
+
+    const results: { tool: string; success: boolean; error?: string }[] = [];
+
+    for (const toolName of toolsToUpdate) {
+      try {
+        await settingsApi.runToolLifecycleAction(
+          [toolName],
+          "update",
+          wslShellByTool,
+        );
+        results.push({ tool: toolName, success: true });
+      } catch (error) {
+        results.push({
+          tool: toolName,
+          success: false,
+          error: String(error),
+        });
+      }
+    }
+
+    // Refresh versions for all updated tools
+    await refreshToolVersions(toolsToUpdate);
+
+    setBusyTools((prev) => {
+      const next = { ...prev };
+      for (const name of toolsToUpdate) next[name] = false;
+      return next;
+    });
+
+    // Show summary toast
+    const failed = results.filter((r) => !r.success);
+    if (failed.length === 0) {
+      toast.success(
+        t("settings.toolActionUpdateAllSuccess", { count: results.length }),
+      );
+    } else if (failed.length === results.length) {
+      toast.error(t("settings.toolActionUpdateAllFailed"));
+    } else {
+      toast.warning(
+        t("settings.toolActionPartial", {
+          success: results.length - failed.length,
+          failed: failed.map((r) => r.tool).join(", "),
+        }),
+      );
+    }
+  }, [toolVersions, busyTools, wslShellByTool, refreshToolVersions, t]);
 
   useEffect(() => {
     let active = true;
@@ -459,20 +574,40 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
             <h3 className="text-sm font-medium">
               {t("settings.localEnvCheck")}
             </h3>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => loadAllToolVersions()}
-              disabled={isLoadingTools}
-            >
-              <RefreshCw
-                className={
-                  isLoadingTools ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"
-                }
-              />
-              {isLoadingTools ? t("common.refreshing") : t("common.refresh")}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => handleUpdateAll()}
+                disabled={isLoadingTools || isAnyBusy}
+                aria-label={t("settings.updateAll")}
+              >
+                {isAnyBusy ? (
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {t("settings.updateAll")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => loadAllToolVersions()}
+                disabled={isLoadingTools}
+              >
+                <RefreshCw
+                  className={
+                    isLoadingTools ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"
+                  }
+                />
+                {isLoadingTools ? t("common.refreshing") : t("common.refresh")}
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 px-1">
@@ -558,7 +693,10 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                       )}
                     </div>
                     {isLoadingTools || loadingTools[toolName] ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <Loader2
+                        className="h-4 w-4 animate-spin text-muted-foreground"
+                        aria-hidden="true"
+                      />
                     ) : tool?.version ? (
                       tool.latest_version &&
                       tool.version !== tool.latest_version ? (
@@ -566,10 +704,16 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                           {tool.latest_version}
                         </span>
                       ) : (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2
+                          className="h-4 w-4 text-green-500"
+                          aria-hidden="true"
+                        />
                       )
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-yellow-500" />
+                      <AlertCircle
+                        className="h-4 w-4 text-yellow-500"
+                        aria-hidden="true"
+                      />
                     )}
                   </div>
                   <div
@@ -581,6 +725,57 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                       : tool?.version
                         ? tool.version
                         : tool?.error || t("common.notInstalled")}
+                  </div>
+                  {/* Install/Update buttons */}
+                  <div className="flex gap-2 mt-1">
+                    {!tool?.version && !isLoadingTools && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs flex-1"
+                        onClick={() => handleToolAction(toolName, "install")}
+                        disabled={isAnyBusy || loadingTools[toolName]}
+                        aria-label={`${t("common.install")} ${displayName}`}
+                      >
+                        {busyTools[toolName] ? (
+                          <Loader2
+                            className="h-3 w-3 animate-spin mr-1"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Download
+                            className="h-3 w-3 mr-1"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {t("common.install")}
+                      </Button>
+                    )}
+                    {tool?.version &&
+                      tool.latest_version &&
+                      tool.version !== tool.latest_version && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs flex-1"
+                          onClick={() => handleToolAction(toolName, "update")}
+                          disabled={isAnyBusy || loadingTools[toolName]}
+                          aria-label={`${t("common.update")} ${displayName}`}
+                        >
+                          {busyTools[toolName] ? (
+                            <Loader2
+                              className="h-3 w-3 animate-spin mr-1"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <RefreshCw
+                              className="h-3 w-3 mr-1"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {t("common.update")}
+                        </Button>
+                      )}
                   </div>
                 </motion.div>
               );

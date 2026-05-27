@@ -25,7 +25,7 @@ pub async fn execute_usage_script(
 
     // 2. 验证 base_url 的安全性（仅当提供了 base_url 时）
     // 自定义模板模式下，用户可能不使用模板变量，而是直接在脚本中写完整 URL
-    if !base_url.is_empty() {
+    if should_validate_base_url(base_url, is_custom_template) {
         validate_base_url(base_url)?;
     }
 
@@ -468,6 +468,25 @@ fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     }
 
     Ok(())
+}
+
+fn should_validate_base_url(base_url: &str, is_custom_template: bool) -> bool {
+    if base_url.is_empty() {
+        return false;
+    }
+    if is_custom_template {
+        // 自定义模板模式下跳过严格校验，但记录安全警告
+        if let Ok(parsed) = url::Url::parse(base_url) {
+            if parsed.scheme() != "https" && !is_loopback_host(&parsed) {
+                log::warn!(
+                    "自定义模板使用非 HTTPS 连接到外部主机: {} (安全风险：数据可能被窃听)",
+                    base_url
+                );
+            }
+        }
+        return false;
+    }
+    true
 }
 
 /// 验证请求 URL 是否安全（HTTPS 强制 + 同源检查）

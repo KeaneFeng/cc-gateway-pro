@@ -438,6 +438,14 @@ fn convert_message_to_openai(
                         }
                     }
                 }
+                "redacted_thinking" if preserve_reasoning_content => {
+                    // Claude Code encrypts historical thinking into redacted_thinking blocks.
+                    // MiMo/DeepSeek require non-empty reasoning_content on assistant tool-call
+                    // messages, so inject a minimal placeholder when the real content is
+                    // unavailable. Skip when preserve_reasoning_content is off (generic
+                    // OpenAI-compatible path).
+                    reasoning_parts.push("[redacted thinking]".to_string());
+                }
                 _ => {}
             }
         }

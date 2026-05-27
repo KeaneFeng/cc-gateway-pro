@@ -332,13 +332,15 @@ mod tests {
     #[test]
     fn test_rollup_merges_with_existing() -> Result<(), AppError> {
         let db = Database::memory()?;
-        let now = chrono::Utc::now().timestamp();
+        let now = chrono::Local::now().timestamp();
         let old_ts = now - 40 * 86400;
 
         {
             let conn = crate::database::lock_conn!(db.conn);
+            // Use local time to match rollup SQL's date(created_at, 'unixepoch', 'localtime')
             let date_str = chrono::DateTime::from_timestamp(old_ts, 0)
                 .unwrap()
+                .with_timezone(&chrono::Local)
                 .format("%Y-%m-%d")
                 .to_string();
             conn.execute(

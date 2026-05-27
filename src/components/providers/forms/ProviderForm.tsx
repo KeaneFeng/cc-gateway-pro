@@ -1836,6 +1836,8 @@ function ProviderFormFull({
               onApiKeyFieldChange={handleApiKeyFieldChange}
               isFullUrl={localIsFullUrl}
               onFullUrlChange={setLocalIsFullUrl}
+              visionModel={visionModel}
+              onVisionModelChange={setVisionModel}
             />
           )}
 
@@ -2133,9 +2135,6 @@ function ProviderFormFull({
                 pricingConfig={pricingConfig}
                 onTestConfigChange={setTestConfig}
                 onPricingConfigChange={setPricingConfig}
-                visionModel={visionModel}
-                onVisionModelChange={setVisionModel}
-                showVisionModel={appId === "claude"}
               />
             )}
 

@@ -108,7 +108,9 @@ pub struct ToolVersion {
     wsl_distro: Option<String>,
 }
 
-const VALID_TOOLS: [&str; 4] = ["claude", "codex", "gemini", "opencode"];
+const VALID_TOOLS: [&str; 6] = [
+    "claude", "codex", "gemini", "opencode", "openclaw", "hermes",
+];
 
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -231,6 +233,207 @@ async fn get_single_tool_version_impl(
         env_type,
         wsl_distro,
     }
+}
+
+#[tauri::command]
+pub async fn run_tool_lifecycle_action(
+    tools: Vec<String>,
+    action: String,
+    wsl_shell_by_tool: Option<HashMap<String, WslShellPreferenceInput>>,
+) -> Result<(), String> {
+    let action = ToolLifecycleAction::from_str(&action)?;
+    let requested = normalize_requested_tools(&tools);
+    if requested.is_empty() {
+        return Err("No supported tools selected".to_string());
+    }
+
+    let command_line =
+        build_tool_lifecycle_command(&requested, action, wsl_shell_by_tool.as_ref())?;
+    let label = match action {
+        ToolLifecycleAction::Install => "tool_install",
+        ToolLifecycleAction::Update => "tool_update",
+    };
+
+    tokio::task::spawn_blocking(move || run_tool_lifecycle_silently(&command_line, label))
+        .await
+        .map_err(|e| format!("tool lifecycle task join error: {e}"))?
+}
+
+/// 静默执行工具安装/更新脚本：直接捕获子进程输出并阻塞到命令真正结束，
+/// 不再弹出可见终端窗口（与 `launch_terminal_running` 的"开窗即返回"形成对比，
+/// 后者仍保留给 provider 切换等需要交互式终端的场景）。
+/// 失败时回传 stderr/stdout 末尾若干行，供前端 toast 提示。
+#[cfg(not(target_os = "windows"))]
+fn run_tool_lifecycle_silently(command_line: &str, _label: &str) -> Result<(), String> {
+    use std::process::Command;
+    // command_line 是 bash 风格脚本（含 `set -e` 与多行命令）；强制用 bash 执行，
+    // 避免用户默认 shell 为 fish/zsh 时 `set -e` 等语义不一致。
+    let output = Command::new("bash")
+        .arg("-c")
+        .arg(command_line)
+        .output()
+        .map_err(|e| format!("启动安装进程失败: {e}"))?;
+    finish_lifecycle_output(&output)
+}
+
+/// Windows 静默执行：command_line 是 .bat 内容（@echo off + call/wsl 行，CRLF 分隔），
+/// 写临时 .bat 后用 `cmd /C` 执行，`CREATE_NO_WINDOW` 抑制 console 窗口。
+#[cfg(target_os = "windows")]
+fn run_tool_lifecycle_silently(command_line: &str, label: &str) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    use std::process::Command;
+
+    // 使用 NamedTempFile 避免 TOCTOU 竞态：
+    // 文件创建时带有受限权限，且在 scope 结束时自动删除
+    let bat_file = tempfile::Builder::new()
+        .prefix(&format!("cc_switch_{label}_"))
+        .suffix(".bat")
+        .tempfile()
+        .map_err(|e| format!("创建临时文件失败: {e}"))?;
+    std::fs::write(bat_file.path(), command_line)
+        .map_err(|e| format!("写入批处理文件失败: {e}"))?;
+
+    let output = Command::new("cmd")
+        .arg("/C")
+        .arg(bat_file.path())
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    // bat_file 在此处自动删除（drop 时）
+
+    finish_lifecycle_output(&output.map_err(|e| format!("启动安装进程失败: {e}"))?)
+}
+
+/// 把子进程退出结果转成 `Result`：成功返回 `Ok`；失败提取 stderr（空则回退 stdout）
+/// 的末尾若干行作为错误详情，避免把整段安装日志塞进 toast。
+fn finish_lifecycle_output(output: &std::process::Output) -> Result<(), String> {
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let raw = if stderr.trim().is_empty() {
+        stdout.trim()
+    } else {
+        stderr.trim()
+    };
+    let detail = last_lines(raw, 8);
+    Err(if detail.is_empty() {
+        format!("命令执行失败 (exit code: {:?})", output.status.code())
+    } else {
+        detail
+    })
+}
+
+/// 取文本末尾最多 `n` 行（npm / pip 的关键错误通常出现在输出尾部）。
+fn last_lines(text: &str, n: usize) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let start = lines.len().saturating_sub(n);
+    lines[start..].join("\n")
+}
+
+fn normalize_requested_tools(tools: &[String]) -> Vec<&'static str> {
+    let set: std::collections::HashSet<&str> = tools.iter().map(|s| s.as_str()).collect();
+    VALID_TOOLS
+        .iter()
+        .copied()
+        .filter(|tool| set.contains(tool))
+        .collect()
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ToolLifecycleAction {
+    Install,
+    Update,
+}
+
+impl ToolLifecycleAction {
+    fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "install" => Ok(Self::Install),
+            "update" => Ok(Self::Update),
+            _ => Err(format!("Unknown tool lifecycle action: {s}")),
+        }
+    }
+}
+
+/// 构建工具安装/更新的命令行脚本
+fn build_tool_lifecycle_command(
+    tools: &[&str],
+    action: ToolLifecycleAction,
+    wsl_shell_by_tool: Option<&HashMap<String, WslShellPreferenceInput>>,
+) -> Result<String, String> {
+    let mut commands = Vec::new();
+    commands.push("set -e".to_string());
+
+    for &tool in tools {
+        let pref = wsl_shell_by_tool.and_then(|m| m.get(tool));
+        let wsl_shell = pref.and_then(|p| p.wsl_shell.as_deref());
+        let wsl_shell_flag = pref.and_then(|p| p.wsl_shell_flag.as_deref());
+
+        let cmd = match (tool, action) {
+            ("claude", ToolLifecycleAction::Install) => {
+                "npm install -g @anthropic-ai/claude-code".to_string()
+            }
+            ("claude", ToolLifecycleAction::Update) => {
+                "npm update -g @anthropic-ai/claude-code".to_string()
+            }
+            ("codex", ToolLifecycleAction::Install) => {
+                "npm install -g @openai/codex".to_string()
+            }
+            ("codex", ToolLifecycleAction::Update) => {
+                "npm update -g @openai/codex".to_string()
+            }
+            ("gemini", ToolLifecycleAction::Install) => {
+                "npm install -g @google/gemini-cli".to_string()
+            }
+            ("gemini", ToolLifecycleAction::Update) => {
+                "npm update -g @google/gemini-cli".to_string()
+            }
+            ("opencode", ToolLifecycleAction::Install) => {
+                "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
+                    .to_string()
+            }
+            ("opencode", ToolLifecycleAction::Update) => {
+                "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
+                    .to_string()
+            }
+            ("openclaw", ToolLifecycleAction::Install) => {
+                "pip install openclaw".to_string()
+            }
+            ("openclaw", ToolLifecycleAction::Update) => {
+                "pip install --upgrade openclaw".to_string()
+            }
+            ("hermes", ToolLifecycleAction::Install) => {
+                "pip install hermes-agent".to_string()
+            }
+            ("hermes", ToolLifecycleAction::Update) => {
+                "pip install --upgrade hermes-agent".to_string()
+            }
+            _ => continue,
+        };
+
+        if let Some(shell) = wsl_shell {
+            // WSL 模式：通过 wsl.exe 执行命令
+            // 校验 shell 名称，防止命令注入
+            if !is_valid_shell(shell) {
+                return Err(format!("invalid WSL shell: {shell}"));
+            }
+            let shell = shell.rsplit('/').next().unwrap_or(shell);
+            let wsl_flag = if let Some(flag) = wsl_shell_flag {
+                if !is_valid_shell_flag(flag) {
+                    return Err(format!("invalid WSL shell flag: {flag}"));
+                }
+                flag
+            } else {
+                "-e"
+            };
+            commands.push(format!("wsl.exe {wsl_flag} {shell} -c '{cmd}'"));
+        } else {
+            commands.push(cmd);
+        }
+    }
+
+    Ok(commands.join("\n"))
 }
 
 /// Helper function to fetch latest version from npm registry
@@ -358,9 +561,8 @@ fn is_valid_shell(shell: &str) -> bool {
 }
 
 /// Validate that the given shell flag is one of the allowed flags.
-#[cfg(target_os = "windows")]
 fn is_valid_shell_flag(flag: &str) -> bool {
-    matches!(flag, "-c" | "-lc" | "-lic")
+    matches!(flag, "-c" | "-lc" | "-lic" | "-e" | "-ec")
 }
 
 /// Return the default invocation flag for the given shell.
@@ -1085,6 +1287,7 @@ fn launch_macos_iterm2(script_file: &std::path::Path) -> Result<(), String> {
 
 /// macOS: 使用 open -na 启动 Ghostty（需要特殊参数格式）
 #[cfg(target_os = "macos")]
+#[allow(dead_code)]
 fn launch_macos_ghostty(script_file: &std::path::Path) -> Result<(), String> {
     use std::process::Command;
 

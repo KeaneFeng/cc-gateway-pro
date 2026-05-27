@@ -131,7 +131,6 @@ impl ProxyService {
         auth_policy: ClaudeTakeoverAuthPolicy,
         takeover_model_fields: Vec<(&'static str, String)>,
     ) {
-
         if !config.is_object() {
             *config = json!({});
         }

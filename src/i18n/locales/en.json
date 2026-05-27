@@ -40,7 +40,9 @@
     "deleting": "Deleting...",
     "auto": "Auto",
     "enabled": "Enabled",
-    "notSet": "Not Set"
+    "notSet": "Not Set",
+    "install": "Install",
+    "update": "Update"
   },
   "firstRunNotice": {
     "title": "Welcome to CC Gateway Pro",
@@ -667,6 +669,14 @@
       "macos": "macOS",
       "linux": "Linux"
     },
+    "toolActionInstallSuccess": "{{tool}} installed successfully",
+    "toolActionUpdateSuccess": "{{tool}} updated successfully",
+    "toolActionFailed": "{{tool}} action failed: {{error}}",
+    "toolActionUpdateAllSuccess": "Updated {{count}} tools",
+    "toolActionUpdateAllFailed": "All tool updates failed",
+    "toolActionPartial": "Partial success: {{success}} succeeded, failed: {{failed}}",
+    "allToolsUpToDate": "All tools are up to date",
+    "updateAll": "Update All",
     "wslShell": "Shell",
     "wslShellFlag": "Flag",
     "installCommandsCopied": "Install commands copied",
@@ -809,8 +819,7 @@
     "checkUpdateFailed": "Check for updates failed:",
     "openConfigFolderFailed": "Failed to open config folder:",
     "selectConfigDirFailed": "Failed to select config directory:",
-    "getDefaultConfigDirFailed": "Failed to get default config directory:",
-    "openReleaseNotesFailed": "Failed to open release notes:"
+    "getDefaultConfigDirFailed": "Failed to get default config directory:"
   },
   "providerForm": {
     "supplierName": "Provider Name",

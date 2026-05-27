@@ -341,6 +341,7 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
 
                                         // 处理工具调用
                                         if let Some(tool_calls) = &choice.delta.tool_calls {
+                                            if !tool_calls.is_empty() {
                                             if let Some(index) = current_non_tool_block_index.take() {
                                                 let event = json!({
                                                     "type": "content_block_stop",
@@ -488,6 +489,7 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                                                     yield Ok(Bytes::from(sse_data));
                                                 }
                                             }
+                                            } // end if !tool_calls.is_empty()
                                         }
 
                                         // 处理 finish_reason。
