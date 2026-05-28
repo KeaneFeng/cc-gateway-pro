@@ -1075,6 +1075,7 @@
     "authJsonHint": "Codex auth.json configuration content",
     "configToml": "config.toml (TOML)",
     "configTomlHint": "Codex config.toml configuration content",
+    "enableGoalMode": "Enable Goal Mode",
     "writeCommonConfig": "Write Common Config",
     "editCommonConfig": "Edit Common Config",
     "editCommonConfigTitle": "Edit Codex Common Config Snippet",

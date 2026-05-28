@@ -1075,6 +1075,7 @@
     "authJsonHint": "Codex auth.json 配置内容",
     "configToml": "config.toml (TOML)",
     "configTomlHint": "Codex config.toml 配置内容",
+    "enableGoalMode": "启用 Goal 模式",
     "writeCommonConfig": "写入通用配置",
     "editCommonConfig": "编辑通用配置",
     "editCommonConfigTitle": "编辑 Codex 通用配置片段",

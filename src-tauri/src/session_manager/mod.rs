@@ -146,8 +146,8 @@ pub fn delete_session(
         return hermes::delete_session_sqlite(session_id, source_path);
     }
 
-    let root = provider_root(provider_id)?;
-    delete_session_with_root(provider_id, session_id, Path::new(source_path), &root)
+    let roots = provider_roots(provider_id)?;
+    delete_session_with_roots(provider_id, session_id, Path::new(source_path), &roots)
 }
 
 pub fn delete_sessions(requests: &[DeleteSessionRequest]) -> Vec<DeleteSessionOutcome> {
@@ -160,45 +160,67 @@ pub fn delete_sessions(requests: &[DeleteSessionRequest]) -> Vec<DeleteSessionOu
     })
 }
 
-fn delete_session_with_root(
+fn delete_session_with_roots(
     provider_id: &str,
     session_id: &str,
     source_path: &Path,
-    root: &Path,
+    roots: &[PathBuf],
 ) -> Result<bool, String> {
-    let validated_root = canonicalize_existing_path(root, "session root")?;
     let validated_source = canonicalize_existing_path(source_path, "session source")?;
 
-    if !validated_source.starts_with(&validated_root) {
+    let mut saw_existing_root = false;
+    for root in roots {
+        if !root.exists() {
+            continue;
+        }
+
+        saw_existing_root = true;
+        let validated_root = canonicalize_existing_path(root, "session root")?;
+        if validated_source.starts_with(&validated_root) {
+            return match provider_id {
+                "codex" => codex::delete_session(&validated_root, &validated_source, session_id),
+                "claude" => claude::delete_session(&validated_root, &validated_source, session_id),
+                "opencode" => {
+                    opencode::delete_session(&validated_root, &validated_source, session_id)
+                }
+                "openclaw" => {
+                    openclaw::delete_session(&validated_root, &validated_source, session_id)
+                }
+                "gemini" => gemini::delete_session(&validated_root, &validated_source, session_id),
+                "hermes" => hermes::delete_session(&validated_root, &validated_source, session_id),
+                _ => Err(format!("Unsupported provider: {provider_id}")),
+            };
+        }
+    }
+
+    if !saw_existing_root {
         return Err(format!(
-            "Session source path is outside provider root: {}",
-            source_path.display()
+            "Session root not found for provider {provider_id}: {}",
+            roots
+                .first()
+                .map(|root| root.display().to_string())
+                .unwrap_or_else(|| "<none>".to_string())
         ));
     }
 
-    match provider_id {
-        "codex" => codex::delete_session(&validated_root, &validated_source, session_id),
-        "claude" => claude::delete_session(&validated_root, &validated_source, session_id),
-        "opencode" => opencode::delete_session(&validated_root, &validated_source, session_id),
-        "openclaw" => openclaw::delete_session(&validated_root, &validated_source, session_id),
-        "gemini" => gemini::delete_session(&validated_root, &validated_source, session_id),
-        "hermes" => hermes::delete_session(&validated_root, &validated_source, session_id),
-        _ => Err(format!("Unsupported provider: {provider_id}")),
-    }
+    Err(format!(
+        "Session source path is outside provider roots: {}",
+        source_path.display()
+    ))
 }
 
-fn provider_root(provider_id: &str) -> Result<PathBuf, String> {
-    let root = match provider_id {
-        "codex" => crate::codex_config::get_codex_config_dir().join("sessions"),
-        "claude" => crate::config::get_claude_config_dir().join("projects"),
-        "opencode" => opencode::get_opencode_data_dir(),
-        "openclaw" => crate::openclaw_config::get_openclaw_dir().join("agents"),
-        "gemini" => crate::gemini_config::get_gemini_dir().join("tmp"),
-        "hermes" => crate::hermes_config::get_hermes_dir().join("sessions"),
+fn provider_roots(provider_id: &str) -> Result<Vec<PathBuf>, String> {
+    let roots = match provider_id {
+        "codex" => codex::session_roots(),
+        "claude" => vec![crate::config::get_claude_config_dir().join("projects")],
+        "opencode" => vec![opencode::get_opencode_data_dir()],
+        "openclaw" => vec![crate::openclaw_config::get_openclaw_dir().join("agents")],
+        "gemini" => vec![crate::gemini_config::get_gemini_dir().join("tmp")],
+        "hermes" => vec![crate::hermes_config::get_hermes_dir().join("sessions")],
         _ => return Err(format!("Unsupported provider: {provider_id}")),
     };
 
-    Ok(root)
+    Ok(roots)
 }
 
 fn canonicalize_existing_path(path: &Path, label: &str) -> Result<PathBuf, String> {
