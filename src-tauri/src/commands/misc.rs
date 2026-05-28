@@ -268,9 +268,22 @@ fn run_tool_lifecycle_silently(command_line: &str, _label: &str) -> Result<(), S
     use std::process::Command;
     // command_line 是 bash 风格脚本（含 `set -e` 与多行命令）；强制用 bash 执行，
     // 避免用户默认 shell 为 fish/zsh 时 `set -e` 等语义不一致。
+    // 先 source 用户的 shell profile 以获取完整 PATH（Tauri GUI 应用不继承 shell PATH）
+    let profile_cmd = format!(
+        r#"
+        # Source common profile files to get full PATH
+        [ -f /etc/profile ] && . /etc/profile
+        [ -f "$HOME/.bash_profile" ] && . "$HOME/.bash_profile"
+        [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+        [ -f "$HOME/.zprofile" ] && . "$HOME/.zprofile"
+        [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"
+        # Execute the actual command
+        {command_line}
+        "#
+    );
     let output = Command::new("bash")
         .arg("-c")
-        .arg(command_line)
+        .arg(&profile_cmd)
         .output()
         .map_err(|e| format!("启动安装进程失败: {e}"))?;
     finish_lifecycle_output(&output)
