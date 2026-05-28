@@ -50,6 +50,8 @@ build_dev() {
 
 build_release() {
     log "Building in release mode (this may take 5-10 minutes)..."
+    # Load .env for TAURI_SIGNING_PRIVATE_KEY if it exists
+    [ -f "$SCRIPT_DIR/.env" ] && export "$(grep -v '^\s*#' "$SCRIPT_DIR/.env" | xargs)"
     node $PNPM tauri build --bundles app
     log "Build complete! Check src-tauri/target/release/bundle/"
 }

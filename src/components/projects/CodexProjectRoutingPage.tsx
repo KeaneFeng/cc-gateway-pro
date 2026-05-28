@@ -138,7 +138,7 @@ export function CodexProjectRoutingPage({
   return (
     <TooltipProvider>
       <div className="mx-auto px-4 sm:px-6 flex flex-col h-full min-h-0">
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        <div className="flex-1 min-h-0 flex flex-col gap-4">
           {/* 顶部工具栏 */}
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">

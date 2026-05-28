@@ -229,6 +229,8 @@ function ProviderFormFull({
   }));
 
   // CC-Gateway-Pro: Vision Model state
+  // 初始为空，实际显示时通过 fallback 取 claudeModel。
+  // useModelState 初始化后，如果 visionModel 为空则同步为 claudeModel
   const [visionModel, setVisionModel] = useState<string>(
     () => initialData?.meta?.visionModel ?? "",
   );
@@ -363,6 +365,9 @@ function ProviderFormFull({
     settingsConfig: form.getValues("settingsConfig"),
     onConfigChange: handleSettingsConfigChange,
   });
+
+  // CC-Gateway-Pro: 如果 visionModel 未设置，默认跟随兜底模型
+  const visionModelResolved = visionModel || claudeModel || "";
 
   const [localApiFormat, setLocalApiFormat] = useState<ClaudeApiFormat>(() => {
     if (appId !== "claude") return "anthropic";
@@ -1836,7 +1841,7 @@ function ProviderFormFull({
               onApiKeyFieldChange={handleApiKeyFieldChange}
               isFullUrl={localIsFullUrl}
               onFullUrlChange={setLocalIsFullUrl}
-              visionModel={visionModel}
+              visionModel={visionModelResolved}
               onVisionModelChange={setVisionModel}
             />
           )}
