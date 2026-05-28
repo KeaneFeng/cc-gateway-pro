@@ -279,8 +279,9 @@ mod tests {
         let source = outside.path().join("session.jsonl");
         std::fs::write(&source, "{}").expect("write source");
 
-        let err = delete_session_with_root("codex", "session-1", &source, root.path())
-            .expect_err("expected outside-root path to be rejected");
+        let err =
+            delete_session_with_roots("codex", "session-1", &source, &[root.path().to_path_buf()])
+                .expect_err("expected outside-root path to be rejected");
 
         assert!(err.contains("outside provider root"));
     }
@@ -290,8 +291,9 @@ mod tests {
         let root = tempdir().expect("tempdir");
         let missing = root.path().join("missing.jsonl");
 
-        let err = delete_session_with_root("codex", "session-1", &missing, root.path())
-            .expect_err("expected missing source path to fail");
+        let err =
+            delete_session_with_roots("codex", "session-1", &missing, &[root.path().to_path_buf()])
+                .expect_err("expected missing source path to fail");
 
         assert!(err.contains("session source not found"));
     }
