@@ -373,6 +373,106 @@ impl ToolLifecycleAction {
     }
 }
 
+/// 检测工具的安装来源
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ToolInstallSource {
+    Brew,
+    Npm,
+    Pip,
+    InstallScript,
+    Unknown,
+}
+
+/// 检测工具的实际安装来源
+/// 优先级：brew > npm > pip > install.sh > fallback
+#[cfg(not(target_os = "windows"))]
+fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
+    use std::process::Command;
+
+    // 1. 检查 brew
+    let brew_check = if tool == "claude" || tool == "codex" || tool == "openclaw" {
+        // brew cask
+        Command::new("brew").args(["list", "--cask"]).output()
+    } else {
+        // brew formula
+        Command::new("brew").args(["list"]).output()
+    };
+    if let Ok(out) = brew_check {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let brew_name = match tool {
+            "claude" => "claude-code",
+            "codex" => "codex",
+            "gemini" => "gemini-cli",
+            "opencode" => "opencode",
+            "openclaw" => "openclaw",
+            "hermes" => "hermes-agent",
+            _ => tool,
+        };
+        if stdout.contains(brew_name) {
+            return ToolInstallSource::Brew;
+        }
+    }
+
+    // 2. 检查 npm
+    let npm_pkg = match tool {
+        "claude" => "@anthropic-ai/claude-code",
+        "codex" => "@openai/codex",
+        "gemini" => "@google/gemini-cli",
+        "opencode" => "opencode-ai",
+        "openclaw" => "openclaw",
+        _ => "",
+    };
+    if !npm_pkg.is_empty() {
+        if let Ok(out) = Command::new("npm").args(["list", "-g", npm_pkg]).output() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if stdout.contains(npm_pkg) {
+                return ToolInstallSource::Npm;
+            }
+        }
+    }
+
+    // 3. 检查 pip
+    let pip_pkg = match tool {
+        "openclaw" => "openclaw",
+        "hermes" => "hermes-agent",
+        _ => "",
+    };
+    if !pip_pkg.is_empty() {
+        if let Ok(out) = Command::new("pip").args(["show", pip_pkg]).output() {
+            if out.status.success() {
+                return ToolInstallSource::Pip;
+            }
+        }
+    }
+
+    // 4. 检查 install.sh 安装路径
+    let home = dirs::home_dir().unwrap_or_default();
+    let install_script_markers: Vec<std::path::PathBuf> = match tool {
+        "claude" => vec![home.join(".local/share/claude")],
+        "opencode" => vec![home.join(".opencode/bin/opencode")],
+        "hermes" => vec![home.join(".hermes/hermes-agent")],
+        _ => vec![],
+    };
+    for marker in &install_script_markers {
+        if marker.exists() {
+            return ToolInstallSource::InstallScript;
+        }
+    }
+
+    // 5. 通过 which 路径推断
+    if let Ok(out) = Command::new("which").arg(tool).output() {
+        let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if path.contains("/Caskroom/") || path.contains("/Cellar/") {
+            return ToolInstallSource::Brew;
+        }
+        if path.contains("/node_modules/") {
+            return ToolInstallSource::Npm;
+        }
+    }
+
+    ToolInstallSource::Unknown
+}
+
 /// 构建工具安装/更新的命令行脚本
 fn build_tool_lifecycle_command(
     tools: &[&str],
@@ -387,45 +487,117 @@ fn build_tool_lifecycle_command(
         let wsl_shell = pref.and_then(|p| p.wsl_shell.as_deref());
         let wsl_shell_flag = pref.and_then(|p| p.wsl_shell_flag.as_deref());
 
-        let cmd = match (tool, action) {
-            ("claude", ToolLifecycleAction::Install) => {
+        // 检测安装来源，选择正确的升级命令
+        let source = detect_tool_install_source(tool);
+        let cmd = match (tool, action, source) {
+            // Claude Code
+            ("claude", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install --cask claude-code".to_string()
+            }
+            ("claude", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade claude-code".to_string()
+            }
+            ("claude", ToolLifecycleAction::Install, _) => {
                 "npm install -g @anthropic-ai/claude-code".to_string()
             }
-            ("claude", ToolLifecycleAction::Update) => {
+            ("claude", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
                 "npm update -g @anthropic-ai/claude-code".to_string()
             }
-            ("codex", ToolLifecycleAction::Install) => {
+            ("claude", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
+                "claude update".to_string()
+            }
+            ("claude", ToolLifecycleAction::Update, _) => {
+                // fallback: 优先尝试 claude update，失败则 npm
+                "claude update 2>/dev/null || npm update -g @anthropic-ai/claude-code".to_string()
+            }
+
+            // Codex
+            ("codex", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install --cask codex".to_string()
+            }
+            ("codex", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade codex".to_string()
+            }
+            ("codex", ToolLifecycleAction::Install, _) => {
                 "npm install -g @openai/codex".to_string()
             }
-            ("codex", ToolLifecycleAction::Update) => {
+            ("codex", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
                 "npm update -g @openai/codex".to_string()
             }
-            ("gemini", ToolLifecycleAction::Install) => {
+            ("codex", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
+                "codex update".to_string()
+            }
+            ("codex", ToolLifecycleAction::Update, _) => {
+                "codex update 2>/dev/null || npm update -g @openai/codex".to_string()
+            }
+
+            // Gemini CLI
+            ("gemini", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install gemini-cli".to_string()
+            }
+            ("gemini", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade gemini-cli".to_string()
+            }
+            ("gemini", ToolLifecycleAction::Install, _) => {
                 "npm install -g @google/gemini-cli".to_string()
             }
-            ("gemini", ToolLifecycleAction::Update) => {
+            ("gemini", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
                 "npm update -g @google/gemini-cli".to_string()
             }
-            ("opencode", ToolLifecycleAction::Install) => {
+            ("gemini", ToolLifecycleAction::Update, _) => {
+                "npm update -g @google/gemini-cli".to_string()
+            }
+
+            // OpenCode
+            ("opencode", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install anomalyco/tap/opencode".to_string()
+            }
+            ("opencode", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade anomalyco/tap/opencode".to_string()
+            }
+            ("opencode", ToolLifecycleAction::Install, _) => {
                 "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
                     .to_string()
             }
-            ("opencode", ToolLifecycleAction::Update) => {
+            ("opencode", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
+                "npm update -g opencode-ai".to_string()
+            }
+            ("opencode", ToolLifecycleAction::Update, _) => {
                 "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
                     .to_string()
             }
-            ("openclaw", ToolLifecycleAction::Install) => {
+
+            // OpenClaw
+            ("openclaw", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install --cask openclaw".to_string()
+            }
+            ("openclaw", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade openclaw".to_string()
+            }
+            ("openclaw", ToolLifecycleAction::Install, _) => {
                 "pip install openclaw".to_string()
             }
-            ("openclaw", ToolLifecycleAction::Update) => {
+            ("openclaw", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
+                "npm update -g openclaw".to_string()
+            }
+            ("openclaw", ToolLifecycleAction::Update, _) => {
                 "pip install --upgrade openclaw".to_string()
             }
-            ("hermes", ToolLifecycleAction::Install) => {
+
+            // Hermes Agent
+            ("hermes", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
+                "brew install hermes-agent".to_string()
+            }
+            ("hermes", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
+                "brew upgrade hermes-agent".to_string()
+            }
+            ("hermes", ToolLifecycleAction::Install, _) => {
                 "pip install hermes-agent".to_string()
             }
-            ("hermes", ToolLifecycleAction::Update) => {
+            ("hermes", ToolLifecycleAction::Update, _) => {
                 "pip install --upgrade hermes-agent".to_string()
             }
+
             _ => continue,
         };
 
