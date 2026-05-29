@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import appIcon from "@/assets/icons/app-icon.png";
 import { isWindows } from "@/lib/platform";
+import { isUpdateAvailable } from "@/lib/version";
 
 interface AboutSectionProps {
   isPortable: boolean;
@@ -698,8 +699,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                         aria-hidden="true"
                       />
                     ) : tool?.version ? (
-                      tool.latest_version &&
-                      tool.version !== tool.latest_version ? (
+                      isUpdateAvailable(tool.version, tool.latest_version) ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20">
                           {tool.latest_version}
                         </span>
@@ -751,31 +751,29 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                         {t("common.install")}
                       </Button>
                     )}
-                    {tool?.version &&
-                      tool.latest_version &&
-                      tool.version !== tool.latest_version && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs flex-1"
-                          onClick={() => handleToolAction(toolName, "update")}
-                          disabled={isAnyBusy || loadingTools[toolName]}
-                          aria-label={`${t("common.update")} ${displayName}`}
-                        >
-                          {busyTools[toolName] ? (
-                            <Loader2
-                              className="h-3 w-3 animate-spin mr-1"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <RefreshCw
-                              className="h-3 w-3 mr-1"
-                              aria-hidden="true"
-                            />
-                          )}
-                          {t("common.update")}
-                        </Button>
-                      )}
+                    {isUpdateAvailable(tool?.version, tool?.latest_version) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs flex-1"
+                        onClick={() => handleToolAction(toolName, "update")}
+                        disabled={isAnyBusy || loadingTools[toolName]}
+                        aria-label={`${t("common.update")} ${displayName}`}
+                      >
+                        {busyTools[toolName] ? (
+                          <Loader2
+                            className="h-3 w-3 animate-spin mr-1"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <RefreshCw
+                            className="h-3 w-3 mr-1"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {t("common.update")}
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               );
