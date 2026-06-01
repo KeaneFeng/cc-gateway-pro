@@ -225,7 +225,7 @@ async fn get_single_tool_version_impl(
         }
         "codex" => fetch_npm_latest_for_tool(&client, "@openai/codex", tool, local).await,
         "gemini" => fetch_npm_latest_for_tool(&client, "@google/gemini-cli", tool, local).await,
-        "opencode" => fetch_github_latest_version(&client, "anomalyco/opencode").await,
+        "opencode" => fetch_npm_latest_for_tool(&client, "opencode-ai", tool, local).await,
         _ => None,
     };
 
@@ -494,12 +494,12 @@ fn build_tool_lifecycle_command(
         // 检测安装来源，选择正确的升级命令
         let source = detect_tool_install_source(tool);
         let cmd = match (tool, action, source) {
-            // Claude Code
+            // ── Claude Code ──────────────────────────────────────────
             ("claude", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install --cask claude-code".to_string()
             }
             ("claude", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade claude-code".to_string()
+                "brew upgrade claude-code 2>/dev/null || npm install -g @anthropic-ai/claude-code@latest".to_string()
             }
             ("claude", ToolLifecycleAction::Install, _) => {
                 "npm install -g @anthropic-ai/claude-code".to_string()
@@ -508,19 +508,18 @@ fn build_tool_lifecycle_command(
                 "npm update -g @anthropic-ai/claude-code".to_string()
             }
             ("claude", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
-                "claude update".to_string()
+                "claude update 2>/dev/null || npm install -g @anthropic-ai/claude-code@latest".to_string()
             }
             ("claude", ToolLifecycleAction::Update, _) => {
-                // fallback: 优先尝试 claude update，失败则 npm
-                "claude update 2>/dev/null || npm update -g @anthropic-ai/claude-code".to_string()
+                "claude update 2>/dev/null || npm install -g @anthropic-ai/claude-code@latest".to_string()
             }
 
-            // Codex
+            // ── Codex ────────────────────────────────────────────────
             ("codex", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install --cask codex".to_string()
             }
             ("codex", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade codex".to_string()
+                "brew upgrade codex 2>/dev/null || npm install -g @openai/codex@latest".to_string()
             }
             ("codex", ToolLifecycleAction::Install, _) => {
                 "npm install -g @openai/codex".to_string()
@@ -529,18 +528,18 @@ fn build_tool_lifecycle_command(
                 "npm update -g @openai/codex".to_string()
             }
             ("codex", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
-                "codex update".to_string()
+                "codex update 2>/dev/null || npm install -g @openai/codex@latest".to_string()
             }
             ("codex", ToolLifecycleAction::Update, _) => {
-                "codex update 2>/dev/null || npm update -g @openai/codex".to_string()
+                "codex update 2>/dev/null || npm install -g @openai/codex@latest".to_string()
             }
 
-            // Gemini CLI
+            // ── Gemini CLI ───────────────────────────────────────────
             ("gemini", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install gemini-cli".to_string()
             }
             ("gemini", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade gemini-cli".to_string()
+                "brew upgrade gemini-cli 2>/dev/null || npm install -g @google/gemini-cli@latest".to_string()
             }
             ("gemini", ToolLifecycleAction::Install, _) => {
                 "npm install -g @google/gemini-cli".to_string()
@@ -549,34 +548,32 @@ fn build_tool_lifecycle_command(
                 "npm update -g @google/gemini-cli".to_string()
             }
             ("gemini", ToolLifecycleAction::Update, _) => {
-                "npm update -g @google/gemini-cli".to_string()
+                "npm install -g @google/gemini-cli@latest".to_string()
             }
 
-            // OpenCode
+            // ── OpenCode ─────────────────────────────────────────────
             ("opencode", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install anomalyco/tap/opencode".to_string()
             }
             ("opencode", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade anomalyco/tap/opencode".to_string()
+                "brew upgrade anomalyco/tap/opencode 2>/dev/null || npm install -g opencode-ai@latest".to_string()
             }
             ("opencode", ToolLifecycleAction::Install, _) => {
-                "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
-                    .to_string()
+                "curl -fsSL https://opencode.ai/install | bash".to_string()
             }
             ("opencode", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
                 "npm update -g opencode-ai".to_string()
             }
             ("opencode", ToolLifecycleAction::Update, _) => {
-                "curl -fsSL https://raw.githubusercontent.com/anomalyco/opencode/main/install.sh | bash"
-                    .to_string()
+                "npm install -g opencode-ai@latest".to_string()
             }
 
-            // OpenClaw
+            // ── OpenClaw ─────────────────────────────────────────────
             ("openclaw", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install --cask openclaw".to_string()
             }
             ("openclaw", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade openclaw".to_string()
+                "brew upgrade openclaw 2>/dev/null || pip install --upgrade openclaw".to_string()
             }
             ("openclaw", ToolLifecycleAction::Install, _) => {
                 "pip install openclaw".to_string()
@@ -588,12 +585,12 @@ fn build_tool_lifecycle_command(
                 "pip install --upgrade openclaw".to_string()
             }
 
-            // Hermes Agent
+            // ── Hermes Agent ─────────────────────────────────────────
             ("hermes", ToolLifecycleAction::Install, ToolInstallSource::Brew) => {
                 "brew install hermes-agent".to_string()
             }
             ("hermes", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade hermes-agent".to_string()
+                "brew upgrade hermes-agent 2>/dev/null || pip install --upgrade hermes-agent".to_string()
             }
             ("hermes", ToolLifecycleAction::Install, _) => {
                 "pip install hermes-agent".to_string()

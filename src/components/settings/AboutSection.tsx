@@ -92,9 +92,9 @@ const ENV_BADGE_CONFIG: Record<
 const ONE_CLICK_INSTALL_COMMANDS = `# Claude Code (Native install - recommended)
 curl -fsSL https://claude.ai/install.sh | bash
 # Codex
-npm i -g @openai/codex@latest
+npm install -g @openai/codex
 # Gemini CLI
-npm i -g @google/gemini-cli@latest
+npm install -g @google/gemini-cli
 # OpenCode
 curl -fsSL https://opencode.ai/install | bash`;
 
