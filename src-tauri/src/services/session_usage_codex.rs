@@ -75,9 +75,10 @@ fn normalize_codex_model(raw: &str) -> String {
     }
 
     // Step 3: 剥离 ISO 日期后缀 -YYYY-MM-DD（正好 11 字符）
-    if name.len() > 11 {
+    if name.len() > 11 && name.is_char_boundary(name.len() - 11) {
         let suffix = &name[name.len() - 11..];
-        if suffix.as_bytes()[0] == b'-'
+        if suffix.is_ascii()
+            && suffix.as_bytes()[0] == b'-'
             && suffix[1..5].chars().all(|c| c.is_ascii_digit())
             && suffix.as_bytes()[5] == b'-'
             && suffix[6..8].chars().all(|c| c.is_ascii_digit())
@@ -495,15 +496,16 @@ fn insert_codex_session_entry(
         ),
     };
 
-    conn.execute(
-        "INSERT OR IGNORE INTO proxy_request_logs (
+    let inserted_rows = conn
+        .execute(
+            "INSERT OR IGNORE INTO proxy_request_logs (
             request_id, provider_id, app_type, model, request_model,
             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
             input_cost_usd, output_cost_usd, cache_read_cost_usd, cache_creation_cost_usd, total_cost_usd,
             latency_ms, first_token_ms, status_code, error_message, session_id,
             provider_type, is_streaming, cost_multiplier, created_at, data_source
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
-        rusqlite::params![
+            rusqlite::params![
             request_id,
             "_codex_session",    // provider_id
             "codex",             // app_type
@@ -531,6 +533,10 @@ fn insert_codex_session_entry(
         ],
     )
     .map_err(|e| AppError::Database(format!("插入 Codex 会话日志失败: {e}")))?;
+
+    if inserted_rows > 0 {
+        crate::usage_events::notify_log_recorded();
+    }
 
     Ok(true)
 }

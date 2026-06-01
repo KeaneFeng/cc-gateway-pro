@@ -441,15 +441,16 @@ fn insert_session_log_entry(
         ),
     };
 
-    conn.execute(
-        "INSERT OR IGNORE INTO proxy_request_logs (
+    let inserted_rows = conn
+        .execute(
+            "INSERT OR IGNORE INTO proxy_request_logs (
             request_id, provider_id, app_type, model, request_model,
             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
             input_cost_usd, output_cost_usd, cache_read_cost_usd, cache_creation_cost_usd, total_cost_usd,
             latency_ms, first_token_ms, status_code, error_message, session_id,
             provider_type, is_streaming, cost_multiplier, created_at, data_source
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
-        rusqlite::params![
+            rusqlite::params![
             request_id,
             "_session",         // provider_id: 标记为会话来源
             "claude",           // app_type
@@ -477,6 +478,11 @@ fn insert_session_log_entry(
         ],
     )
     .map_err(|e| AppError::Database(format!("插入会话日志失败: {e}")))?;
+
+    // 仅在确实写入新行时通知前端，避免 INSERT OR IGNORE 跳过时产生空刷新
+    if inserted_rows > 0 {
+        crate::usage_events::notify_log_recorded();
+    }
 
     Ok(true)
 }

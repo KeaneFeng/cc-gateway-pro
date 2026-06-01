@@ -1122,7 +1122,23 @@ impl ProxyService {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let updated_config = Self::update_toml_base_url(config_str, &proxy_codex_base_url);
-            live_config["config"] = json!(updated_config);
+
+            // 3. 从数据库 provider 配置中补充 model_context_window 等元数据字段
+            let final_config =
+                if let Ok(provider) = self.require_current_provider_for_app(&AppType::Codex) {
+                    if let Some(db_config) = provider
+                        .settings_config
+                        .get("config")
+                        .and_then(|v| v.as_str())
+                    {
+                        Self::merge_codex_model_metadata(&updated_config, db_config)
+                    } else {
+                        updated_config
+                    }
+                } else {
+                    updated_config
+                };
+            live_config["config"] = json!(final_config);
 
             self.write_codex_live(&live_config)?;
             log::info!("Codex Live 配置已接管，代理地址: {proxy_codex_base_url}");
@@ -1175,7 +1191,23 @@ impl ProxyService {
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
                 let updated_config = Self::update_toml_base_url(config_str, &proxy_codex_base_url);
-                live_config["config"] = json!(updated_config);
+
+                // 从数据库 provider 配置中补充 model_context_window 等元数据字段
+                let final_config =
+                    if let Ok(provider) = self.require_current_provider_for_app(&AppType::Codex) {
+                        if let Some(db_config) = provider
+                            .settings_config
+                            .get("config")
+                            .and_then(|v| v.as_str())
+                        {
+                            Self::merge_codex_model_metadata(&updated_config, db_config)
+                        } else {
+                            updated_config
+                        }
+                    } else {
+                        updated_config
+                    };
+                live_config["config"] = json!(final_config);
 
                 self.write_codex_live(&live_config)?;
                 log::info!("Codex Live 配置已接管，代理地址: {proxy_codex_base_url}");
@@ -1870,6 +1902,97 @@ impl ProxyService {
     // ==================== Live 配置读写辅助方法 ====================
 
     /// 更新 TOML 字符串中的 base_url（委托给 codex_config 共享实现）
+    /// 从数据库 provider 配置中合并模型元数据字段到 config.toml
+    ///
+    /// 当前 config.toml 可能缺少 model_context_window 等字段（因为 Codex CLI 自身
+    /// 不会写入这些字段），但数据库 provider 配置中有。此函数从数据库配置中提取
+    /// [model_providers.<provider>] 下的元数据字段，合并到当前 config.toml 中。
+    fn merge_codex_model_metadata(current_config: &str, db_config: &str) -> String {
+        log::debug!(
+            "[Codex] merge_codex_model_metadata: current_config len={}, db_config len={}",
+            current_config.len(),
+            db_config.len()
+        );
+
+        // 解析当前 config.toml 获取 model_provider 名称
+        let current_doc: toml::Value = match toml::from_str(current_config) {
+            Ok(v) => v,
+            Err(_) => return current_config.to_string(),
+        };
+        let provider_name = current_doc
+            .get("model_provider")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        if provider_name.is_empty() {
+            return current_config.to_string();
+        }
+
+        // 解析数据库 config 获取该 provider 的元数据字段
+        let db_doc: toml::Value = match toml::from_str(db_config) {
+            Ok(v) => v,
+            Err(_) => return current_config.to_string(),
+        };
+
+        let db_provider = db_doc
+            .get("model_providers")
+            .and_then(|mp| mp.get(provider_name));
+        let current_provider = current_doc
+            .get("model_providers")
+            .and_then(|mp| mp.get(provider_name));
+
+        let (Some(db_tbl), Some(cur_tbl)) = (db_provider, current_provider) else {
+            return current_config.to_string();
+        };
+
+        // 需要合并的元数据字段列表
+        let metadata_keys = [
+            "model_context_window",
+            "model_auto_compact_token_limit",
+            "model_max_output_tokens",
+        ];
+
+        let mut result = current_config.to_string();
+        for key in &metadata_keys {
+            // 只在当前 config 缺少该字段且数据库有该字段时合并
+            if cur_tbl.get(key).is_none() {
+                if let Some(value) = db_tbl.get(key) {
+                    // 使用 toml_edit 语法保留插入到 [model_providers.<name>] 下
+                    if let Ok(mut doc) = result.parse::<toml_edit::DocumentMut>() {
+                        if let Some(mp) = doc
+                            .get_mut("model_providers")
+                            .and_then(|mp| mp.as_table_mut())
+                        {
+                            if let Some(provider_tbl) = mp.get_mut(provider_name) {
+                                if let Some(tbl) = provider_tbl.as_table_mut() {
+                                    // 根据原始值类型插入正确的 TOML 值
+                                    match value {
+                                        toml::Value::Integer(i) => {
+                                            tbl.insert(key, toml_edit::value(*i));
+                                        }
+                                        toml::Value::String(s) => {
+                                            tbl.insert(key, toml_edit::value(s.as_str()));
+                                        }
+                                        toml::Value::Boolean(b) => {
+                                            tbl.insert(key, toml_edit::value(*b));
+                                        }
+                                        toml::Value::Float(f) => {
+                                            tbl.insert(key, toml_edit::value(*f));
+                                        }
+                                        _ => continue,
+                                    }
+                                    result = doc.to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
     fn update_toml_base_url(toml_str: &str, new_url: &str) -> String {
         crate::codex_config::update_codex_toml_field(toml_str, "base_url", new_url)
             .unwrap_or_else(|_| toml_str.to_string())

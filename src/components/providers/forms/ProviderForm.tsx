@@ -374,9 +374,27 @@ function ProviderFormFull({
     return initialData?.meta?.apiFormat ?? "anthropic";
   });
 
+  // Codex API 格式状态
+  const [codexApiFormat, setCodexApiFormat] = useState<
+    "openai_responses" | "openai_chat"
+  >(() => {
+    const format = initialData?.meta?.apiFormat;
+    if (format === "openai_chat" || format === "openai_responses") {
+      return format;
+    }
+    return "openai_responses";
+  });
+
   const handleApiFormatChange = useCallback((format: ClaudeApiFormat) => {
     setLocalApiFormat(format);
   }, []);
+
+  const handleCodexApiFormatChange = useCallback(
+    (format: "openai_responses" | "openai_chat") => {
+      setCodexApiFormat(format);
+    },
+    [],
+  );
 
   const handleApiKeyFieldChange = useCallback(
     (field: ClaudeApiKeyField) => {
@@ -1240,7 +1258,9 @@ function ProviderFormFull({
       apiFormat:
         appId === "claude" && category !== "official"
           ? localApiFormat
-          : undefined,
+          : appId === "codex" && category !== "official"
+            ? codexApiFormat
+            : undefined,
       apiKeyField:
         appId === "claude" &&
         category !== "official" &&
@@ -1402,6 +1422,20 @@ function ProviderFormFull({
       const config = preset.config ?? "";
 
       resetCodexConfig(auth, config);
+
+      // 设置 API 格式
+      if (preset.apiFormat) {
+        setCodexApiFormat(preset.apiFormat);
+      } else {
+        setCodexApiFormat("openai_responses");
+      }
+
+      // 设置 Vision Model（仅 xiaomimimo 预设）
+      if (preset.icon === "xiaomimimo") {
+        setVisionModel("mimo-v2.5");
+      } else {
+        setVisionModel("");
+      }
 
       form.reset({
         name: preset.nameKey ? t(preset.nameKey) : preset.name,
@@ -1871,6 +1905,10 @@ function ProviderFormFull({
               shouldShowModelField={category !== "official"}
               modelName={codexModelName}
               onModelNameChange={handleCodexModelNameChange}
+              apiFormat={codexApiFormat}
+              onApiFormatChange={handleCodexApiFormatChange}
+              visionModel={visionModelResolved}
+              onVisionModelChange={setVisionModel}
               speedTestEndpoints={speedTestEndpoints}
             />
           )}

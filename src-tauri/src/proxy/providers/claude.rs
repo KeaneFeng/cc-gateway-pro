@@ -17,6 +17,10 @@
 use super::{AuthInfo, AuthStrategy, ProviderAdapter, ProviderType};
 use crate::provider::Provider;
 use crate::proxy::error::ProxyError;
+use serde_json::{json, Value};
+
+const ANTHROPIC_THINKING_PLACEHOLDER: &str = "tool call";
+const ANTHROPIC_REDACTED_THINKING_PLACEHOLDER: &str = "[redacted thinking]";
 
 /// 获取 Claude 供应商的 API 格式
 ///
@@ -118,6 +122,138 @@ fn should_preserve_reasoning_content_for_openai_chat(
         .into_iter()
         .flatten()
         .any(is_reasoning_content_compatible_identifier)
+}
+
+fn is_anthropic_tool_thinking_history_identifier(value: &str) -> bool {
+    let value = value.to_ascii_lowercase();
+    value.contains("deepseek") || value.contains("mimo") || value.contains("xiaomimimo")
+}
+
+fn should_normalize_anthropic_tool_thinking_history(
+    provider: &Provider,
+    body: &Value,
+    api_format: &str,
+) -> bool {
+    if api_format.trim() != "anthropic" {
+        return false;
+    }
+
+    if body
+        .get("model")
+        .and_then(|m| m.as_str())
+        .is_some_and(is_anthropic_tool_thinking_history_identifier)
+    {
+        return true;
+    }
+
+    let settings = &provider.settings_config;
+    [
+        settings
+            .get("env")
+            .and_then(|env| env.get("ANTHROPIC_BASE_URL"))
+            .and_then(|v| v.as_str()),
+        settings.get("base_url").and_then(|v| v.as_str()),
+        settings.get("baseURL").and_then(|v| v.as_str()),
+        settings.get("apiEndpoint").and_then(|v| v.as_str()),
+    ]
+    .into_iter()
+    .flatten()
+    .any(is_anthropic_tool_thinking_history_identifier)
+}
+
+/// DeepSeek's Anthropic-compatible endpoint requires thinking history to be
+/// replayed on every assistant turn that contains tool_use. Some Anthropic SDK
+/// clients keep the tool history but drop or redact the thinking block, which
+/// makes DeepSeek reject the next request with `content[].thinking ... must be
+/// passed back`. Normalize only the narrow tool-call history shape for
+/// providers known to require plain `thinking` blocks.
+pub fn normalize_anthropic_tool_thinking_history_for_provider(
+    body: &mut Value,
+    provider: &Provider,
+    api_format: &str,
+) -> bool {
+    if !should_normalize_anthropic_tool_thinking_history(provider, body, api_format) {
+        return false;
+    }
+
+    normalize_anthropic_tool_thinking_history(body)
+}
+
+fn normalize_anthropic_tool_thinking_history(body: &mut Value) -> bool {
+    let Some(messages) = body.get_mut("messages").and_then(Value::as_array_mut) else {
+        return false;
+    };
+
+    let mut changed = false;
+    for message in messages {
+        if message.get("role").and_then(Value::as_str) != Some("assistant") {
+            continue;
+        }
+
+        let Some(content) = message.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        if !content
+            .iter()
+            .any(|block| block.get("type").and_then(Value::as_str) == Some("tool_use"))
+        {
+            continue;
+        }
+
+        let mut has_thinking = false;
+        for block in content.iter_mut() {
+            match block.get("type").and_then(Value::as_str) {
+                Some("thinking") => {
+                    let has_non_empty_thinking = block
+                        .get("thinking")
+                        .and_then(Value::as_str)
+                        .is_some_and(|text| !text.trim().is_empty());
+                    if let Some(obj) = block.as_object_mut() {
+                        if obj.remove("signature").is_some() {
+                            changed = true;
+                        }
+                        if !has_non_empty_thinking {
+                            obj.insert(
+                                "thinking".to_string(),
+                                json!(ANTHROPIC_THINKING_PLACEHOLDER),
+                            );
+                            changed = true;
+                        }
+                    }
+                    has_thinking = true;
+                }
+                Some("redacted_thinking") => {
+                    if let Some(obj) = block.as_object_mut() {
+                        obj.insert("type".to_string(), json!("thinking"));
+                        obj.insert(
+                            "thinking".to_string(),
+                            json!(ANTHROPIC_REDACTED_THINKING_PLACEHOLDER),
+                        );
+                        obj.remove("data");
+                    }
+                    has_thinking = true;
+                    changed = true;
+                }
+                _ => {}
+            }
+        }
+
+        if !has_thinking {
+            // No thinking block at all — insert a placeholder before the first tool_use
+            if let Some(pos) = content
+                .iter()
+                .position(|b| b.get("type").and_then(Value::as_str) == Some("tool_use"))
+            {
+                content.insert(
+                    pos,
+                    json!({"type": "thinking", "thinking": ANTHROPIC_THINKING_PLACEHOLDER}),
+                );
+                changed = true;
+            }
+        }
+    }
+
+    changed
 }
 
 pub fn transform_claude_request_for_api_format(

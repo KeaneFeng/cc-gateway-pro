@@ -272,15 +272,19 @@ fn run_tool_lifecycle_silently(command_line: &str, _label: &str) -> Result<(), S
     use std::process::Command;
     // command_line 是 bash 风格脚本（含 `set -e` 与多行命令）；强制用 bash 执行，
     // 避免用户默认 shell 为 fish/zsh 时 `set -e` 等语义不一致。
-    // 先 source 用户的 shell profile 以获取完整 PATH（Tauri GUI 应用不继承 shell PATH）
+    // 先 source 用户的 shell profile 以获取完整 PATH（Tauri GUI 应用不继承 shell PATH）。
+    // 注意：不 source ~/.zshrc —— 它包含 zsh 交互式插件（如 fast-syntax-highlighting），
+    // 在 bash 中执行会报 typeset -g / bad substitution 错误。
     let profile_cmd = format!(
         r#"
         # Source common profile files to get full PATH
+        # (Tauri GUI 应用不继承 shell PATH)
         [ -f /etc/profile ] && . /etc/profile
         [ -f "$HOME/.bash_profile" ] && . "$HOME/.bash_profile"
         [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
-        [ -f "$HOME/.zprofile" ] && . "$HOME/.zprofile"
-        [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"
+        # homebrew / hermes PATH（从 .zprofile 提取，避免 source zsh 专有语法）
+        [ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"
+        export PATH="$HOME/.local/bin:$PATH"
         # Execute the actual command
         {command_line}
         "#

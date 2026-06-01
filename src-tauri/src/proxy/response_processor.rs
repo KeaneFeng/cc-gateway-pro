@@ -351,10 +351,137 @@ pub async fn process_response(
     parser_config: &UsageParserConfig,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<Response, ProxyError> {
+    // Codex + openai_chat: 需要将 Chat Completions 响应转换为 Responses API 格式
+    if ctx.tag == "Codex" {
+        let api_format = super::providers::codex::get_codex_api_format(&ctx.provider);
+        if api_format == "openai_chat" {
+            return handle_codex_chat_to_responses(
+                response,
+                ctx,
+                state,
+                parser_config,
+                connection_guard,
+            )
+            .await;
+        }
+    }
+
     if is_sse_response(&response) {
         Ok(handle_streaming(response, ctx, state, parser_config, connection_guard).await)
     } else {
         handle_non_streaming(response, ctx, state, parser_config, connection_guard).await
+    }
+}
+
+/// Codex Chat → Responses 转换处理
+///
+/// 将 Chat Completions 格式的响应（流式或非流式）转换为 Responses API 格式
+async fn handle_codex_chat_to_responses(
+    response: ProxyResponse,
+    ctx: &RequestContext,
+    state: &ProxyState,
+    parser_config: &UsageParserConfig,
+    connection_guard: Option<ActiveConnectionGuard>,
+) -> Result<Response, ProxyError> {
+    let status = response.status();
+
+    if !status.is_success() {
+        // 错误响应：读取 body 并转换为 Responses API 错误格式
+        let (_headers, _status, body_bytes) =
+            read_decoded_body(response, ctx.tag, std::time::Duration::ZERO).await?;
+        let error_response = super::providers::transform_codex_chat::chat_error_to_response_error(
+            serde_json::from_slice(&body_bytes).ok().as_ref(),
+        );
+        let error_bytes = serde_json::to_vec(&error_response).unwrap_or(body_bytes.to_vec());
+        let mut builder = axum::response::Response::builder().status(status);
+        builder = builder.header("content-type", "application/json");
+        return builder
+            .body(axum::body::Body::from(error_bytes))
+            .map_err(|e| ProxyError::Internal(format!("Failed to build error response: {e}")));
+    }
+
+    let is_stream = is_sse_response(&response);
+
+    if is_stream {
+        // 流式响应：将 Chat Completions SSE 转换为 Responses API SSE
+        log::debug!("[{}] Codex Chat -> Responses 流式转换", ctx.tag);
+        let stream = response.bytes_stream();
+        let sse_stream =
+            super::providers::streaming_codex_chat::create_responses_sse_stream_from_chat(stream);
+
+        let usage_collector = create_usage_collector(ctx, state, status.as_u16(), parser_config);
+        let timeout_config = ctx.streaming_timeout_config();
+        let logged_stream = create_logged_passthrough_stream(
+            sse_stream,
+            ctx.tag,
+            usage_collector,
+            timeout_config,
+            connection_guard,
+        );
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            "Content-Type",
+            axum::http::HeaderValue::from_static("text/event-stream"),
+        );
+        headers.insert(
+            "Cache-Control",
+            axum::http::HeaderValue::from_static("no-cache"),
+        );
+
+        let body = axum::body::Body::from_stream(logged_stream);
+        Ok((headers, body).into_response())
+    } else {
+        // 非流式响应：将 Chat Completions JSON 转换为 Responses API JSON
+        let (_headers, _status, body_bytes) =
+            read_decoded_body(response, ctx.tag, std::time::Duration::ZERO).await?;
+        let body_str = String::from_utf8_lossy(&body_bytes);
+        log::debug!(
+            "[{}] Codex Chat -> Responses 非流式转换: {}",
+            ctx.tag,
+            body_str
+        );
+
+        let chat_response: Value = serde_json::from_slice(&body_bytes).map_err(|e| {
+            log::error!("[{}] 解析 Chat 响应失败: {e}, body: {body_str}", ctx.tag);
+            ProxyError::TransformError(format!("Failed to parse chat response: {e}"))
+        })?;
+
+        let responses_response =
+            super::providers::transform_codex_chat::chat_completion_to_response(chat_response)
+                .map_err(|e| {
+                    log::error!("[{}] Chat -> Responses 转换失败: {e}", ctx.tag);
+                    e
+                })?;
+
+        // 记录使用量
+        if usage_logging_enabled(state) {
+            if let Some(usage) = (parser_config.response_parser)(&responses_response) {
+                let model = usage
+                    .model
+                    .clone()
+                    .unwrap_or_else(|| ctx.request_model.clone());
+                spawn_log_usage(
+                    state,
+                    ctx,
+                    usage,
+                    &model,
+                    &ctx.request_model,
+                    status.as_u16(),
+                    false,
+                );
+            }
+        }
+
+        let response_bytes = serde_json::to_vec(&responses_response).map_err(|e| {
+            ProxyError::TransformError(format!("Failed to serialize responses: {e}"))
+        })?;
+
+        let mut builder = axum::response::Response::builder().status(status);
+        builder = builder.header("content-type", "application/json");
+        builder
+            .body(axum::body::Body::from(response_bytes))
+            .map_err(|e| ProxyError::Internal(format!("Failed to build response: {e}")))
     }
 }
 

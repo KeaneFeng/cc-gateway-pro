@@ -30,45 +30,6 @@ pub const ANTHROPIC_CLAUDE_ROUTE_PREFIX: &str = "anthropic/claude-";
 /// Claude Desktop schema 不接受此后缀，import 边界翻译为 `supports1m` 字段。
 pub const ONE_M_CONTEXT_MARKER: &str = "[1m]";
 
-const NON_ANTHROPIC_ROUTE_MARKERS: &[&str] = &[
-    "ark-code",
-    "astron",
-    "command-r",
-    "deepseek",
-    "doubao",
-    "gemini",
-    "gemma",
-    "glm",
-    "gpt",
-    "grok",
-    "hermes",
-    "hy3",
-    "kimi",
-    "lfm",
-    "llama",
-    "longcat",
-    "mimo",
-    "minimax",
-    "mistral",
-    "mixtral",
-    "moonshot",
-    "nemotron",
-    "openai",
-    "qianfan",
-    "qwen",
-    "stepfun",
-    "seed-",
-    "hunyuan",
-    "nova-",
-    "ernie",
-    "codex",
-    "abab",
-    "jamba",
-    "arctic",
-    "solar",
-    "mercury",
-];
-
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClaudeDesktopDefaultRoute {
@@ -259,19 +220,24 @@ pub fn provider_mode(provider: &Provider) -> ClaudeDesktopMode {
 
 pub fn is_claude_safe_model_id(model: &str) -> bool {
     let normalized = model.trim().to_ascii_lowercase();
-    let has_allowed_shape = (normalized.starts_with(CLAUDE_ROUTE_PREFIX)
-        && normalized.len() > CLAUDE_ROUTE_PREFIX.len())
-        || (normalized.starts_with(ANTHROPIC_CLAUDE_ROUTE_PREFIX)
-            && normalized.len() > ANTHROPIC_CLAUDE_ROUTE_PREFIX.len())
-        || matches!(normalized.as_str(), "sonnet" | "opus" | "haiku")
-        || (normalized.starts_with("sonnet-") && normalized.len() > "sonnet-".len())
-        || (normalized.starts_with("opus-") && normalized.len() > "opus-".len())
-        || (normalized.starts_with("haiku-") && normalized.len() > "haiku-".len());
-    has_allowed_shape
-        && !normalized.contains(ONE_M_CONTEXT_MARKER)
-        && !NON_ANTHROPIC_ROUTE_MARKERS
-            .iter()
-            .any(|marker| normalized.contains(marker))
+    if normalized.contains(ONE_M_CONTEXT_MARKER) {
+        return false;
+    }
+
+    let Some(route_tail) = normalized
+        .strip_prefix(ANTHROPIC_CLAUDE_ROUTE_PREFIX)
+        .or_else(|| normalized.strip_prefix(CLAUDE_ROUTE_PREFIX))
+    else {
+        return false;
+    };
+
+    // 角色前缀后必须还有实际模型标识，拒绝 claude-sonnet- 这类退化值
+    // （否则会写入 profile 并触发 Claude Desktop fail-all 拒收整组）。
+    ["sonnet-", "opus-", "haiku-"].iter().any(|prefix| {
+        route_tail
+            .strip_prefix(prefix)
+            .is_some_and(|rest| !rest.is_empty())
+    })
 }
 
 fn inference_model_json(spec: &InferenceModelSpec) -> Value {

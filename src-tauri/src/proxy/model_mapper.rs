@@ -65,13 +65,25 @@ impl ModelMapping {
     /// 检查请求是否包含图片内容（CC-Gateway-Pro vision routing）
     /// 递归检查，支持 tool_result 中嵌套的 image block
     pub fn has_image_content(body: &Value) -> bool {
-        let messages = match body.get("messages").and_then(|m| m.as_array()) {
-            Some(msgs) => msgs,
-            None => return false,
-        };
-        for msg in messages {
-            if Self::has_image_in_content(msg.get("content")) {
-                return true;
+        // Check "messages" (Chat Completions / Anthropic format)
+        if let Some(messages) = body.get("messages").and_then(|m| m.as_array()) {
+            for msg in messages {
+                if Self::has_image_in_content(msg.get("content")) {
+                    return true;
+                }
+            }
+        }
+        // Check "input" (Responses API format)
+        if let Some(input) = body.get("input").and_then(|m| m.as_array()) {
+            for item in input {
+                // Responses API: {"role": "user", "content": [{"type": "input_image", ...}]}
+                if Self::has_image_in_content(item.get("content")) {
+                    return true;
+                }
+                // Also check the item itself (flat structure)
+                if Self::has_image_in_content(Some(item)) {
+                    return true;
+                }
             }
         }
         false
@@ -83,7 +95,8 @@ impl ModelMapping {
             Some(Value::Array(arr)) => {
                 for item in arr {
                     if let Some(t) = item.get("type").and_then(|t| t.as_str()) {
-                        if t == "image" || t == "image_url" {
+                        // Anthropic: "image", Chat Completions: "image_url", Responses API: "input_image"
+                        if t == "image" || t == "image_url" || t == "input_image" {
                             return true;
                         }
                     }

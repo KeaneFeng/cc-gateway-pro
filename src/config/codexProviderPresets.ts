@@ -24,6 +24,8 @@ export interface CodexProviderPreset {
   // 图标配置
   icon?: string; // 图标名称
   iconColor?: string; // 图标颜色
+  // API 格式（openai_responses | openai_chat）
+  apiFormat?: "openai_responses" | "openai_chat";
 }
 
 /**
@@ -531,5 +533,27 @@ base_url = "https://cc-api.pipellm.ai/v1"`,
     ),
     endpointCandidates: ["https://api.therouter.ai/v1"],
     category: "aggregator",
+  },
+  {
+    name: "Xiaomi MiMo",
+    websiteUrl: "https://platform.xiaomimimo.com",
+    apiKeyUrl: "https://platform.xiaomimimo.com/#/console/api-keys",
+    auth: generateThirdPartyAuth(""),
+    config: `model_provider = "mimo"
+model = "mimo-v2.5-pro"
+model_reasoning_effort = "high"
+disable_response_storage = true
+
+[model_providers.mimo]
+name = "mimo"
+base_url = "https://token-plan-cn.xiaomimimo.com/v1"
+wire_api = "responses"
+requires_openai_auth = true
+model_context_window = 131072`,
+    endpointCandidates: ["https://token-plan-cn.xiaomimimo.com/v1"],
+    category: "cn_official",
+    icon: "xiaomimimo",
+    iconColor: "#000000",
+    apiFormat: "openai_chat",
   },
 ];

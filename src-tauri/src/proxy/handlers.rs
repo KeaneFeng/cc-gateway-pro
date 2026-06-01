@@ -67,6 +67,49 @@ pub async fn get_status(State(state): State<ProxyState>) -> Result<Json<ProxySta
 /// 处理 /v1/messages 请求（Claude API）
 ///
 /// Claude 处理器包含独特的格式转换逻辑：
+/// 从 Responses API 的 input 中剥离图片内容
+///
+/// 当 provider 不支持图片时（如小米 MiMo），从请求中移除图片内容，
+/// 只保留文本内容，避免上游返回 "No endpoints found that support image input" 错误。
+#[allow(dead_code)]
+fn strip_images_from_input(body: &mut Value) {
+    let input = match body.get_mut("input").and_then(|v| v.as_array_mut()) {
+        Some(arr) => arr,
+        None => return,
+    };
+
+    for item in input.iter_mut() {
+        if let Some(content) = item.get_mut("content").and_then(|v| v.as_array_mut()) {
+            let has_image = content.iter().any(|part| {
+                part.get("type")
+                    .and_then(|t| t.as_str())
+                    .is_some_and(|t| t == "input_image" || t == "image_url" || t == "image")
+            });
+            if has_image {
+                // 保留文本内容，移除图片
+                let text_content: Vec<Value> = content
+                    .iter()
+                    .filter(|part| {
+                        part.get("type")
+                            .and_then(|t| t.as_str())
+                            .is_some_and(|t| t == "input_text" || t == "text")
+                    })
+                    .cloned()
+                    .collect();
+                if !text_content.is_empty() {
+                    *content = text_content;
+                } else {
+                    // 如果没有文本内容，添加一个占位文本
+                    *content = vec![serde_json::json!({
+                        "type": "input_text",
+                        "text": "[Image removed - not supported by provider]"
+                    })];
+                }
+            }
+        }
+    }
+}
+
 /// - 过去用于 OpenRouter 的 OpenAI Chat Completions 兼容接口（Anthropic ↔ OpenAI 转换）
 /// - 现在 OpenRouter 已推出 Claude Code 兼容接口，默认不再启用该转换（逻辑保留以备回退）
 pub async fn handle_messages(
@@ -504,6 +547,19 @@ pub async fn handle_chat_completions(
         RequestContext::new(&state, &body, &headers, AppType::Codex, "Codex", "codex").await?;
     let endpoint = endpoint_with_query(&uri, "/chat/completions");
 
+    // CC-Gateway-Pro: Vision routing 修改了 ctx.request_model，需要同步到 body
+    let body_model = body.get("model").and_then(|m| m.as_str()).unwrap_or("");
+    if ctx.request_model != body_model {
+        log::info!(
+            "[{}] Vision routing: updating body model {} -> {}",
+            "Codex",
+            body_model,
+            ctx.request_model
+        );
+    }
+    let mut body = body;
+    body["model"] = serde_json::json!(ctx.request_model);
+
     let is_stream = body
         .get("stream")
         .and_then(|v| v.as_bool())
@@ -567,6 +623,22 @@ pub async fn handle_responses(
     let mut ctx =
         RequestContext::new(&state, &body, &headers, AppType::Codex, "Codex", "codex").await?;
     let endpoint = endpoint_with_query(&uri, "/responses");
+
+    // CC-Gateway-Pro: Vision routing 修改了 ctx.request_model，需要同步到 body
+    let body_model = body.get("model").and_then(|m| m.as_str()).unwrap_or("");
+    if ctx.request_model != body_model {
+        log::info!(
+            "[{}] Vision routing: updating body model {} -> {}",
+            "Codex",
+            body_model,
+            ctx.request_model
+        );
+    }
+    let mut body = body;
+    body["model"] = serde_json::json!(ctx.request_model);
+
+    // 图片内容不再剥离 — transform_codex_chat 会将 input_image 转换为 Chat Completions 的 image_url 格式
+    // Vision routing 已切换到支持图片的模型 (如 mimo-v2.5)
 
     let is_stream = body
         .get("stream")

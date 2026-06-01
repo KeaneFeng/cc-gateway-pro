@@ -1104,6 +1104,15 @@ impl RequestForwarder {
         } else {
             None
         };
+        if adapter.name() == "Claude" {
+            if let Some(api_format) = resolved_claude_api_format.as_deref() {
+                super::providers::normalize_anthropic_tool_thinking_history_for_provider(
+                    &mut mapped_body,
+                    provider,
+                    api_format,
+                );
+            }
+        }
         let needs_transform = match resolved_claude_api_format.as_deref() {
             Some(api_format) => super::providers::claude_api_format_needs_transform(api_format),
             None => adapter.needs_transform(provider),
@@ -1114,6 +1123,12 @@ impl RequestForwarder {
                     .as_deref()
                     .unwrap_or_else(|| super::providers::get_claude_api_format(provider));
                 rewrite_claude_transform_endpoint(endpoint, api_format, is_copilot, &mapped_body)
+            } else if needs_transform && adapter.name() == "Codex" {
+                // Codex adapter: 重写 endpoint 为 /v1/chat/completions
+                let query = split_endpoint_and_query(endpoint)
+                    .1
+                    .map(ToString::to_string);
+                ("/v1/chat/completions".to_string(), query)
             } else {
                 (
                     endpoint.to_string(),
