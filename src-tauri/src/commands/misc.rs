@@ -492,7 +492,9 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
     if !npm_pkg.is_empty() {
         if let Ok(out) = Command::new("npm").args(["list", "-g", npm_pkg]).output() {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            if stdout.contains(npm_pkg) { return ToolInstallSource::Npm; }
+            if stdout.contains(npm_pkg) {
+                return ToolInstallSource::Npm;
+            }
         }
     }
     let pip_pkg = match tool {
@@ -502,7 +504,9 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
     };
     if !pip_pkg.is_empty() {
         if let Ok(out) = Command::new("pip").args(["show", pip_pkg]).output() {
-            if out.status.success() { return ToolInstallSource::Pip; }
+            if out.status.success() {
+                return ToolInstallSource::Pip;
+            }
         }
     }
     ToolInstallSource::Unknown
