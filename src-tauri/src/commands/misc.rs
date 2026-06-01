@@ -477,6 +477,37 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
     ToolInstallSource::Unknown
 }
 
+/// Windows 版本的检测安装来源（无 brew，只检查 npm/pip）
+#[cfg(target_os = "windows")]
+fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
+    use std::process::Command;
+    let npm_pkg = match tool {
+        "claude" => "@anthropic-ai/claude-code",
+        "codex" => "@openai/codex",
+        "gemini" => "@google/gemini-cli",
+        "opencode" => "opencode-ai",
+        "openclaw" => "openclaw",
+        _ => "",
+    };
+    if !npm_pkg.is_empty() {
+        if let Ok(out) = Command::new("npm").args(["list", "-g", npm_pkg]).output() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if stdout.contains(npm_pkg) { return ToolInstallSource::Npm; }
+        }
+    }
+    let pip_pkg = match tool {
+        "openclaw" => "openclaw",
+        "hermes" => "hermes-agent",
+        _ => "",
+    };
+    if !pip_pkg.is_empty() {
+        if let Ok(out) = Command::new("pip").args(["show", pip_pkg]).output() {
+            if out.status.success() { return ToolInstallSource::Pip; }
+        }
+    }
+    ToolInstallSource::Unknown
+}
+
 /// 构建工具安装/更新的命令行脚本
 fn build_tool_lifecycle_command(
     tools: &[&str],
