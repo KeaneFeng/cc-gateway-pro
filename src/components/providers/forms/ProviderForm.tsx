@@ -355,6 +355,7 @@ function ProviderFormFull({
       ),
     });
     setCodexChatReasoning(initialData?.meta?.codexChatReasoning ?? {});
+    setVisionModel(initialData?.meta?.visionModel ?? "");
   }, [appId, initialData, supportsFullUrl]);
 
   const defaultValues: ProviderFormData = useMemo(
@@ -509,6 +510,13 @@ function ProviderFormFull({
     useState<CodexChatReasoning>(
       () => initialData?.meta?.codexChatReasoning ?? {},
     );
+  // CC-Gateway-Pro: Vision Model state
+  const [visionModel, setVisionModel] = useState<string>(
+    () => initialData?.meta?.visionModel ?? "",
+  );
+
+  // CC-Gateway-Pro: Vision Model resolved value
+  const visionModelResolved = visionModel || claudeModel || "";
 
   const {
     codexAuth,
@@ -1410,6 +1418,7 @@ function ProviderFormFull({
         supportsFullUrl && category !== "official" && localIsFullUrl
           ? true
           : undefined,
+      visionModel: visionModel || undefined,
     };
 
     if (!isCodexOauthProvider && "codexFastMode" in nextMeta) {
@@ -1565,6 +1574,7 @@ function ProviderFormFull({
 
       resetCodexConfig(auth, config, preset.modelCatalog ?? []);
       setCodexChatReasoning(preset.codexChatReasoning ?? {});
+      setVisionModel(preset.visionModel ?? "");
       setLocalCodexApiFormat(
         preset.apiFormat ??
           codexApiFormatFromWireApi(extractCodexWireApi(config)) ??
@@ -1995,6 +2005,7 @@ function ProviderFormFull({
               showEndpointTools
               shouldShowModelSelector={category !== "official"}
               claudeModel={claudeModel}
+              visionModel={visionModelResolved}
               defaultHaikuModel={defaultHaikuModel}
               defaultHaikuModelName={defaultHaikuModelName}
               defaultSonnetModel={defaultSonnetModel}
@@ -2041,6 +2052,7 @@ function ProviderFormFull({
               catalogModels={codexCatalogModels}
               onCatalogModelsChange={setCodexCatalogModels}
               speedTestEndpoints={speedTestEndpoints}
+              visionModel={visionModelResolved}
             />
           )}
 

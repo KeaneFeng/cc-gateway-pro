@@ -668,7 +668,7 @@ pub fn map_proxy_request_model(mut body: Value, provider: &Provider) -> Result<V
         .get("model")
         .and_then(Value::as_str)
         .map(str::trim)
-        .map(str::to_string)
+        .map(|s| crate::proxy::model_mapper::strip_one_m_suffix_for_upstream(s).to_string())
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
             AppError::localized(
@@ -1820,16 +1820,25 @@ mod tests {
     }
 
     #[test]
-    fn claude_desktop_proxy_rejects_1m_suffix_route() {
+    fn claude_desktop_strips_1m_suffix_before_route_lookup() {
         let provider = proxy_provider("proxy");
 
-        let err = map_proxy_request_model(
+        let result = map_proxy_request_model(
             json!({"model": "claude-sonnet-4-6 [1M]", "messages": []}),
             &provider,
         )
-        .expect_err("1M suffix route should not be accepted");
-        assert!(err.to_string().contains("claude-sonnet-4-6 [1M]"));
+        .expect("1M suffix should be stripped before route lookup");
+        assert_eq!(result["model"], "kimi-k2");
     }
+
+
+
+
+
+
+
+
+
 
     #[test]
     fn claude_desktop_rejects_1m_suffix_as_model_id() {
