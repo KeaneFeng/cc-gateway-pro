@@ -1829,7 +1829,7 @@ name = "any"
     }
 
     #[test]
-    fn resolve_catalog_path_accepts_cc_switch_owned_file() {
+    fn resolve_catalog_path_accepts_cc_gateway_pro_owned_file() {
         let generated = PathBuf::from("/tmp/.codex/cc-switch-model-catalog.json");
         let config = r#"model_catalog_json = "/tmp/.codex/cc-switch-model-catalog.json"
 "#;
