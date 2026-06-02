@@ -2003,6 +2003,7 @@ function ProviderFormFull({
               shouldShowModelSelector={category !== "official"}
               claudeModel={claudeModel}
               visionModel={visionModelHook.visionModelResolved}
+              onVisionModelChange={visionModelHook.setVisionModel}
               defaultHaikuModel={defaultHaikuModel}
               defaultHaikuModelName={defaultHaikuModelName}
               defaultSonnetModel={defaultSonnetModel}
@@ -2050,6 +2051,7 @@ function ProviderFormFull({
               onCatalogModelsChange={setCodexCatalogModels}
               speedTestEndpoints={speedTestEndpoints}
               visionModel={visionModelHook.visionModelResolved}
+              onVisionModelChange={visionModelHook.setVisionModel}
             />
           )}
 
