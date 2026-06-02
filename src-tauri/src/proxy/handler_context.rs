@@ -204,43 +204,9 @@ impl RequestContext {
             current_provider_id = effective_provider.id.clone();
         }
 
-        // CC-Gateway-Pro: Vision Model Auto-Routing
-        // 在 project routing 之后执行，确保检查的是最终 provider 的 vision_model
-        let mut effective_model = request_model.clone();
-        let has_images = crate::proxy::model_mapper::ModelMapping::has_image_content(body);
-        log::info!(
-            "[{}] Vision check: has_images={}, provider={}, vision_model={:?}",
-            tag,
-            has_images,
-            effective_provider.name,
-            effective_provider
-                .meta
-                .as_ref()
-                .and_then(|m| m.vision_model.as_deref())
-        );
-        if has_images {
-            if let Some(vision) = effective_provider
-                .meta
-                .as_ref()
-                .and_then(|m| m.vision_model.as_ref())
-                .filter(|s| !s.is_empty())
-            {
-                log::info!(
-                    "[{}] Vision routing: detected image content, switching model {} -> {} (provider: {})",
-                    tag,
-                    request_model,
-                    vision,
-                    effective_provider.name
-                );
-                effective_model = vision.clone();
-            } else {
-                log::warn!(
-                    "[{}] Vision routing: image detected but provider {} has no vision_model configured, using default model",
-                    tag,
-                    effective_provider.name
-                );
-            }
-        }
+        // CC-Gateway-Pro: Vision Model Auto-Routing (独立模块，避免上游覆盖)
+        let effective_model =
+            super::vision_router::route(&request_model, body, &effective_provider, tag);
 
         log::debug!(
             "[{}] Provider: {}, model: {}, failover chain: {} providers, session: {}",
@@ -250,12 +216,6 @@ impl RequestContext {
             providers.len(),
             session_id
         );
-
-        // CC-Gateway-Pro: Vision routing 修改了 effective_model，同步到 body
-        // 这样 forwarder 的 model mapping 会基于 vision-routed 的模型做映射
-        if effective_model != request_model {
-            body["model"] = serde_json::json!(effective_model);
-        }
 
         Ok(Self {
             start_time,
