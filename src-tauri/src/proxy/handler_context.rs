@@ -84,7 +84,7 @@ impl RequestContext {
     /// 返回 `ProxyError` 如果 Provider 选择失败
     pub async fn new(
         state: &ProxyState,
-        body: &serde_json::Value,
+        body: &mut serde_json::Value,
         headers: &HeaderMap,
         app_type: AppType,
         tag: &'static str,
@@ -250,6 +250,12 @@ impl RequestContext {
             providers.len(),
             session_id
         );
+
+        // CC-Gateway-Pro: Vision routing 修改了 effective_model，同步到 body
+        // 这样 forwarder 的 model mapping 会基于 vision-routed 的模型做映射
+        if effective_model != request_model {
+            body["model"] = serde_json::json!(effective_model);
+        }
 
         Ok(Self {
             start_time,
