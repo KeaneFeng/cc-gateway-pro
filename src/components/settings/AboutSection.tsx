@@ -496,7 +496,14 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
       try {
         resetDismiss();
         await updateHandle.downloadAndInstall();
-        await relaunchApp();
+        try {
+          await relaunchApp();
+        } catch {
+          // 下载成功但重启失败，提示手动重启
+          toast.success(t("settings.updateDownloaded"), { closeButton: true });
+          setIsDownloading(false);
+          return;
+        }
       } catch (error) {
         console.error("[AboutSection] Update failed", error);
         toast.error(t("settings.updateFailed"));

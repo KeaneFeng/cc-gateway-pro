@@ -119,7 +119,17 @@ export async function checkForUpdate(
 
 export async function relaunchApp(): Promise<void> {
   const { relaunch } = await import("@tauri-apps/plugin-process");
-  await relaunch();
+
+  // 超时保护：5 秒内 relaunch 未生效则抛出
+  const timeout = new Promise<void>((_, reject) =>
+    setTimeout(() => reject(new Error("relaunch timeout")), 5000),
+  );
+
+  try {
+    await Promise.race([relaunch(), timeout]);
+  } catch {
+    throw new Error("RELAUNCH_FAILED");
+  }
 }
 
 // 旧的聚合更新流程已由调用方直接使用 updateHandle 取代
