@@ -114,6 +114,7 @@ import { HERMES_DEFAULT_CONFIG } from "./hooks/useHermesFormState";
 import { resolveManagedAccountId } from "@/lib/authBinding";
 import { useOpenClawLiveProviderIds } from "@/hooks/useOpenClaw";
 import { useHermesLiveProviderIds } from "@/hooks/useHermes";
+import { useVisionModel } from "@/hooks/useVisionModel";
 
 type PresetEntry = {
   id: string;
@@ -355,7 +356,7 @@ function ProviderFormFull({
       ),
     });
     setCodexChatReasoning(initialData?.meta?.codexChatReasoning ?? {});
-    setVisionModel(initialData?.meta?.visionModel ?? "");
+    visionModelHook.setVisionModel(initialData?.meta?.visionModel ?? "");
   }, [appId, initialData, supportsFullUrl]);
 
   const defaultValues: ProviderFormData = useMemo(
@@ -510,13 +511,9 @@ function ProviderFormFull({
     useState<CodexChatReasoning>(
       () => initialData?.meta?.codexChatReasoning ?? {},
     );
-  // CC-Gateway-Pro: Vision Model state
-  const [visionModel, setVisionModel] = useState<string>(
-    () => initialData?.meta?.visionModel ?? "",
-  );
 
-  // CC-Gateway-Pro: Vision Model resolved value
-  const visionModelResolved = visionModel || claudeModel || "";
+  // CC-Gateway-Pro: Vision Model (独立 hook，避免上游覆盖丢失)
+  const visionModelHook = useVisionModel({ initialData, claudeModel });
 
   const {
     codexAuth,
@@ -1418,7 +1415,7 @@ function ProviderFormFull({
         supportsFullUrl && category !== "official" && localIsFullUrl
           ? true
           : undefined,
-      visionModel: visionModel || undefined,
+      ...visionModelHook.getMeta(),
     };
 
     if (!isCodexOauthProvider && "codexFastMode" in nextMeta) {
@@ -1574,7 +1571,7 @@ function ProviderFormFull({
 
       resetCodexConfig(auth, config, preset.modelCatalog ?? []);
       setCodexChatReasoning(preset.codexChatReasoning ?? {});
-      setVisionModel(preset.visionModel ?? "");
+      visionModelHook.setFromPreset(preset);
       setLocalCodexApiFormat(
         preset.apiFormat ??
           codexApiFormatFromWireApi(extractCodexWireApi(config)) ??
@@ -2005,7 +2002,7 @@ function ProviderFormFull({
               showEndpointTools
               shouldShowModelSelector={category !== "official"}
               claudeModel={claudeModel}
-              visionModel={visionModelResolved}
+              visionModel={visionModelHook.visionModelResolved}
               defaultHaikuModel={defaultHaikuModel}
               defaultHaikuModelName={defaultHaikuModelName}
               defaultSonnetModel={defaultSonnetModel}
@@ -2052,7 +2049,7 @@ function ProviderFormFull({
               catalogModels={codexCatalogModels}
               onCatalogModelsChange={setCodexCatalogModels}
               speedTestEndpoints={speedTestEndpoints}
-              visionModel={visionModelResolved}
+              visionModel={visionModelHook.visionModelResolved}
             />
           )}
 
