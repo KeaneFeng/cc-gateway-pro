@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use cc_switch_lib::{
+use cc_gateway_pro_lib::{
     get_claude_settings_path, read_json_file, write_codex_live_atomic, AppError, AppType, McpApps,
     McpServer, MultiAppConfig, Provider, ProviderMeta, ProviderService,
 };
@@ -180,7 +180,7 @@ command = "say"
         .expect("switch provider should succeed");
 
     let auth_value: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth.json");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth.json");
     assert_eq!(
         auth_value.get("OPENAI_API_KEY").and_then(|v| v.as_str()),
         Some("legacy-key"),
@@ -188,7 +188,7 @@ command = "say"
     );
 
     let config_text =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config.toml");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
     assert!(
         config_text.contains("mcp_servers.echo-server"),
         "config.toml should contain synced MCP servers"
@@ -310,7 +310,7 @@ requires_openai_auth = true
         .expect("switch provider should succeed");
 
     let config_text =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config.toml");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
     let parsed: toml::Value = toml::from_str(&config_text).expect("parse config.toml");
 
     assert_eq!(
@@ -447,7 +447,7 @@ requires_openai_auth = true
         .expect("switch to bridge provider should succeed");
 
     let auth_value: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth.json");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth.json");
     assert_eq!(
         auth_value.get("auth_mode").and_then(|v| v.as_str()),
         Some("chatgpt")
@@ -467,7 +467,7 @@ requires_openai_auth = true
     );
 
     let live_config =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config.toml");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
     let parsed_live: toml::Value = toml::from_str(&live_config).expect("parse live config");
     assert_eq!(
         parsed_live
@@ -601,14 +601,14 @@ wire_api = "responses"
         .expect("switch from official subscription to DeepSeek");
 
     let auth_after_switch: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth after switch");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth after switch");
     assert_eq!(
         auth_after_switch, oauth_auth,
         "normal provider switch with Codex preservation enabled must keep OAuth auth.json"
     );
 
     let config_after_switch =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config");
     assert!(
         config_after_switch.contains("https://api.deepseek.com/v1"),
         "normal switch should write the DeepSeek endpoint before takeover"
@@ -625,14 +625,14 @@ wire_api = "responses"
         .expect("enable Codex takeover");
 
     let auth_after_takeover: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth after takeover");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth after takeover");
     assert_eq!(
         auth_after_takeover, oauth_auth,
         "enabling takeover must not rewrite Codex OAuth auth.json"
     );
 
     let config_after_takeover =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config");
     assert!(
         config_after_takeover.contains("http://127.0.0.1:15721/v1"),
         "enabling takeover should point Codex config.toml at the local proxy"
@@ -671,13 +671,13 @@ wire_api = "responses"
         .expect("disable Codex takeover");
 
     let restored_auth: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read restored auth");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read restored auth");
     assert_eq!(
         restored_auth, oauth_auth,
         "disabling takeover should restore without replacing OAuth auth.json"
     );
 
-    let restored_config = std::fs::read_to_string(cc_switch_lib::get_codex_config_path())
+    let restored_config = std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path())
         .expect("read restored config");
     assert!(
         restored_config.contains("https://api.deepseek.com/v1")
@@ -766,7 +766,7 @@ requires_openai_auth = true
         .expect("switch to third-party provider should succeed");
 
     let auth_value: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth.json");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth.json");
     assert_eq!(
         auth_value.get("OPENAI_API_KEY").and_then(|v| v.as_str()),
         Some("third-party-key"),
@@ -840,7 +840,7 @@ requires_openai_auth = true
         .expect("switch to official provider should succeed without API key");
 
     let auth_value: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth.json");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth.json");
     assert_eq!(
         auth_value.get("auth_mode").and_then(|v| v.as_str()),
         Some("chatgpt")
@@ -860,7 +860,7 @@ requires_openai_auth = true
     );
 
     let live_config =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config.toml");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
     assert!(
         !live_config.contains("experimental_bearer_token"),
         "official login provider has no API key to inject"
@@ -938,7 +938,7 @@ fn provider_service_switch_codex_official_accounts_write_auth_json() {
     ProviderService::switch(&state, AppType::Codex, "official-b")
         .expect("switch to official account B should write auth.json");
     let auth_b: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth B");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth B");
     assert_eq!(
         auth_b
             .pointer("/tokens/access_token")
@@ -950,7 +950,7 @@ fn provider_service_switch_codex_official_accounts_write_auth_json() {
     ProviderService::switch(&state, AppType::Codex, "official-a")
         .expect("switch back to official account A should use backfilled live auth");
     let auth_a: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth A");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth A");
     assert_eq!(
         auth_a
             .pointer("/tokens/access_token")
@@ -1286,14 +1286,14 @@ wire_api = "responses"
         .expect("switch should update takeover backup instead of writing normal live config");
 
     let auth_after: serde_json::Value =
-        read_json_file(&cc_switch_lib::get_codex_auth_path()).expect("read auth.json");
+        read_json_file(&cc_gateway_pro_lib::get_codex_auth_path()).expect("read auth.json");
     assert_eq!(
         auth_after, oauth_auth,
         "provider switch during takeover ownership must not rewrite Codex OAuth auth"
     );
 
     let live_config =
-        std::fs::read_to_string(cc_switch_lib::get_codex_config_path()).expect("read config.toml");
+        std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config.toml");
     assert!(
         live_config.contains("http://127.0.0.1:15721/v1"),
         "live config should remain pointed at the local proxy"
