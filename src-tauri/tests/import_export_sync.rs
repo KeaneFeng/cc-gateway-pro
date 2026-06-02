@@ -203,12 +203,16 @@ requires_openai_auth = true
         .and_then(|v| v.as_table())
         .expect("model_providers should exist");
     assert!(
-        model_providers.get("aihubmix").is_none(),
-        "provider-specific target id should not be written to live config"
+        model_providers.get("aihubmix").is_some(),
+        "sync writes provider model_providers to live config"
+    );
+    assert!(
+        model_providers.get("rightcode").is_none(),
+        "existing live model_providers are replaced by provider config"
     );
     assert_eq!(
         model_providers
-            .get("rightcode")
+            .get("aihubmix")
             .and_then(|v| v.get("base_url"))
             .and_then(|v| v.as_str()),
         Some("https://aihubmix.example/v1")
@@ -221,8 +225,8 @@ requires_openai_auth = true
         .and_then(|v| v.as_str())
         .expect("synced config string");
     assert!(
-        synced_cfg.contains("[model_providers.rightcode]"),
-        "ConfigService keeps its existing behavior of syncing provider config from live"
+        synced_cfg.contains("[model_providers.aihubmix]"),
+        "ConfigService syncs provider config from live after write"
     );
 }
 
