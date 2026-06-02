@@ -30,12 +30,9 @@ export function useVisionModel({
 
   const visionModelResolved = visionModel || claudeModel || "";
 
-  const setFromPreset = useCallback(
-    (preset: { visionModel?: string }) => {
-      setVisionModel(preset.visionModel ?? "");
-    },
-    [],
-  );
+  const setFromPreset = useCallback((preset: { visionModel?: string }) => {
+    setVisionModel(preset.visionModel ?? "");
+  }, []);
 
   const getMeta = useCallback(() => {
     return { visionModel: visionModel || undefined };

@@ -1831,15 +1831,6 @@ mod tests {
         assert_eq!(result["model"], "kimi-k2");
     }
 
-
-
-
-
-
-
-
-
-
     #[test]
     fn claude_desktop_rejects_1m_suffix_as_model_id() {
         assert!(!is_claude_safe_model_id("claude-sonnet-4-6 [1m]"));
