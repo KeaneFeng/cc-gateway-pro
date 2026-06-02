@@ -194,8 +194,8 @@ requires_openai_auth = true
 
     assert_eq!(
         parsed.get("model_provider").and_then(|v| v.as_str()),
-        Some("rightcode"),
-        "legacy ConfigService sync should use the stable live provider id"
+        Some("aihubmix"),
+        "ConfigService sync writes provider config to live"
     );
 
     let model_providers = parsed
