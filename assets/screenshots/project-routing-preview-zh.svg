@@ -1,0 +1,59 @@
+<svg width="1440" height="840" viewBox="0 0 1440 840" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">项目路由界面预览</title>
+  <desc id="desc">展示按项目路径绑定供应商和查看会话的项目路由界面。</desc>
+  <rect width="1440" height="840" rx="0" fill="#0A0A0A"/>
+  <rect x="24" y="24" width="1392" height="792" rx="18" fill="#FFFFFF"/>
+  <circle cx="56" cy="57" r="8" fill="#FF5F57"/>
+  <circle cx="80" cy="57" r="8" fill="#FFBD2E"/>
+  <circle cx="104" cy="57" r="8" fill="#28C840"/>
+  <rect x="58" y="94" width="44" height="44" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="2"/>
+  <path d="M84 105L73 116L84 127" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M75 116H92" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="124" y="126" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">项目路由</text>
+  <rect x="56" y="178" width="80" height="30" rx="15" fill="#F3F4F6"/>
+  <text x="72" y="199" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700">6 个项目</text>
+  <rect x="1255" y="166" width="86" height="44" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+  <path d="M1279 181C1284 176 1293 176 1298 181M1298 181V174M1298 181H1291M1297 195C1292 200 1283 200 1278 195M1278 195V202M1278 195H1285" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1308" y="194" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="600">刷新</text>
+
+  <g>
+    <rect x="56" y="248" width="1284" height="108" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <path d="M91 286L99 294L91 302" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="124" y="298" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">/Users/keane</text>
+    <rect x="124" y="316" width="84" height="28" rx="14" fill="#F3F4F6"/>
+    <text x="140" y="336" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">18 个会话</text>
+    <rect x="220" y="316" width="116" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="234" y="336" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">使用默认供应商</text>
+    <path d="M1290 285L1302 273L1309 280L1297 292L1288 294L1290 285Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="56" y="384" width="1284" height="244" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <path d="M91 423L99 431L107 423" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="124" y="435" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">/Users/keane/www/company/miniprogram</text>
+    <rect x="124" y="453" width="76" height="28" rx="14" fill="#F3F4F6"/>
+    <text x="140" y="473" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">2 个会话</text>
+    <rect x="212" y="453" width="116" height="28" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <text x="226" y="473" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">使用默认供应商</text>
+    <line x1="124" y1="492" x2="124" y2="604" stroke="#F3F4F6" stroke-width="3"/>
+    <rect x="158" y="508" width="18" height="18" rx="3" stroke="#6B7280" stroke-width="2"/>
+    <text x="194" y="526" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">hi</text>
+    <text x="194" y="552" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="17">/Users/keane/www/company/miniprogram</text>
+    <rect x="158" y="586" width="18" height="18" rx="3" stroke="#6B7280" stroke-width="2"/>
+    <text x="194" y="604" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">hi</text>
+    <text x="194" y="630" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="17">/Users/keane/www/company/miniprogram</text>
+    <path d="M1250 526H1241V517H1250V526ZM1246 522H1259V535H1246V522Z" stroke="#6B7280" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M1288 521H1304M1293 521V517H1299V521M1291 525L1293 540H1299L1301 525" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="56" y="656" width="1284" height="108" rx="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <path d="M91 694L99 702L91 710" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="124" y="706" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">/Users/keane/www/company/app</text>
+    <rect x="124" y="724" width="76" height="28" rx="14" fill="#F3F4F6"/>
+    <text x="140" y="744" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">53 个会话</text>
+    <rect x="212" y="724" width="166" height="28" rx="14" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5"/>
+    <text x="226" y="744" fill="#10B981" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">Bailian（Qwen3.6-plus）</text>
+    <path d="M1290 693L1302 681L1309 688L1297 700L1288 702L1290 693Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

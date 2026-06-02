@@ -353,7 +353,7 @@ pub async fn process_response(
 ) -> Result<Response, ProxyError> {
     // Codex + openai_chat: 需要将 Chat Completions 响应转换为 Responses API 格式
     if ctx.tag == "Codex" {
-        let api_format = super::providers::codex::get_codex_api_format(&ctx.provider);
+        let api_format = super::providers::get_codex_api_format(&ctx.provider);
         if api_format == "openai_chat" {
             return handle_codex_chat_to_responses(
                 response,

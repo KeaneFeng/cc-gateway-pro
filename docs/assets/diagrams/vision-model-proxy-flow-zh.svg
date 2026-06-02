@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="760" viewBox="0 0 1300 760">
+  <defs>
+    <style>
+      .bg{fill:#fbfdff}.title{font:700 40px Arial,"Microsoft YaHei",sans-serif;fill:#101828}.sub{font:400 18px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .box{fill:#fff;stroke:#c8d7ea;stroke-width:2}.blue{fill:#f0f7ff;stroke:#b8d8ff}.green{fill:#f1fbf5;stroke:#afe4c4}.orange{fill:#fff7ed;stroke:#ffd1a1}.purple{fill:#faf5ff;stroke:#dcc6ff}
+      .h{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#1849a9}.label{font:700 17px Arial,"Microsoft YaHei",sans-serif;fill:#1d2939}.small{font:400 14px Arial,"Microsoft YaHei",sans-serif;fill:#475467}.tiny{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#3478c9;stroke-width:2.6;fill:none;marker-end:url(#arrow)}.yes{stroke:#12a05c;stroke-width:2.6;fill:none;marker-end:url(#green)}.no{stroke:#f79009;stroke-width:2.4;fill:none;stroke-dasharray:7 7;marker-end:url(#orange)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#3478c9"/></marker>
+    <marker id="green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#12a05c"/></marker>
+    <marker id="orange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#f79009"/></marker>
+  </defs>
+  <rect class="bg" width="1300" height="760"/>
+  <text class="title" x="650" y="54" text-anchor="middle">Vision Model 代理工作原理图</text>
+  <text class="sub" x="650" y="86" text-anchor="middle">检测请求中的图片内容，并在代理链路中自动切换到 Provider 配置的 vision_model</text>
+
+  <rect class="box" x="36" y="140" width="190" height="430" rx="16"/>
+  <text class="h" x="131" y="178" text-anchor="middle">客户端</text>
+  <rect class="blue" x="64" y="218" width="134" height="58" rx="10"/>
+  <text class="label" x="131" y="251" text-anchor="middle">Claude Code</text>
+  <rect class="blue" x="64" y="304" width="134" height="58" rx="10"/>
+  <text class="label" x="131" y="337" text-anchor="middle">Codex</text>
+  <rect class="blue" x="64" y="390" width="134" height="58" rx="10"/>
+  <text class="label" x="131" y="423" text-anchor="middle">Gemini CLI</text>
+  <text class="small" x="131" y="505" text-anchor="middle">文本 + 图片 / 截图</text>
+  <text class="small" x="131" y="528" text-anchor="middle">或 tool_result 图片</text>
+
+  <rect class="box" x="300" y="120" width="620" height="510" rx="18"/>
+  <text class="h" x="610" y="158" text-anchor="middle">本地代理核心处理链路</text>
+  <rect class="green" x="330" y="200" width="160" height="86" rx="12"/>
+  <text class="label" x="410" y="232" text-anchor="middle">1. 解析请求体</text>
+  <text class="tiny" x="410" y="256" text-anchor="middle">messages / input</text>
+
+  <rect class="green" x="530" y="200" width="160" height="86" rx="12"/>
+  <text class="label" x="610" y="232" text-anchor="middle">2. 递归识别图片</text>
+  <text class="tiny" x="610" y="256" text-anchor="middle">image / image_url / input_image</text>
+
+  <rect class="orange" x="730" y="200" width="160" height="86" rx="12"/>
+  <text class="label" x="810" y="232" text-anchor="middle">3. 读取 Provider</text>
+  <text class="tiny" x="810" y="256" text-anchor="middle">meta.vision_model</text>
+
+  <rect class="purple" x="410" y="350" width="180" height="96" rx="12"/>
+  <text class="label" x="500" y="386" text-anchor="middle">未发现图片</text>
+  <text class="tiny" x="500" y="412" text-anchor="middle">保持原模型</text>
+
+  <rect class="purple" x="640" y="350" width="190" height="96" rx="12"/>
+  <text class="label" x="735" y="386" text-anchor="middle">发现图片 + 已配置</text>
+  <text class="tiny" x="735" y="412" text-anchor="middle">body.model -> vision_model</text>
+
+  <rect class="green" x="500" y="500" width="230" height="78" rx="12"/>
+  <text class="label" x="615" y="532" text-anchor="middle">4. 后续模型映射保护</text>
+  <text class="tiny" x="615" y="555" text-anchor="middle">vision_model 不再被默认模型覆盖</text>
+
+  <rect class="box" x="990" y="140" width="250" height="430" rx="16"/>
+  <text class="h" x="1115" y="178" text-anchor="middle">上游 Provider</text>
+  <rect class="orange" x="1020" y="226" width="190" height="72" rx="10"/>
+  <text class="label" x="1115" y="256" text-anchor="middle">文本模型</text>
+  <text class="tiny" x="1115" y="278" text-anchor="middle">默认 / 便宜 / 快</text>
+  <rect class="green" x="1020" y="340" width="190" height="72" rx="10"/>
+  <text class="label" x="1115" y="370" text-anchor="middle">视觉模型</text>
+  <text class="tiny" x="1115" y="392" text-anchor="middle">vision_model</text>
+  <rect class="blue" x="1020" y="454" width="190" height="72" rx="10"/>
+  <text class="label" x="1115" y="484" text-anchor="middle">用量记录</text>
+  <text class="tiny" x="1115" y="506" text-anchor="middle">原始模型 / 实际模型 / Token</text>
+
+  <path class="arrow" d="M226 350 C258 350 268 243 330 243"/>
+  <path class="arrow" d="M490 243 H530"/>
+  <path class="arrow" d="M690 243 H730"/>
+  <path class="no" d="M610 286 C570 310 535 326 500 350"/>
+  <path class="yes" d="M810 286 C805 318 780 330 735 350"/>
+  <path class="arrow" d="M500 446 C510 484 548 492 615 500"/>
+  <path class="arrow" d="M735 446 C725 484 685 492 615 500"/>
+  <path class="arrow" d="M730 540 C820 540 900 490 1020 490"/>
+  <path class="no" d="M500 398 C855 398 870 262 1020 262"/>
+  <path class="yes" d="M735 398 C890 398 910 376 1020 376"/>
+
+  <rect x="72" y="650" width="1156" height="56" rx="12" fill="#eef6ff" stroke="#d6e3f5"/>
+  <text class="small" x="650" y="682" text-anchor="middle">关键点：Vision 路由发生在 Project Provider 覆盖之后，因此不同项目绑定的 Provider 可以拥有不同的 vision_model。</text>
+</svg>

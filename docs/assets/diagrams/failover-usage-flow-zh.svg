@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="720" viewBox="0 0 1300 720">
+  <defs>
+    <style>
+      .bg{fill:#fbfdff}.title{font:700 38px Arial,"Microsoft YaHei",sans-serif;fill:#101828}.sub{font:400 18px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .box{fill:#fff;stroke:#c8d7ea;stroke-width:2}.blue{fill:#f0f7ff;stroke:#b8d8ff}.green{fill:#f1fbf5;stroke:#afe4c4}.orange{fill:#fff7ed;stroke:#ffd1a1}.red{fill:#fff1f3;stroke:#ffccd5}.purple{fill:#faf5ff;stroke:#dcc6ff}
+      .h{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#1849a9}.label{font:700 17px Arial,"Microsoft YaHei",sans-serif;fill:#1d2939}.small{font:400 14px Arial,"Microsoft YaHei",sans-serif;fill:#475467}.tiny{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#3478c9;stroke-width:2.6;fill:none;marker-end:url(#arrow)}.yes{stroke:#12a05c;stroke-width:2.6;fill:none;marker-end:url(#green)}.no{stroke:#f04438;stroke-width:2.4;fill:none;stroke-dasharray:7 7;marker-end:url(#red)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#3478c9"/></marker>
+    <marker id="green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#12a05c"/></marker>
+    <marker id="red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#f04438"/></marker>
+  </defs>
+  <rect class="bg" width="1300" height="720"/>
+  <text class="title" x="650" y="54" text-anchor="middle">故障转移与用量观测工作流</text>
+  <text class="sub" x="650" y="86" text-anchor="middle">按应用独立队列选择 Provider，失败时熔断并切换，同时沉淀请求日志、Token 和成本</text>
+
+  <rect class="box" x="48" y="140" width="250" height="420" rx="16"/>
+  <text class="h" x="173" y="178" text-anchor="middle">代理请求入口</text>
+  <rect class="blue" x="78" y="230" width="190" height="68" rx="10"/>
+  <text class="label" x="173" y="260" text-anchor="middle">应用代理配置</text>
+  <text class="tiny" x="173" y="282" text-anchor="middle">重试 / 超时 / 故障转移开关</text>
+  <rect class="blue" x="78" y="342" width="190" height="68" rx="10"/>
+  <text class="label" x="173" y="372" text-anchor="middle">请求上下文</text>
+  <text class="tiny" x="173" y="394" text-anchor="middle">app / session / model</text>
+
+  <rect class="box" x="365" y="120" width="445" height="460" rx="18"/>
+  <text class="h" x="587" y="158" text-anchor="middle">ProviderRouter + Circuit Breaker</text>
+  <rect class="green" x="395" y="205" width="180" height="76" rx="12"/>
+  <text class="label" x="485" y="235" text-anchor="middle">自动故障转移开启</text>
+  <text class="tiny" x="485" y="257" text-anchor="middle">读取 failover queue</text>
+  <rect class="orange" x="610" y="205" width="170" height="76" rx="12"/>
+  <text class="label" x="695" y="235" text-anchor="middle">未开启</text>
+  <text class="tiny" x="695" y="257" text-anchor="middle">只使用当前 Provider</text>
+  <rect class="green" x="395" y="330" width="180" height="76" rx="12"/>
+  <text class="label" x="485" y="360" text-anchor="middle">过滤不可用 Provider</text>
+  <text class="tiny" x="485" y="382" text-anchor="middle">Open / HalfOpen 限流</text>
+  <rect class="purple" x="610" y="330" width="170" height="76" rx="12"/>
+  <text class="label" x="695" y="360" text-anchor="middle">按顺序尝试</text>
+  <text class="tiny" x="695" y="382" text-anchor="middle">P1 -> P2 -> P3</text>
+  <rect class="red" x="500" y="470" width="200" height="58" rx="12"/>
+  <text class="label" x="600" y="493" text-anchor="middle">失败记录</text>
+  <text class="tiny" x="600" y="515" text-anchor="middle">更新健康状态 / 打开熔断</text>
+
+  <rect class="box" x="880" y="140" width="270" height="420" rx="16"/>
+  <text class="h" x="1015" y="178" text-anchor="middle">上游执行</text>
+  <rect class="green" x="910" y="230" width="210" height="64" rx="10"/>
+  <text class="label" x="1015" y="258" text-anchor="middle">Provider A</text>
+  <text class="tiny" x="1015" y="280" text-anchor="middle">优先级 1</text>
+  <rect class="orange" x="910" y="342" width="210" height="64" rx="10"/>
+  <text class="label" x="1015" y="370" text-anchor="middle">Provider B</text>
+  <text class="tiny" x="1015" y="392" text-anchor="middle">备用</text>
+  <rect class="purple" x="910" y="454" width="210" height="64" rx="10"/>
+  <text class="label" x="1015" y="482" text-anchor="middle">Provider C</text>
+  <text class="tiny" x="1015" y="504" text-anchor="middle">保底</text>
+
+  <rect class="box" x="180" y="620" width="940" height="70" rx="16"/>
+  <text class="h" x="650" y="648" text-anchor="middle">观测与统计</text>
+  <text class="small" x="650" y="674" text-anchor="middle">请求日志 · Token Usage · 成本估算 · 延迟 · 状态码 · 错误信息 · Provider 健康 · 用量趋势图表</text>
+
+  <path class="arrow" d="M298 264 H395"/>
+  <path class="arrow" d="M298 376 C330 376 340 243 395 243"/>
+  <path class="arrow" d="M575 243 H610"/>
+  <path class="arrow" d="M485 281 V330"/>
+  <path class="arrow" d="M575 368 H610"/>
+  <path class="arrow" d="M780 368 C830 368 850 262 910 262"/>
+  <path class="no" d="M1015 294 C1015 318 780 450 700 490"/>
+  <path class="arrow" d="M700 500 C820 500 850 374 910 374"/>
+  <path class="no" d="M1015 406 C1015 425 820 520 700 510"/>
+  <path class="arrow" d="M700 510 C830 540 850 486 910 486"/>
+  <path class="yes" d="M1015 518 C1015 610 930 610 930 620"/>
+  <path class="yes" d="M1015 294 C1170 294 1170 620 1030 620"/>
+  <path class="yes" d="M1015 406 C1150 406 1150 620 990 620"/>
+  <path class="arrow" d="M600 528 C600 585 600 585 600 620"/>
+</svg>

@@ -1,165 +1,152 @@
 # CC-Gateway-Pro 代理功能使用指南
 
-## 功能介绍
+CC-Gateway-Pro 的代理功能是在本机启动一个 HTTP 网关，默认监听 `127.0.0.1:15721`。启用应用接管后，Claude Code、Claude Desktop、Codex 或 Gemini CLI 的请求会先进入本地代理，再由代理选择实际 Provider、转换 API 格式、记录用量，并在需要时执行项目级路由、Vision Model 自动路由和故障转移。
 
-CC-Gateway-Pro 的代理功能是一个本地 HTTP 代理服务器，可以统一管理 Claude Code、Codex 和 Gemini CLI 的 API 请求。主要特性包括：
+更完整的实现说明见 [架构与核心流程](architecture-and-flows-zh.md)。
 
-- **统一代理入口** - 所有 CLI 应用的请求通过本地代理转发
-- **自动故障转移** - 当前供应商故障时自动切换到备用供应商
-- **按应用控制** - 可独立控制每个应用是否启用代理
-- **配置保护** - 自动备份原始配置，停止代理时安全恢复
+## 重点原理图
+
+- [CC-Gateway-Pro 总体架构](architecture-and-flows-zh.md#总体架构)
+- [Vision Model 代理工作原理](architecture-and-flows-zh.md#vision-model-代理工作原理)
+- [Project Provider 代理工作原理](architecture-and-flows-zh.md#project-provider-代理工作原理)
+- [故障转移与熔断](architecture-and-flows-zh.md#故障转移与熔断)
+- [用量统计流程](architecture-and-flows-zh.md#用量统计流程)
+
+![本地 AI Provider 网关架构原理图](assets/diagrams/cc-gateway-pro-architecture-zh.svg)
+
+## 适用场景
+
+- 希望切换 Provider 后不重启 CLI。
+- 希望记录请求日志、Token 用量、成本和延迟。
+- 希望使用自动故障转移和熔断器提高可用性。
+- 希望 Claude/Codex 不同项目自动使用不同 Provider。
+- 希望包含图片的请求自动切换到视觉模型。
+- 希望把不同 Provider 的 API 格式适配给 Claude Code 或 Claude Desktop。
 
 ## 快速开始
 
-### 1. 启动代理
+1. 打开 CC-Gateway-Pro 的「代理」面板。
+2. 点击「启动代理」，默认地址为 `http://127.0.0.1:15721`。
+3. 为需要的应用开启接管：Claude、Claude Desktop、Codex 或 Gemini。
+4. 正常使用对应 CLI/桌面应用。请求会经本地代理转发到当前 Provider。
+5. 不再需要时关闭应用接管或停止代理，CC-Gateway-Pro 会恢复接管前配置。
 
-在 CC-Gateway-Pro 主界面，点击右上角的 **Proxy** 按钮，可以看到代理控制面板。
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant UI as CC-Gateway-Pro
+    participant Config as 应用配置文件
+    participant Proxy as 本地代理
+    participant Provider as 上游 Provider
 
-点击 **启动代理** 按钮启动本地代理服务器。代理默认监听 `127.0.0.1:15721`。
+    User->>UI: 启动代理并开启应用接管
+    UI->>Config: 备份原配置并写入本地代理地址
+    User->>Proxy: 通过 CLI 发起请求
+    Proxy->>Provider: 选择 Provider 并转发
+    Provider-->>Proxy: 返回响应
+    Proxy-->>User: 返回结果并记录用量
+    User->>UI: 关闭接管或停止代理
+    UI->>Config: 恢复原配置
+```
 
-### 2. 启用应用接管
+## 请求处理顺序
 
-代理启动后，你可以选择让哪些应用的请求通过代理：
+```mermaid
+flowchart TD
+    Req["请求进入代理"] --> App["识别应用类型"]
+    App --> Config["读取应用代理配置\n重试、超时、故障转移开关"]
+    Config --> Provider["选择 Provider\n当前 Provider 或故障转移队列"]
+    Provider --> Project{"Claude/Codex 项目绑定?"}
+    Project -- 命中 --> ProjectProvider["覆盖为项目绑定 Provider"]
+    Project -- 未命中 --> Selected["使用已选 Provider"]
+    ProjectProvider --> Vision{"图片内容 + vision_model?"}
+    Selected --> Vision
+    Vision -- 是 --> VM["替换请求 model"]
+    Vision -- 否 --> Map["普通模型映射"]
+    VM --> Convert{"需要格式转换?"}
+    Map --> Convert
+    Convert -- 是 --> Transform["Anthropic/OpenAI/Responses/Gemini 转换"]
+    Convert -- 否 --> Forward["直接转发"]
+    Transform --> Upstream["上游 API"]
+    Forward --> Upstream
+    Upstream --> Log["记录用量和健康状态"]
+```
 
-- **Claude** - 接管 Claude Code 的 API 请求
-- **Codex** - 接管 Codex CLI 的 API 请求
-- **Gemini** - 接管 Gemini CLI 的 API 请求
+## 应用接管会修改什么
 
-点击对应应用的开关即可启用/禁用接管。
+| 应用           | 典型修改内容                                  | 说明                                 |
+| -------------- | --------------------------------------------- | ------------------------------------ |
+| Claude Code    | `ANTHROPIC_BASE_URL` 指向本地代理             | 代理处理 `/v1/messages` 并可转换格式 |
+| Claude Desktop | 写入本地路由 profile 或指向 `/claude-desktop` | 支持直连模式与模型映射路由模式       |
+| Codex          | `base_url` 指向本地代理的 OpenAI 兼容地址     | 支持 Codex 请求转发、日志与项目路由  |
+| Gemini CLI     | `GOOGLE_GEMINI_BASE_URL` 指向本地代理         | 支持 Gemini 请求转发与用量记录       |
 
-> **注意**：启用接管后，CC-Gateway-Pro 会自动修改对应应用的配置文件，将 API 端点指向本地代理。原始配置会被安全备份。
+接管前配置会被保存，关闭接管或停止代理时恢复。若应用配置被其他程序同时修改，建议重新打开 CC-Gateway-Pro 后再关闭接管，让它重新检测状态。
 
-### 3. 正常使用 CLI
+## 项目级 Provider 绑定
 
-启用接管后，你可以正常使用各个 CLI 工具。所有请求都会经过 CC-Gateway-Pro 代理转发到配置的供应商。
+Claude 和 Codex 的项目级路由依赖会话文件中的 `session_id -> cwd` 映射：
 
-### 4. 停止代理
+- Claude：扫描 `~/.claude/projects/` 下的 JSONL 会话文件。
+- Codex：使用 Codex session scanner 扫描本地会话记录。
+- 绑定关系保存到数据库 settings 中：Claude 使用 `project_providers`，Codex 使用 `project_providers_codex`。
 
-当你不再需要代理时，点击 **停止代理** 按钮。CC-Gateway-Pro 会：
+匹配顺序为：精确路径、canonical 路径、前缀路径。未匹配时使用当前 Provider 或故障转移队列选择的 Provider。
 
-1. 安全关闭代理服务器
-2. 自动恢复所有应用的原始配置
-3. 清除代理状态
+## Vision Model 自动路由
 
-## 自动故障转移
+当 Provider 配置了 `vision_model`，代理会检查请求体中的图片内容：
 
-### 工作原理
+- Anthropic：`image`
+- OpenAI Chat：`image_url`
+- OpenAI Responses：`input_image`
+- 嵌套 `tool_result.content` 中的图片块
 
-代理功能内置了智能故障转移机制：
+命中后，代理会把请求中的 `model` 替换为该 Provider 的 `vision_model`。未配置 `vision_model` 时不会自动猜测模型。
 
-1. **健康监控** - 实时监控每个供应商的响应状态
-2. **熔断器** - 连续失败 5 次后触发熔断，暂停使用该供应商
-3. **自动切换** - 熔断后自动切换到列表中的下一个供应商
-4. **自动恢复** - 30 秒后尝试恢复熔断的供应商
+## 故障转移
 
-### 配置故障转移
+故障转移按应用独立配置。开启自动故障转移后，代理只使用该应用的故障转移队列，并按队列顺序尝试 Provider。
 
-要使用故障转移功能，你需要：
+```mermaid
+flowchart LR
+    Queue["故障转移队列"] --> P1["P1"]
+    P1 --> OK{"成功?"}
+    OK -- 是 --> Done["返回响应"]
+    OK -- 否 --> Health["记录失败并更新熔断器"]
+    Health --> P2["P2"]
+    P2 --> OK2{"成功?"}
+    OK2 -- 是 --> Done
+    OK2 -- 否 --> P3["继续尝试下一个"]
+```
 
-1. 在对应应用下添加多个供应商（至少 2 个）
-2. 启动代理并启用接管
-3. 当主供应商故障时，代理会自动切换到备用供应商
-
-### 健康状态指示
-
-在供应商卡片上可以看到健康状态指示：
-
-- **绿色** - 供应商正常
-- **红色** - 供应商故障/熔断中
-- **灰色** - 未使用代理或未检测
-
-## 按应用接管
-
-v3.9.0 新增了按应用分粒度控制功能：
-
-- 你可以只接管 Claude，而让 Codex 使用原始配置
-- 每个应用的接管状态独立管理
-- 启用/禁用不会影响其他应用
-
-### 接管状态检测
-
-CC-Gateway-Pro 通过检测配置备份来判断接管状态：
-
-- 存在备份 = 已接管
-- 无备份 = 未接管
-
-这确保了即使 CC-Gateway-Pro 异常退出，重新启动后也能正确识别状态。
-
-## 代理配置
-
-在代理面板中，你可以配置以下参数：
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| 监听地址 | 127.0.0.1 | 代理服务器绑定地址 |
-| 监听端口 | 15721 | 代理服务器端口 |
-| 最大重试 | 3 | 请求失败时的最大重试次数 |
-| 请求超时 | 120 秒 | 单个请求的超时时间 |
-| 启用日志 | 是 | 是否记录请求日志 |
+熔断器有 Closed、Open、HalfOpen 三种状态。Provider 连续失败或错误率达到阈值后进入 Open，恢复时间到期后进入 HalfOpen 进行探测，探测成功达到阈值后回到 Closed。
 
 ## 常见问题
 
-### Q: 代理启动失败，提示端口被占用？
+### 代理启动失败，提示端口被占用
 
-A: 默认端口 15721 可能被其他程序占用。你可以：
-- 关闭占用该端口的程序
-- 在代理配置中修改端口号
+默认端口是 `15721`。可以关闭占用端口的程序，或在代理配置里改成其他端口后重新启动。
 
-### Q: 启用接管后 CLI 无法使用？
+### 开启接管后请求失败
 
-A: 请检查：
-1. 代理服务器是否正常运行（查看代理面板状态）
-2. 供应商配置是否正确（API Key 等）
-3. 网络连接是否正常
+请检查：
 
-### Q: 如何恢复原始配置？
+1. 代理服务是否运行。
+2. 对应应用接管是否开启。
+3. 当前 Provider 的 API Key、Base URL 和模型是否正确。
+4. 如果使用项目绑定，目标项目绑定的 Provider 是否仍存在。
+5. 如果请求包含图片，Provider 是否配置了可用的 `vision_model`。
 
-A: 点击 **停止代理** 按钮，CC-Gateway-Pro 会自动恢复所有应用的原始配置。
+### 故障转移没有生效
 
-如果 CC-Gateway-Pro 异常退出，重新启动后会检测到之前的备份，你可以：
-- 点击停止代理来恢复配置
-- 或继续使用代理功能
+请确认：
 
-### Q: 故障转移没有生效？
+1. 已启动代理并开启对应应用接管。
+2. 该应用已开启自动故障转移。
+3. 故障转移队列中至少有一个可用 Provider。
+4. 队列中的 Provider 没有全部处于熔断状态。
 
-A: 请确保：
-1. 配置了至少 2 个供应商
-2. 代理已启动且接管已启用
-3. 故障转移只在代理模式下工作
+### 停止代理后配置没有恢复
 
-### Q: 代理会影响性能吗？
-
-A: 本地代理的延迟开销非常小（通常 < 1ms）。但如果启用了请求日志，在高频请求场景下可能会有少量性能影响。
-
-## 技术细节
-
-### 配置文件位置
-
-启用接管后，CC-Gateway-Pro 会修改以下配置文件：
-
-| 应用 | 配置文件 | 修改内容 |
-|------|----------|----------|
-| Claude | `~/.claude/settings.json` | `apiBaseUrl` 指向代理 |
-| Codex | `~/.codex/config.toml` | `[api] baseUrl` 指向代理 |
-| Gemini | `~/.gemini/.env` | `GEMINI_BASE_URL` 指向代理 |
-
-原始配置备份在 CC-Gateway-Pro 数据库中，停止代理时自动恢复。
-
-### 代理模式
-
-代理服务器运行在接管模式下，会：
-
-1. 接收来自 CLI 的 HTTPS 请求
-2. 根据当前供应商配置转发到真实 API 端点
-3. 返回响应给 CLI
-4. 记录请求日志和健康状态
-
-### 数据库表
-
-代理功能使用以下数据库表：
-
-- `proxy_config` - 代理配置
-- `provider_health` - 供应商健康状态
-- `proxy_request_logs` - 请求日志
-- `circuit_breaker_config` - 熔断器配置
-- `proxy_live_backup` - Live 配置备份
+通常重新打开 CC-Gateway-Pro 后再关闭一次对应应用接管即可恢复。如果应用配置在接管期间被手动修改，建议在 CC-Gateway-Pro 中重新保存目标 Provider，重新写入一份干净配置。

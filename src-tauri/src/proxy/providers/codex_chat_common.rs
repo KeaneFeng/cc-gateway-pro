@@ -170,7 +170,25 @@ pub(crate) fn response_function_call_item(
     item
 }
 
-#[allow(dead_code)]
+pub(crate) fn response_function_call_item_with_namespace(
+    item_id: &str,
+    status: &str,
+    call_id: &str,
+    name: &str,
+    namespace: Option<&str>,
+    arguments: &str,
+    reasoning: Option<&str>,
+) -> Value {
+    let mut item =
+        response_function_call_item(item_id, status, call_id, name, arguments, reasoning);
+    if let Some(namespace) = namespace.filter(|value| !value.is_empty()) {
+        if let Some(obj) = item.as_object_mut() {
+            obj.insert("namespace".to_string(), json!(namespace));
+        }
+    }
+    item
+}
+
 pub(crate) fn response_item_call_id(item: &Value) -> Option<String> {
     item.get("call_id")
         .or_else(|| item.get("id"))
@@ -180,7 +198,6 @@ pub(crate) fn response_item_call_id(item: &Value) -> Option<String> {
         .map(ToString::to_string)
 }
 
-#[allow(dead_code)]
 pub(crate) fn is_empty_value(value: &Value) -> bool {
     match value {
         Value::Null => true,

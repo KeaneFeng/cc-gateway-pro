@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="760" viewBox="0 0 1300 760">
+  <defs>
+    <style>
+      .bg{fill:#fbfdff}.title{font:700 40px Arial,"Microsoft YaHei",sans-serif;fill:#101828}.sub{font:400 18px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .box{fill:#fff;stroke:#c8d7ea;stroke-width:2}.blue{fill:#f0f7ff;stroke:#b8d8ff}.green{fill:#f1fbf5;stroke:#afe4c4}.orange{fill:#fff7ed;stroke:#ffd1a1}.purple{fill:#faf5ff;stroke:#dcc6ff}
+      .h{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#1849a9}.label{font:700 17px Arial,"Microsoft YaHei",sans-serif;fill:#1d2939}.small{font:400 14px Arial,"Microsoft YaHei",sans-serif;fill:#475467}.tiny{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#3478c9;stroke-width:2.6;fill:none;marker-end:url(#arrow)}.yes{stroke:#12a05c;stroke-width:2.6;fill:none;marker-end:url(#green)}.no{stroke:#f79009;stroke-width:2.4;fill:none;stroke-dasharray:7 7;marker-end:url(#orange)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#3478c9"/></marker>
+    <marker id="green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#12a05c"/></marker>
+    <marker id="orange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#f79009"/></marker>
+  </defs>
+  <rect class="bg" width="1300" height="760"/>
+  <text class="title" x="650" y="54" text-anchor="middle">Project Provider 代理工作原理图</text>
+  <text class="sub" x="650" y="86" text-anchor="middle">通过会话 session_id 反查项目目录，并用项目绑定 Provider 覆盖本次请求的上游</text>
+
+  <rect class="box" x="40" y="142" width="210" height="430" rx="16"/>
+  <text class="h" x="145" y="178" text-anchor="middle">客户端请求</text>
+  <rect class="blue" x="70" y="230" width="150" height="72" rx="10"/>
+  <text class="label" x="145" y="260" text-anchor="middle">Claude Code</text>
+  <text class="tiny" x="145" y="282" text-anchor="middle">~/.claude/projects JSONL</text>
+  <rect class="blue" x="70" y="342" width="150" height="72" rx="10"/>
+  <text class="label" x="145" y="372" text-anchor="middle">Codex CLI</text>
+  <text class="tiny" x="145" y="394" text-anchor="middle">Codex sessions</text>
+  <rect class="purple" x="70" y="454" width="150" height="72" rx="10"/>
+  <text class="label" x="145" y="484" text-anchor="middle">session_id</text>
+  <text class="tiny" x="145" y="506" text-anchor="middle">headers / body 提取</text>
+
+  <rect class="box" x="310" y="120" width="650" height="500" rx="18"/>
+  <text class="h" x="635" y="158" text-anchor="middle">Project Router</text>
+  <rect class="green" x="345" y="205" width="160" height="76" rx="12"/>
+  <text class="label" x="425" y="235" text-anchor="middle">1. 查缓存</text>
+  <text class="tiny" x="425" y="257" text-anchor="middle">session -> cwd</text>
+  <rect class="orange" x="545" y="205" width="180" height="76" rx="12"/>
+  <text class="label" x="635" y="235" text-anchor="middle">2. 扫描会话文件</text>
+  <text class="tiny" x="635" y="257" text-anchor="middle">新会话增量发现 cwd</text>
+  <rect class="green" x="765" y="205" width="160" height="76" rx="12"/>
+  <text class="label" x="845" y="235" text-anchor="middle">3. 得到项目目录</text>
+  <text class="tiny" x="845" y="257" text-anchor="middle">cwd / canonical path</text>
+
+  <rect class="blue" x="355" y="345" width="190" height="88" rx="12"/>
+  <text class="label" x="450" y="378" text-anchor="middle">4. 读取绑定表</text>
+  <text class="tiny" x="450" y="400" text-anchor="middle">project_providers</text>
+  <text class="tiny" x="450" y="418" text-anchor="middle">project_providers_codex</text>
+  <rect class="purple" x="605" y="345" width="170" height="88" rx="12"/>
+  <text class="label" x="690" y="378" text-anchor="middle">5. 路径匹配</text>
+  <text class="tiny" x="690" y="400" text-anchor="middle">精确 / canonical / 前缀</text>
+  <rect class="green" x="830" y="345" width="120" height="88" rx="12"/>
+  <text class="label" x="890" y="378" text-anchor="middle">6. 命中</text>
+  <text class="tiny" x="890" y="400" text-anchor="middle">provider_id</text>
+
+  <rect class="orange" x="430" y="500" width="190" height="70" rx="12"/>
+  <text class="label" x="525" y="530" text-anchor="middle">未命中</text>
+  <text class="tiny" x="525" y="552" text-anchor="middle">保持当前/故障转移 Provider</text>
+  <rect class="green" x="700" y="500" width="210" height="70" rx="12"/>
+  <text class="label" x="805" y="530" text-anchor="middle">命中项目 Provider</text>
+  <text class="tiny" x="805" y="552" text-anchor="middle">覆盖本次请求 Provider</text>
+
+  <rect class="box" x="1030" y="142" width="230" height="430" rx="16"/>
+  <text class="h" x="1145" y="178" text-anchor="middle">代理转发</text>
+  <rect class="green" x="1060" y="230" width="170" height="64" rx="10"/>
+  <text class="label" x="1145" y="258" text-anchor="middle">继续 Vision 路由</text>
+  <text class="tiny" x="1145" y="280" text-anchor="middle">项目 Provider 自己的配置</text>
+  <rect class="blue" x="1060" y="342" width="170" height="64" rx="10"/>
+  <text class="label" x="1145" y="370" text-anchor="middle">协议转换</text>
+  <text class="tiny" x="1145" y="392" text-anchor="middle">Anthropic / OpenAI / Gemini</text>
+  <rect class="orange" x="1060" y="454" width="170" height="64" rx="10"/>
+  <text class="label" x="1145" y="482" text-anchor="middle">上游 Provider</text>
+  <text class="tiny" x="1145" y="504" text-anchor="middle">项目指定模型服务</text>
+
+  <path class="arrow" d="M250 490 C280 490 290 243 345 243"/>
+  <path class="arrow" d="M505 243 H545"/>
+  <path class="arrow" d="M725 243 H765"/>
+  <path class="arrow" d="M845 281 C845 315 450 315 450 345"/>
+  <path class="arrow" d="M545 389 H605"/>
+  <path class="yes" d="M775 389 H830"/>
+  <path class="yes" d="M890 433 C890 470 830 480 805 500"/>
+  <path class="no" d="M690 433 C675 480 575 480 525 500"/>
+  <path class="arrow" d="M910 535 C980 535 1000 262 1060 262"/>
+  <path class="no" d="M620 535 C880 650 1000 374 1060 374"/>
+  <path class="arrow" d="M1145 294 V342"/>
+  <path class="arrow" d="M1145 406 V454"/>
+
+  <rect x="78" y="660" width="1144" height="56" rx="12" fill="#eef6ff" stroke="#d6e3f5"/>
+  <text class="small" x="650" y="692" text-anchor="middle">关键点：项目绑定只覆盖本次代理请求，不需要改写全局当前 Provider；未命中绑定时仍走当前 Provider 或故障转移队列。</text>
+</svg>

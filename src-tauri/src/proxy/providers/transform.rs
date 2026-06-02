@@ -959,6 +959,26 @@ mod tests {
     }
 
     #[test]
+    fn test_anthropic_to_openai_tool_use_uses_redacted_thinking_placeholder() {
+        let input = json!({
+            "model": "mimo-v2.5-pro",
+            "max_tokens": 1024,
+            "messages": [{
+                "role": "assistant",
+                "content": [
+                    {"type": "redacted_thinking", "data": "opaque"},
+                    {"type": "tool_use", "id": "call_123", "name": "get_weather", "input": {"location": "Tokyo"}}
+                ]
+            }]
+        });
+
+        let result = anthropic_to_openai_with_reasoning_content(input, true).unwrap();
+        let msg = &result["messages"][0];
+        assert_eq!(msg["reasoning_content"], "[redacted thinking]");
+        assert_eq!(msg["tool_calls"][0]["id"], "call_123");
+    }
+
+    #[test]
     fn test_anthropic_to_openai_does_not_emit_reasoning_content_by_default() {
         let input = json!({
             "model": "gpt-5.4",

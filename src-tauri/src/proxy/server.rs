@@ -42,6 +42,8 @@ pub struct ProxyState {
     pub app_handle: Option<tauri::AppHandle>,
     /// 故障转移切换管理器
     pub failover_manager: Arc<FailoverSwitchManager>,
+    /// Codex Chat History Store (Chat↔Responses bridge history)
+    pub codex_chat_history: Arc<super::providers::codex_chat_history::CodexChatHistoryStore>,
     /// CC-Gateway-Pro: Session → Project 路由器 (Claude)
     pub session_project_router: Arc<SessionProjectRouter>,
     /// CC-Gateway-Pro: Session → Project 路由器 (Codex)
@@ -86,6 +88,9 @@ impl ProxyServer {
             current_providers: Arc::new(RwLock::new(std::collections::HashMap::new())),
             provider_router,
             gemini_shadow: Arc::new(GeminiShadowStore::default()),
+            codex_chat_history: Arc::new(
+                super::providers::codex_chat_history::CodexChatHistoryStore::default(),
+            ),
             app_handle,
             failover_manager,
             session_project_router,

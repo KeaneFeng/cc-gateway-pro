@@ -13,7 +13,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
-const CC_SWITCH_SQL_EXPORT_HEADER: &str = "-- CC-Gateway-Pro SQLite 导出";
+const CC_GATEWAY_PRO_SQL_EXPORT_HEADER: &str = "-- CC-Gateway-Pro SQLite 导出";
 
 /// Tables whose data rows are skipped when exporting for WebDAV sync.
 const SYNC_SKIP_TABLES: &[&str] = &[
@@ -165,7 +165,7 @@ impl Database {
 
     fn validate_cc_gateway_pro_sql_export(sql: &str) -> Result<(), AppError> {
         let trimmed = sql.trim_start();
-        if trimmed.starts_with(CC_SWITCH_SQL_EXPORT_HEADER) {
+        if trimmed.starts_with(CC_GATEWAY_PRO_SQL_EXPORT_HEADER) {
             return Ok(());
         }
 

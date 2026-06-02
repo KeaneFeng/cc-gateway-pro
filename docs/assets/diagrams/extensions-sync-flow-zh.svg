@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="700" viewBox="0 0 1300 700">
+  <defs>
+    <style>
+      .bg{fill:#fbfdff}.title{font:700 38px Arial,"Microsoft YaHei",sans-serif;fill:#101828}.sub{font:400 18px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .box{fill:#fff;stroke:#c8d7ea;stroke-width:2}.blue{fill:#f0f7ff;stroke:#b8d8ff}.green{fill:#f1fbf5;stroke:#afe4c4}.orange{fill:#fff7ed;stroke:#ffd1a1}.purple{fill:#faf5ff;stroke:#dcc6ff}
+      .h{font:700 22px Arial,"Microsoft YaHei",sans-serif;fill:#1849a9}.label{font:700 17px Arial,"Microsoft YaHei",sans-serif;fill:#1d2939}.small{font:400 14px Arial,"Microsoft YaHei",sans-serif;fill:#475467}.tiny{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#3478c9;stroke-width:2.6;fill:none;marker-end:url(#arrow)}.dash{stroke:#12a05c;stroke-width:2.4;fill:none;stroke-dasharray:8 8;marker-end:url(#green)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#3478c9"/></marker>
+    <marker id="green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#12a05c"/></marker>
+  </defs>
+  <rect class="bg" width="1300" height="700"/>
+  <text class="title" x="650" y="54" text-anchor="middle">MCP / Prompts / Skills 统一同步原理图</text>
+  <text class="sub" x="650" y="86" text-anchor="middle">先进入 CC-Gateway-Pro 统一管理层，再按应用同步到各自 live 配置和目录</text>
+
+  <rect class="box" x="42" y="140" width="230" height="390" rx="16"/>
+  <text class="h" x="157" y="178" text-anchor="middle">输入来源</text>
+  <rect class="blue" x="72" y="225" width="170" height="56" rx="10"/>
+  <text class="label" x="157" y="258" text-anchor="middle">界面创建 / 编辑</text>
+  <rect class="blue" x="72" y="305" width="170" height="56" rx="10"/>
+  <text class="label" x="157" y="338" text-anchor="middle">Deep Link 导入</text>
+  <rect class="blue" x="72" y="385" width="170" height="56" rx="10"/>
+  <text class="label" x="157" y="418" text-anchor="middle">GitHub / ZIP / skills.sh</text>
+  <rect class="blue" x="72" y="465" width="170" height="56" rx="10"/>
+  <text class="label" x="157" y="498" text-anchor="middle">现有配置回填</text>
+
+  <rect class="box" x="360" y="118" width="440" height="430" rx="18"/>
+  <text class="h" x="580" y="158" text-anchor="middle">CC-Gateway-Pro 统一管理层</text>
+  <rect class="green" x="395" y="215" width="170" height="74" rx="12"/>
+  <text class="label" x="480" y="246" text-anchor="middle">SQLite 元数据</text>
+  <text class="tiny" x="480" y="268" text-anchor="middle">MCP / Prompts / Skills</text>
+  <rect class="green" x="595" y="215" width="170" height="74" rx="12"/>
+  <text class="label" x="680" y="246" text-anchor="middle">Skills 统一存储</text>
+  <text class="tiny" x="680" y="268" text-anchor="middle">~/.cc-gateway-pro/skills</text>
+  <rect class="purple" x="395" y="350" width="170" height="74" rx="12"/>
+  <text class="label" x="480" y="381" text-anchor="middle">应用同步策略</text>
+  <text class="tiny" x="480" y="403" text-anchor="middle">按应用开关</text>
+  <rect class="orange" x="595" y="350" width="170" height="74" rx="12"/>
+  <text class="label" x="680" y="381" text-anchor="middle">备份与回填保护</text>
+  <text class="tiny" x="680" y="403" text-anchor="middle">避免覆盖用户现场</text>
+
+  <rect class="box" x="888" y="140" width="270" height="390" rx="16"/>
+  <text class="h" x="1023" y="178" text-anchor="middle">应用侧配置</text>
+  <rect class="orange" x="920" y="216" width="210" height="50" rx="10"/>
+  <text class="label" x="1025" y="247" text-anchor="middle">Claude：MCP / CLAUDE.md / Skills</text>
+  <rect class="orange" x="920" y="286" width="210" height="50" rx="10"/>
+  <text class="label" x="1025" y="317" text-anchor="middle">Codex：MCP / AGENTS.md / Skills</text>
+  <rect class="orange" x="920" y="356" width="210" height="50" rx="10"/>
+  <text class="label" x="1025" y="387" text-anchor="middle">Gemini：MCP / GEMINI.md / Skills</text>
+  <rect class="orange" x="920" y="426" width="210" height="50" rx="10"/>
+  <text class="label" x="1025" y="457" text-anchor="middle">OpenCode / Hermes</text>
+
+  <rect x="156" y="600" width="988" height="52" rx="12" fill="#eef6ff" stroke="#d6e3f5"/>
+  <text class="small" x="650" y="632" text-anchor="middle">效果：扩展能力不再分散在多个工具里手动维护，可统一安装、启用、同步、回填和备份。</text>
+
+  <path class="arrow" d="M272 253 H395"/>
+  <path class="arrow" d="M272 333 C320 333 335 252 395 252"/>
+  <path class="arrow" d="M272 413 C330 413 345 252 595 252"/>
+  <path class="dash" d="M272 493 C350 493 350 387 395 387"/>
+  <path class="arrow" d="M565 252 H595"/>
+  <path class="arrow" d="M480 289 V350"/>
+  <path class="arrow" d="M680 289 V350"/>
+  <path class="arrow" d="M765 387 H888"/>
+  <path class="dash" d="M920 476 C760 570 250 570 160 520"/>
+</svg>

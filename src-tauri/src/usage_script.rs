@@ -471,22 +471,7 @@ fn validate_base_url(base_url: &str) -> Result<(), AppError> {
 }
 
 fn should_validate_base_url(base_url: &str, is_custom_template: bool) -> bool {
-    if base_url.is_empty() {
-        return false;
-    }
-    if is_custom_template {
-        // 自定义模板模式下跳过严格校验，但记录安全警告
-        if let Ok(parsed) = url::Url::parse(base_url) {
-            if parsed.scheme() != "https" && !is_loopback_host(&parsed) {
-                log::warn!(
-                    "自定义模板使用非 HTTPS 连接到外部主机: {} (安全风险：数据可能被窃听)",
-                    base_url
-                );
-            }
-        }
-        return false;
-    }
-    true
+    !base_url.is_empty() && !is_custom_template
 }
 
 /// 验证请求 URL 是否安全（HTTPS 强制 + 同源检查）
@@ -596,6 +581,24 @@ mod tests {
         assert!(
             result.is_err(),
             "Should reject HTTP for non-localhost domains"
+        );
+    }
+
+    #[test]
+    fn test_custom_template_allows_http_lan_request_with_different_base_url() {
+        assert!(
+            !should_validate_base_url("http://10.37.192.156:8090/anthropic", true),
+            "Custom scripts should not validate an unused provider base_url fallback"
+        );
+
+        let result = validate_request_url(
+            "http://10.37.192.156:18344/user/balance",
+            "http://10.37.192.156:8090/anthropic",
+            true,
+        );
+        assert!(
+            result.is_ok(),
+            "Custom usage scripts should be able to call an explicit HTTP quota endpoint"
         );
     }
 

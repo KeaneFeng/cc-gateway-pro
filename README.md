@@ -2,167 +2,149 @@
 
 # CC-Gateway-Pro
 
-### AI Provider Gateway with Vision Routing & Project-Level Provider Binding
+### Local AI Provider Gateway for Claude Code, Claude Desktop, Codex, Gemini CLI, OpenCode, OpenClaw and Hermes
 
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro)
+[![Version](https://img.shields.io/github/v/release/KeaneFeng/cc-gateway-pro?color=blue&label=version)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-cc--switch-blue.svg)](https://github.com/KeaneFeng/cc-switch)
+[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
-English | [中文](#中文说明)
+English | [中文](README_ZH.md) | [日本語](README_JA.md) | [Changelog](CHANGELOG.md)
 
 </div>
 
-## What is CC-Gateway-Pro?
+## What Is CC-Gateway-Pro?
 
-CC-Gateway-Pro is a fork of [cc-switch](https://github.com/KeaneFeng/cc-switch) that adds two powerful features for AI provider management:
+CC-Gateway-Pro is a desktop control plane and local AI Provider Gateway for AI coding tools. It manages provider profiles, writes each tool's native configuration files, and can route live requests through a local proxy for logging, failover, model transformation, project-level provider binding, and Vision Model routing.
 
-### 🎯 Vision Model Auto-Routing
-Automatically detects image content in requests and routes to a vision-capable model. Configure a `vision_model` per provider, and requests with images will automatically use it — no manual switching needed.
+This project is forked from [farion1231/cc-switch](https://github.com/farion1231/cc-switch). It keeps the original visual provider-switching idea, then extends it with a Rust/Tauri local gateway, multi-app configuration management, request routing, usage analytics, synchronization, and provider-specific integrations.
 
-### 📁 Project-Level Provider Binding
-Bind different AI providers to different project directories. When Claude Code sends a request from a specific project, it automatically uses the configured provider for that project.
+## Supported Apps
 
-## Features (inherited from cc-switch)
+| App            | Main capabilities                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Claude Code    | Provider switching, local proxy takeover, project routing, Vision Model routing, MCP, prompts, skills, sessions  |
+| Claude Desktop | Official and third-party profiles, direct mode, local routed mode, model route mapping                           |
+| Codex          | Provider switching, local proxy takeover, project routing, OAuth/Copilot helpers, MCP, prompts, skills, sessions |
+| Gemini CLI     | Provider switching, local proxy takeover, MCP, prompts, skills, sessions                                         |
+| OpenCode       | Provider presets, common config snippets, MCP, prompts, skills, sessions                                         |
+| OpenClaw       | Provider presets, workspace files, agent defaults, tool and environment panels                                   |
+| Hermes Agent   | Provider presets, memory panel, MCP and skills management                                                        |
 
-- **Multi-App Support**: Claude Code, Codex, Gemini CLI, OpenCode, Hermes Agent
-- **50+ Provider Presets**: One-click import for popular providers
-- **Visual Provider Management**: Card-based UI with drag-and-drop sorting
-- **Proxy Server**: Built-in axum proxy with format conversion (Anthropic ↔ OpenAI ↔ Gemini)
-- **Auto Failover**: Circuit breaker + failover queue for reliability
-- **Usage Statistics**: Token tracking, cost estimation, balance queries
-- **MCP & Skills Management**: Unified management across tools
-- **i18n**: English and Chinese
-- **System Tray**: Quick provider switching from menu bar
+## Core Features
 
-## Download & Installation
+- **Provider management**: 50+ presets, custom providers, drag sorting, import/export, endpoint speed tests, balance and quota helpers.
+- **Local proxy gateway**: Tauri/Rust + Axum proxy on `127.0.0.1:15721` by default, with per-app takeover for Claude, Claude Desktop, Codex and Gemini.
+- **API format adaptation**: Anthropic, OpenAI Chat Completions, OpenAI Responses, Gemini and provider-specific compatibility paths.
+- **Project-level routing**: Claude and Codex sessions can be mapped from local session files to project directories, then routed to project-bound providers.
+- **Vision Model routing**: requests containing image blocks can automatically switch to the provider's configured `vision_model`.
+- **High availability**: per-app failover queues, circuit breakers, retries, health state, stream and non-stream timeout controls.
+- **Usage analytics**: request logs, token usage, cost estimation, trends, provider/model breakdowns and custom pricing.
+- **MCP, prompts and skills**: unified management, sync across supported apps, deep links, repository/ZIP skill installation.
+- **Data safety**: SQLite storage, atomic config writes, automatic backups, configurable storage directory and WebDAV sync.
 
-### System Requirements
+## Architecture Diagrams
 
-- **macOS**: macOS 12 (Monterey) and above
-- **Windows**: Windows 10 and above
-- **Linux**: Ubuntu 22.04+ / Debian 11+ / Fedora 34+ and other mainstream distributions
+### Local AI Provider Gateway
 
-### Windows Users
+![Local AI provider gateway architecture](docs/assets/diagrams/cc-gateway-pro-architecture-zh.svg)
 
-Download the latest `CC-Gateway-Pro-v{version}-Windows-x64-setup.exe` from the [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) page.
+### Vision Model Proxy Workflow
 
-### macOS Users
+![Vision Model proxy workflow](docs/assets/diagrams/vision-model-proxy-flow-zh.svg)
 
-**Method 1: Install via Homebrew (Recommended)**
+### Project Provider Proxy Workflow
+
+![Project Provider proxy workflow](docs/assets/diagrams/project-provider-proxy-flow-zh.svg)
+
+More diagrams for failover, usage logging, MCP/Prompts/Skills synchronization and the full request chain are available in [Architecture and Flows](docs/architecture-and-flows-zh.md).
+
+## Interface Preview
+
+|                  Main screen                   |                  Add provider                  |
+| :--------------------------------------------: | :--------------------------------------------: |
+| ![Main screen](assets/screenshots/main-en.png) | ![Add provider](assets/screenshots/add-en.png) |
+
+|                                Project routing                                |                                  Vision Model configuration                                  |
+| :---------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
+| ![Project routing preview](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model configuration preview](assets/screenshots/vision-model-config-preview-zh.svg) |
+
+## Installation
+
+Download the latest build from [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+
+System requirements:
+
+- macOS 12 or later
+- Windows 10 or later
+- Linux distributions with a modern WebKitGTK runtime, such as Ubuntu 22.04+, Debian 11+ or Fedora 34+
+
+### macOS Homebrew
+
+Many users need to refresh Homebrew metadata before the cask can be found or updated correctly:
 
 ```bash
+brew update
 brew tap KeaneFeng/cc-gateway-pro
 brew install --cask cc-gateway-pro
 ```
 
-Update:
+Upgrade:
 
 ```bash
+brew update
 brew upgrade --cask cc-gateway-pro
 ```
 
-**Method 2: Manual Download**
+### Manual Download
 
-Download `CC-Gateway-Pro-v{version}-macOS.dmg` from the [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) page.
+- Windows: download the `.msi` installer or portable `.zip` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+- macOS: download the `.dmg` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+- Linux: download the `.deb`, `.rpm` or `.AppImage` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+- Arch Linux: install with `paru -S cc-gateway-pro-bin`.
 
-### Linux Users
+## Build From Source
 
-Download the latest Linux build from the [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) page:
-
-- `CC-Gateway-Pro-v{version}-Linux.deb` (Debian/Ubuntu)
-- `CC-Gateway-Pro-v{version}-Linux.AppImage` (Universal)
-
-## Build from Source (Local Testing)
+Prerequisites: Node.js 22+, pnpm and Rust stable.
 
 ```bash
-# Prerequisites: Node.js 22+, Rust stable
-./build.sh --dev          # Development mode (hot reload)
-./build.sh --release      # Release build
-./build.sh --dmg          # Package DMG installer
-./build.sh --sha          # Calculate DMG SHA256 (for Homebrew update)
+pnpm install
+pnpm tauri dev
+pnpm tauri build
 ```
 
-**Build outputs:**
-- `src-tauri/target/release/bundle/dmg/` — macOS DMG
-- `src-tauri/target/release/bundle/macos/` — macOS .app
-- `src-tauri/target/release/bundle/nsis/` — Windows installer
-- `src-tauri/target/release/bundle/deb/` — Linux .deb
+The repository also includes a helper:
 
-**Test DMG locally and update Homebrew:**
 ```bash
-# 1. Build DMG
+./build.sh --dev
+./build.sh --release
 ./build.sh --dmg
-
-# 2. Get SHA256
 ./build.sh --sha
-# Output: SHA256: xxxxxxx...
-
-# 3. Update homebrew tap
-cd ~/www/homebrew-cc-gateway-pro
-# Edit Casks/cc-gateway-pro.rb: replace PLACEHOLDER_SHA256 with actual hash
-# Update version if needed
-
-# 4. Commit and push tap
-git add -A && git commit -m "update to v0.1.0" && git push
-
-# 5. Test local install
-brew tap KeaneFeng/cc-gateway-pro
-brew install --cask cc-gateway-pro
 ```
 
-## Architecture
+## Documentation
 
-```
-Claude Code → CC-Gateway-Pro Proxy (port 16789) → AI Provider
-                    ↓
-            Vision Detection (image block?)
-                    ↓ Yes              ↓ No
-            vision_model          default model
-                    ↓                  ↓
-            Provider with         Provider with
-            vision support        text-only support
-```
+- [Chinese README](README_ZH.md)
+- [Japanese README](README_JA.md)
+- [User manual](docs/user-manual/zh/README.md)
+- [Architecture and flows](docs/architecture-and-flows-zh.md)
+- [Proxy guide](docs/proxy-guide-zh.md)
+- [Release notes](docs/release-notes/v3.15.0-zh.md)
 
-## Project-Level Routing
+## Data Locations
 
-```
-~/projects/frontend → Provider A (Claude Sonnet)
-~/projects/backend  → Provider B (DeepSeek)
-~/projects/data     → Provider C (Gemini)
-```
+- Main database: `~/.cc-gateway-pro/cc-gateway-pro.db`
+- Device settings: `~/.cc-gateway-pro/settings.json`
+- Backups: `~/.cc-gateway-pro/backups/`
+- Skills: `~/.cc-gateway-pro/skills/`
+
+The storage directory can be moved to Dropbox, OneDrive, iCloud, NAS or another synchronized folder from the settings page.
 
 ## Credits
 
-- Based on [cc-switch](https://github.com/KeaneFeng/cc-switch) by Jason Young
-- Original cc-gateway Rust CLI by [Keane Feng](https://github.com/KeaneFeng)
+- Forked from [farion1231/cc-switch](https://github.com/farion1231/cc-switch)
+- Built with Tauri, Rust, React, TypeScript and Tailwind CSS
 
 ## License
 
-MIT
-
----
-
-<a id="中文说明"></a>
-
-## 中文说明
-
-CC-Gateway-Pro 是基于 [cc-switch](https://github.com/KeaneFeng/cc-switch) 的增强版本，新增两大核心功能：
-
-**🎯 Vision Model 自动路由** — 检测请求中的图片内容，自动切换到支持视觉的模型，无需手动操作。
-
-**📁 项目级 Provider 绑定** — 不同项目目录绑定不同的 AI 供应商，Claude Code 发送请求时自动使用对应项目的 Provider。
-
-继承了 cc-switch 全部功能：多 App 支持（Claude Code/Codex/Gemini CLI/OpenCode/Hermes）、50+ 预设、可视化 Provider 管理、代理服务器、自动故障转移、用量统计、MCP/Skills 管理、中英双语。
-
-### 安装方式
-
-**macOS (Homebrew)**
-
-```bash
-brew tap KeaneFeng/cc-gateway-pro
-brew install --cask cc-gateway-pro
-```
-
-**手动下载**
-
-从 [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) 下载对应平台的安装包。
+MIT © Keane Feng

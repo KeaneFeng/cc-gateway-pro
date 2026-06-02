@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Download,
   Copy,
@@ -11,6 +11,8 @@ import {
   Terminal,
   CheckCircle2,
   AlertCircle,
+  ArrowUpCircle,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,8 +30,12 @@ import { useUpdate } from "@/contexts/UpdateContext";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import appIcon from "@/assets/icons/app-icon.png";
+import { APP_ICON_MAP } from "@/config/appConfig";
+import type { AppId } from "@/lib/api/types";
+import { extractErrorMessage } from "@/utils/errorUtils";
 import { isWindows } from "@/lib/platform";
 import { isUpdateAvailable } from "@/lib/version";
+import { relaunchApp } from "@/lib/updater";
 
 interface AboutSectionProps {
   isPortable: boolean;
@@ -53,6 +59,7 @@ const TOOL_NAMES = [
   "hermes",
 ] as const;
 type ToolName = (typeof TOOL_NAMES)[number];
+type ToolLifecycleAction = "install" | "update";
 
 type WslShellPreference = {
   wslShell?: string | null;
@@ -89,23 +96,81 @@ const ENV_BADGE_CONFIG: Record<
   },
 };
 
-const ONE_CLICK_INSTALL_COMMANDS = `# Claude Code (Native install - recommended)
-curl -fsSL https://claude.ai/install.sh | bash
+const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  gemini: "Gemini CLI",
+  opencode: "OpenCode",
+  openclaw: "OpenClaw",
+  hermes: "Hermes",
+};
+
+const TOOL_APP_IDS: Record<ToolName, AppId> = {
+  claude: "claude",
+  codex: "codex",
+  gemini: "gemini",
+  opencode: "opencode",
+  openclaw: "openclaw",
+  hermes: "hermes",
+};
+
+const posixScriptInstallCommand = (url: string) =>
+  `bash -c 'tmp=$(mktemp) && curl -fsSL ${url} -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'`;
+
+const HERMES_WINDOWS_INSTALL_SCRIPT =
+  "irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex";
+
+const powershellEncodedCommand = (script: string): string => {
+  let binary = "";
+  for (let i = 0; i < script.length; i += 1) {
+    const code = script.charCodeAt(i);
+    binary += String.fromCharCode(code & 0xff, code >> 8);
+  }
+  return btoa(binary);
+};
+
+const HERMES_WINDOWS_INSTALL_COMMAND = `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${powershellEncodedCommand(
+  HERMES_WINDOWS_INSTALL_SCRIPT,
+)}`;
+
+const POSIX_ONE_CLICK_INSTALL_COMMANDS = `# Claude Code (Native install - recommended)
+${posixScriptInstallCommand("https://claude.ai/install.sh")} || npm i -g @anthropic-ai/claude-code@latest
 # Codex
-npm install -g @openai/codex
+npm i -g @openai/codex@latest
 # Gemini CLI
-npm install -g @google/gemini-cli
+npm i -g @google/gemini-cli@latest
 # OpenCode
-curl -fsSL https://opencode.ai/install | bash`;
+${posixScriptInstallCommand("https://opencode.ai/install")} || npm i -g opencode-ai@latest
+# OpenClaw
+npm i -g openclaw@latest
+# Hermes
+${posixScriptInstallCommand("https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh")}`;
+
+const WINDOWS_ONE_CLICK_INSTALL_COMMANDS = `# Claude Code
+npm i -g @anthropic-ai/claude-code@latest
+# Codex
+npm i -g @openai/codex@latest
+# Gemini CLI
+npm i -g @google/gemini-cli@latest
+# OpenCode
+npm i -g opencode-ai@latest
+# OpenClaw
+npm i -g openclaw@latest
+# Hermes
+${HERMES_WINDOWS_INSTALL_COMMAND}`;
+
+const ONE_CLICK_INSTALL_COMMANDS = isWindows()
+  ? WINDOWS_ONE_CLICK_INSTALL_COMMANDS
+  : POSIX_ONE_CLICK_INSTALL_COMMANDS;
 
 export function AboutSection({ isPortable }: AboutSectionProps) {
-  // ... (use hooks as before) ...
   const { t } = useTranslation();
   const [version, setVersion] = useState<string | null>(null);
   const [isLoadingVersion, setIsLoadingVersion] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [toolVersions, setToolVersions] = useState<ToolVersion[]>([]);
   const [isLoadingTools, setIsLoadingTools] = useState(true);
+  const [showInstallCommands, setShowInstallCommands] = useState(false);
 
   const {
     hasUpdate,
@@ -120,15 +185,30 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     Record<string, WslShellPreference>
   >({});
   const [loadingTools, setLoadingTools] = useState<Record<string, boolean>>({});
+  const [busyTools, setBusyTools] = useState<Record<string, boolean>>({});
+
+  const toolVersionByName = useMemo(() => {
+    return new Map(toolVersions.map((tool) => [tool.name, tool]));
+  }, [toolVersions]);
+
+  const updatableToolNames = useMemo(
+    () =>
+      TOOL_NAMES.filter((toolName) => {
+        const tool = toolVersionByName.get(toolName);
+        return isUpdateAvailable(tool?.version, tool?.latest_version);
+      }),
+    [toolVersionByName],
+  );
+
+  const isAnyBusy = Object.values(busyTools).some(Boolean);
 
   const refreshToolVersions = useCallback(
     async (
       toolNames: ToolName[],
       wslOverrides?: Record<string, WslShellPreference>,
-    ) => {
-      if (toolNames.length === 0) return;
+    ): Promise<ToolVersion[]> => {
+      if (toolNames.length === 0) return [];
 
-      // 单工具刷新使用统一后端入口（get_tool_versions）并带工具过滤。
       setLoadingTools((prev) => {
         const next = { ...prev };
         for (const name of toolNames) next[name] = true;
@@ -151,8 +231,11 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
           }
           return merged;
         });
+
+        return updated;
       } catch (error) {
         console.error("[AboutSection] Failed to refresh tools", error);
+        return [];
       } finally {
         setLoadingTools((prev) => {
           const next = { ...prev };
@@ -167,7 +250,6 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
   const loadAllToolVersions = useCallback(async () => {
     setIsLoadingTools(true);
     try {
-      // Respect current UI overrides (shell / flag) when doing a full refresh.
       const versions = await settingsApi.getToolVersions(
         [...TOOL_NAMES],
         wslShellByTool,
@@ -203,29 +285,64 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     await refreshToolVersions([toolName], { [toolName]: nextPref });
   };
 
-  // Tool lifecycle actions (install/update)
-  const [busyTools, setBusyTools] = useState<Record<string, boolean>>({});
-  const isAnyBusy = Object.values(busyTools).some(Boolean);
-
   const handleToolAction = useCallback(
-    async (toolName: ToolName, action: "install" | "update") => {
+    async (toolName: ToolName, action: ToolLifecycleAction) => {
       setBusyTools((prev) => ({ ...prev, [toolName]: true }));
       try {
+        const previousTool = toolVersionByName.get(toolName);
+        const previousVersion = previousTool?.version ?? null;
+
         await settingsApi.runToolLifecycleAction(
           [toolName],
           action,
           wslShellByTool,
         );
-        toast.success(
-          t(
-            action === "install"
-              ? "settings.toolActionInstallSuccess"
-              : "settings.toolActionUpdateSuccess",
-            { tool: toolName },
-          ),
-        );
-        // Refresh version after action
-        await refreshToolVersions([toolName]);
+
+        // Refresh version after action and check result
+        const refreshed = await refreshToolVersions([toolName], wslShellByTool);
+        const tool = refreshed.find((t) => t.name === toolName);
+
+        if (
+          action === "update" &&
+          previousVersion &&
+          tool?.version === previousVersion
+        ) {
+          // Version didn't change after update - might be a no-op or failure
+          const latestVersion = tool.latest_version;
+          if (isUpdateAvailable(tool.version, latestVersion)) {
+            toast.warning(
+              t("settings.toolActionPartial", {
+                success: 0,
+                failed: toolName,
+              }),
+              { closeButton: true },
+            );
+          } else {
+            toast.success(
+              t("settings.toolActionUpdateSuccess", { tool: toolName }),
+              { closeButton: true },
+            );
+          }
+        } else if (action === "install" && !tool?.version) {
+          // Install command ran but version still not detected
+          toast.warning(
+            t("settings.toolActionPartial", {
+              success: 0,
+              failed: toolName,
+            }),
+            { closeButton: true },
+          );
+        } else {
+          toast.success(
+            t(
+              action === "install"
+                ? "settings.toolActionInstallSuccess"
+                : "settings.toolActionUpdateSuccess",
+              { tool: toolName },
+            ),
+            { closeButton: true },
+          );
+        }
       } catch (error) {
         console.error(
           `[AboutSection] Tool ${action} failed for ${toolName}`,
@@ -234,40 +351,32 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
         toast.error(
           t("settings.toolActionFailed", {
             tool: toolName,
-            error: String(error),
+            error: extractErrorMessage(error) || String(error),
           }),
+          { closeButton: true },
         );
       } finally {
         setBusyTools((prev) => ({ ...prev, [toolName]: false }));
       }
     },
-    [wslShellByTool, refreshToolVersions, t],
+    [wslShellByTool, refreshToolVersions, toolVersionByName, t],
   );
 
   const handleUpdateAll = useCallback(async () => {
-    const toolsToUpdate = toolVersions
-      .filter(
-        (tv) =>
-          tv.latest_version &&
-          tv.version !== tv.latest_version &&
-          !busyTools[tv.name],
-      )
-      .map((tv) => tv.name as ToolName);
-
-    if (toolsToUpdate.length === 0) {
-      toast.info(t("settings.allToolsUpToDate"));
+    if (updatableToolNames.length === 0) {
+      toast.info(t("settings.allToolsUpToDate"), { closeButton: true });
       return;
     }
 
     setBusyTools((prev) => {
       const next = { ...prev };
-      for (const name of toolsToUpdate) next[name] = true;
+      for (const name of updatableToolNames) next[name] = true;
       return next;
     });
 
     const results: { tool: string; success: boolean; error?: string }[] = [];
 
-    for (const toolName of toolsToUpdate) {
+    for (const toolName of updatableToolNames) {
       try {
         await settingsApi.runToolLifecycleAction(
           [toolName],
@@ -279,37 +388,39 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
         results.push({
           tool: toolName,
           success: false,
-          error: String(error),
+          error: extractErrorMessage(error) || String(error),
         });
       }
     }
 
-    // Refresh versions for all updated tools
-    await refreshToolVersions(toolsToUpdate);
+    await refreshToolVersions(updatableToolNames, wslShellByTool);
 
     setBusyTools((prev) => {
       const next = { ...prev };
-      for (const name of toolsToUpdate) next[name] = false;
+      for (const name of updatableToolNames) next[name] = false;
       return next;
     });
 
-    // Show summary toast
     const failed = results.filter((r) => !r.success);
     if (failed.length === 0) {
       toast.success(
         t("settings.toolActionUpdateAllSuccess", { count: results.length }),
+        { closeButton: true },
       );
     } else if (failed.length === results.length) {
-      toast.error(t("settings.toolActionUpdateAllFailed"));
+      toast.error(t("settings.toolActionUpdateAllFailed"), {
+        closeButton: true,
+      });
     } else {
       toast.warning(
         t("settings.toolActionPartial", {
           success: results.length - failed.length,
           failed: failed.map((r) => r.tool).join(", "),
         }),
+        { closeButton: true },
       );
     }
-  }, [toolVersions, busyTools, wslShellByTool, refreshToolVersions, t]);
+  }, [updatableToolNames, wslShellByTool, refreshToolVersions, t]);
 
   useEffect(() => {
     let active = true;
@@ -344,8 +455,6 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     // refreshes are handled by refreshToolVersions in the shell/flag handlers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ... (handlers like handleOpenReleaseNotes, handleCheckUpdate) ...
 
   const handleOpenReleaseNotes = useCallback(async () => {
     try {
@@ -387,7 +496,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
       try {
         resetDismiss();
         await updateHandle.downloadAndInstall();
-        await settingsApi.restart();
+        await relaunchApp();
       } catch (error) {
         console.error("[AboutSection] Update failed", error);
         toast.error(t("settings.updateFailed"));
@@ -571,17 +680,19 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
 
       {!isWindows() && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-medium">
               {t("settings.localEnvCheck")}
             </h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => handleUpdateAll()}
-                disabled={isLoadingTools || isAnyBusy}
+                disabled={
+                  isLoadingTools || isAnyBusy || updatableToolNames.length === 0
+                }
                 aria-label={t("settings.updateAll")}
               >
                 {isAnyBusy ? (
@@ -590,16 +701,18 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                     aria-hidden="true"
                   />
                 ) : (
-                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  <ArrowUpCircle className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {t("settings.updateAll")}
+                {t("settings.updateAllTools", {
+                  count: updatableToolNames.length,
+                })}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => loadAllToolVersions()}
-                disabled={isLoadingTools}
+                disabled={isLoadingTools || isAnyBusy}
               >
                 <RefreshCw
                   className={
@@ -611,14 +724,26 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 px-1">
+          <div className="grid gap-3 px-1 sm:grid-cols-2 xl:grid-cols-3">
             {TOOL_NAMES.map((toolName, index) => {
-              const tool = toolVersions.find((item) => item.name === toolName);
-              // Special case for OpenCode (capital C), others use capitalize
-              const displayName =
-                toolName === "opencode"
-                  ? "OpenCode"
-                  : toolName.charAt(0).toUpperCase() + toolName.slice(1);
+              const tool = toolVersionByName.get(toolName);
+              const appConfig = APP_ICON_MAP[TOOL_APP_IDS[toolName]];
+              const displayName = TOOL_DISPLAY_NAMES[toolName];
+              const isToolVersionLoading =
+                isLoadingTools || Boolean(loadingTools[toolName]);
+              const isOutdated = isUpdateAvailable(
+                tool?.version,
+                tool?.latest_version,
+              );
+              const action: ToolLifecycleAction | null =
+                isToolVersionLoading || !tool?.version
+                  ? !tool?.version && !isToolVersionLoading
+                    ? "install"
+                    : null
+                  : isOutdated
+                    ? "update"
+                    : null;
+              const isToolBusy = busyTools[toolName];
               const title = tool?.version || tool?.error || t("common.unknown");
 
               return (
@@ -626,153 +751,155 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
                   key={toolName}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="flex flex-col gap-2 rounded-xl border border-border bg-gradient-to-br from-card/80 to-card/40 p-4 shadow-sm transition-colors hover:border-primary/30"
+                  transition={{ duration: 0.3, delay: 0.15 + index * 0.04 }}
+                  className="flex min-h-[140px] flex-col gap-3 rounded-xl border border-border bg-gradient-to-br from-card/80 to-card/40 p-4 shadow-sm transition-colors hover:border-primary/30"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{displayName}</span>
-                      {/* Environment Badge */}
-                      {tool?.env_type && ENV_BADGE_CONFIG[tool.env_type] && (
-                        <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded-full border ${ENV_BADGE_CONFIG[tool.env_type].className}`}
-                        >
-                          {t(ENV_BADGE_CONFIG[tool.env_type].labelKey)}
-                        </span>
-                      )}
-                      {/* WSL Shell Selector */}
-                      {tool?.env_type === "wsl" && (
-                        <Select
-                          value={wslShellByTool[toolName]?.wslShell || "auto"}
-                          onValueChange={(v) =>
-                            handleToolShellChange(toolName, v)
-                          }
-                          disabled={isLoadingTools || loadingTools[toolName]}
-                        >
-                          <SelectTrigger className="h-6 w-[70px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">
-                              {t("common.auto")}
-                            </SelectItem>
-                            {WSL_SHELL_OPTIONS.map((shell) => (
-                              <SelectItem key={shell} value={shell}>
-                                {shell}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {/* WSL Shell Flag Selector */}
-                      {tool?.env_type === "wsl" && (
-                        <Select
-                          value={
-                            wslShellByTool[toolName]?.wslShellFlag || "auto"
-                          }
-                          onValueChange={(v) =>
-                            handleToolShellFlagChange(toolName, v)
-                          }
-                          disabled={isLoadingTools || loadingTools[toolName]}
-                        >
-                          <SelectTrigger className="h-6 w-[70px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">
-                              {t("common.auto")}
-                            </SelectItem>
-                            {WSL_SHELL_FLAG_OPTIONS.map((flag) => (
-                              <SelectItem key={flag} value={flag}>
-                                {flag}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-background/80 text-muted-foreground">
+                        {appConfig?.icon ?? <Terminal className="h-4 w-4" />}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {displayName}
+                        </div>
+                        {tool?.env_type && ENV_BADGE_CONFIG[tool.env_type] && (
+                          <span
+                            className={`mt-1 inline-flex w-fit text-[9px] px-1.5 py-0.5 rounded-full border ${ENV_BADGE_CONFIG[tool.env_type].className}`}
+                          >
+                            {t(ENV_BADGE_CONFIG[tool.env_type].labelKey)}
+                            {tool.wsl_distro ? ` · ${tool.wsl_distro}` : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {isLoadingTools || loadingTools[toolName] ? (
-                      <Loader2
-                        className="h-4 w-4 animate-spin text-muted-foreground"
-                        aria-hidden="true"
-                      />
+                    {isToolVersionLoading ? (
+                      <Loader2 className="mt-1 h-4 w-4 animate-spin text-muted-foreground" />
                     ) : tool?.version ? (
-                      isUpdateAvailable(tool.version, tool.latest_version) ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20">
-                          {tool.latest_version}
+                      isOutdated ? (
+                        <span className="mt-1 shrink-0 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-600 dark:text-yellow-400">
+                          {t("settings.updateAvailableShort")}
                         </span>
                       ) : (
-                        <CheckCircle2
-                          className="h-4 w-4 text-green-500"
-                          aria-hidden="true"
-                        />
+                        <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-green-500" />
                       )
                     ) : (
-                      <AlertCircle
-                        className="h-4 w-4 text-yellow-500"
-                        aria-hidden="true"
-                      />
+                      <AlertCircle className="mt-1 h-4 w-4 shrink-0 text-yellow-500" />
                     )}
                   </div>
-                  <div
-                    className="text-xs font-mono text-muted-foreground truncate"
-                    title={title}
-                  >
-                    {isLoadingTools
-                      ? t("common.loading")
-                      : tool?.version
-                        ? tool.version
-                        : tool?.error || t("common.notInstalled")}
-                  </div>
-                  {/* Install/Update buttons */}
-                  <div className="flex gap-2 mt-1">
-                    {!tool?.version && !isLoadingTools && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs flex-1"
-                        onClick={() => handleToolAction(toolName, "install")}
-                        disabled={isAnyBusy || loadingTools[toolName]}
-                        aria-label={`${t("common.install")} ${displayName}`}
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {t("settings.currentVersion")}
+                      </span>
+                      <span
+                        className="min-w-0 truncate font-mono text-foreground"
+                        title={title}
                       >
-                        {busyTools[toolName] ? (
-                          <Loader2
-                            className="h-3 w-3 animate-spin mr-1"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <Download
-                            className="h-3 w-3 mr-1"
-                            aria-hidden="true"
-                          />
-                        )}
-                        {t("common.install")}
-                      </Button>
+                        {isToolVersionLoading
+                          ? t("common.loading")
+                          : tool?.version
+                            ? tool.version
+                            : t("common.notInstalled")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {t("settings.latestVersion")}
+                      </span>
+                      <span className="min-w-0 truncate font-mono text-foreground">
+                        {isToolVersionLoading
+                          ? t("common.loading")
+                          : tool?.latest_version || t("common.unknown")}
+                      </span>
+                    </div>
+                    {!isToolVersionLoading && !tool?.version && tool?.error && (
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        {tool.error}
+                      </div>
                     )}
-                    {isUpdateAvailable(tool?.version, tool?.latest_version) && (
+                  </div>
+
+                  {tool?.env_type === "wsl" && (
+                    <div className="flex flex-wrap gap-2">
+                      <Select
+                        value={wslShellByTool[toolName]?.wslShell || "auto"}
+                        onValueChange={(v) =>
+                          handleToolShellChange(toolName, v)
+                        }
+                        disabled={
+                          isLoadingTools || loadingTools[toolName] || isAnyBusy
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-[82px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">
+                            {t("common.auto")}
+                          </SelectItem>
+                          {WSL_SHELL_OPTIONS.map((shell) => (
+                            <SelectItem key={shell} value={shell}>
+                              {shell}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={wslShellByTool[toolName]?.wslShellFlag || "auto"}
+                        onValueChange={(v) =>
+                          handleToolShellFlagChange(toolName, v)
+                        }
+                        disabled={
+                          isLoadingTools || loadingTools[toolName] || isAnyBusy
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-[82px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">
+                            {t("common.auto")}
+                          </SelectItem>
+                          {WSL_SHELL_FLAG_OPTIONS.map((flag) => (
+                            <SelectItem key={flag} value={flag}>
+                              {flag}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="mt-auto flex items-center justify-end">
+                    {isToolVersionLoading ? (
+                      <span className="text-xs text-muted-foreground">
+                        {t("common.loading")}
+                      </span>
+                    ) : action ? (
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="h-7 text-xs flex-1"
-                        onClick={() => handleToolAction(toolName, "update")}
-                        disabled={isAnyBusy || loadingTools[toolName]}
-                        aria-label={`${t("common.update")} ${displayName}`}
+                        variant={action === "install" ? "outline" : "default"}
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={() => handleToolAction(toolName, action)}
+                        disabled={isToolVersionLoading || isAnyBusy}
                       >
-                        {busyTools[toolName] ? (
-                          <Loader2
-                            className="h-3 w-3 animate-spin mr-1"
-                            aria-hidden="true"
-                          />
+                        {isToolBusy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : action === "install" ? (
+                          <Download className="h-3.5 w-3.5" />
                         ) : (
-                          <RefreshCw
-                            className="h-3 w-3 mr-1"
-                            aria-hidden="true"
-                          />
+                          <ArrowUpCircle className="h-3.5 w-3.5" />
                         )}
-                        {t("common.update")}
+                        {action === "install"
+                          ? t("settings.toolInstall")
+                          : t("settings.toolUpdate")}
                       </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {t("settings.toolReady")}
+                      </span>
                     )}
                   </div>
                 </motion.div>
@@ -789,28 +916,40 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
           transition={{ duration: 0.3, delay: 0.3 }}
           className="space-y-3"
         >
-          <h3 className="text-sm font-medium px-1">
-            {t("settings.oneClickInstall")}
-          </h3>
-          <div className="rounded-xl border border-border bg-gradient-to-br from-card/80 to-card/40 p-4 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                {t("settings.oneClickInstallHint")}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCopyInstallCommands}
-                className="h-7 gap-1.5 text-xs"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                {t("common.copy")}
-              </Button>
+          <button
+            type="button"
+            onClick={() => setShowInstallCommands((v) => !v)}
+            aria-expanded={showInstallCommands}
+            className="flex w-full items-center gap-1.5 px-1 text-sm font-medium text-foreground transition-colors hover:text-primary"
+          >
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${
+                showInstallCommands ? "" : "-rotate-90"
+              }`}
+            />
+            {t("settings.manualInstallCommands")}
+          </button>
+          {showInstallCommands && (
+            <div className="rounded-xl border border-border bg-gradient-to-br from-card/80 to-card/40 p-4 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.oneClickInstallHint")}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyInstallCommands}
+                  className="h-7 gap-1.5 text-xs"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {t("common.copy")}
+                </Button>
+              </div>
+              <pre className="text-xs font-mono bg-background/80 px-3 py-2.5 rounded-lg border border-border/60 overflow-x-auto">
+                {ONE_CLICK_INSTALL_COMMANDS}
+              </pre>
             </div>
-            <pre className="text-xs font-mono bg-background/80 px-3 py-2.5 rounded-lg border border-border/60 overflow-x-auto">
-              {ONE_CLICK_INSTALL_COMMANDS}
-            </pre>
-          </div>
+          )}
         </motion.div>
       )}
     </motion.section>

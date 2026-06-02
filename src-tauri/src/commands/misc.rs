@@ -225,7 +225,17 @@ async fn get_single_tool_version_impl(
         }
         "codex" => fetch_npm_latest_for_tool(&client, "@openai/codex", tool, local).await,
         "gemini" => fetch_npm_latest_for_tool(&client, "@google/gemini-cli", tool, local).await,
-        "opencode" => fetch_npm_latest_for_tool(&client, "opencode-ai", tool, local).await,
+        "opencode" => {
+            if let Some(version) =
+                fetch_npm_latest_for_tool(&client, "opencode-ai", tool, local).await
+            {
+                Some(version)
+            } else {
+                fetch_github_latest_version(&client, "anomalyco/opencode").await
+            }
+        }
+        "openclaw" => fetch_npm_latest_for_tool(&client, "openclaw", tool, local).await,
+        "hermes" => fetch_pypi_latest_version(&client, "hermes-agent").await,
         _ => None,
     };
 
@@ -307,7 +317,7 @@ fn run_tool_lifecycle_silently(command_line: &str, label: &str) -> Result<(), St
     // 使用 NamedTempFile 避免 TOCTOU 竞态：
     // 文件创建时带有受限权限，且在 scope 结束时自动删除
     let bat_file = tempfile::Builder::new()
-        .prefix(&format!("cc_switch_{label}_"))
+        .prefix(&format!("cc_gateway_pro_{label}_"))
         .suffix(".bat")
         .tempfile()
         .map_err(|e| format!("创建临时文件失败: {e}"))?;
@@ -324,14 +334,147 @@ fn run_tool_lifecycle_silently(command_line: &str, label: &str) -> Result<(), St
     finish_lifecycle_output(&output.map_err(|e| format!("启动安装进程失败: {e}"))?)
 }
 
+/// Decode command output bytes to string, handling platform-specific encodings.
+/// On Windows, tries UTF-8 first, then OEM codepage, then ANSI codepage.
+/// On other platforms, uses UTF-8 lossy decoding.
+fn decode_command_output(bytes: &[u8]) -> String {
+    #[cfg(target_os = "windows")]
+    {
+        decode_windows_command_output(bytes)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        String::from_utf8_lossy(bytes).into_owned()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn decode_windows_command_output(bytes: &[u8]) -> String {
+    if bytes.is_empty() {
+        return String::new();
+    }
+
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return text.to_string();
+    }
+
+    use windows_sys::Win32::Globalization::{GetACP, GetOEMCP, MultiByteToWideChar};
+
+    fn decode_codepage(bytes: &[u8], codepage: u32) -> Option<String> {
+        if codepage == 0 {
+            return None;
+        }
+
+        let input_len = i32::try_from(bytes.len()).ok()?;
+        unsafe {
+            let wide_len = MultiByteToWideChar(
+                codepage,
+                0,
+                bytes.as_ptr(),
+                input_len,
+                std::ptr::null_mut(),
+                0,
+            );
+            if wide_len <= 0 {
+                return None;
+            }
+
+            let mut wide = vec![0u16; wide_len as usize];
+            let written = MultiByteToWideChar(
+                codepage,
+                0,
+                bytes.as_ptr(),
+                input_len,
+                wide.as_mut_ptr(),
+                wide_len,
+            );
+            if written <= 0 {
+                return None;
+            }
+
+            Some(String::from_utf16_lossy(&wide[..written as usize]))
+        }
+    }
+
+    let oem_cp = unsafe { GetOEMCP() };
+    if let Some(decoded) = decode_codepage(bytes, oem_cp) {
+        return decoded;
+    }
+
+    let ansi_cp = unsafe { GetACP() };
+    if ansi_cp != oem_cp {
+        if let Some(decoded) = decode_codepage(bytes, ansi_cp) {
+            return decoded;
+        }
+    }
+
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+/// Check if a path points to a Windows command script (.cmd or .bat)
+#[cfg(target_os = "windows")]
+fn is_windows_command_script(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("cmd") || ext.eq_ignore_ascii_case("bat"))
+        .unwrap_or(false)
+}
+
+/// Run a tool version command on Windows, handling .cmd/.bat scripts properly
+#[cfg(target_os = "windows")]
+fn run_windows_tool_version_command(
+    tool_path: &Path,
+    new_path: &str,
+) -> std::io::Result<std::process::Output> {
+    use std::process::Command;
+
+    if is_windows_command_script(tool_path) {
+        let path = tool_path.to_string_lossy();
+        let command = format!("call {} --version", win_quote_path_for_batch(&path));
+        let mut cmd = Command::new("cmd");
+        return cmd
+            .args(["/D", "/S", "/C"])
+            .raw_arg(&command)
+            .env("PATH", new_path)
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+
+    Command::new(tool_path)
+        .arg("--version")
+        .env("PATH", new_path)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+}
+
+/// Quote a path for use in a Windows batch `call` command
+/// Handles % escaping (needs 4x for double expansion) and special characters
+#[cfg(target_os = "windows")]
+fn win_quote_path_for_batch(p: &str) -> String {
+    let escaped = if p.contains('%') {
+        p.replace('%', "%%%%")
+    } else {
+        p.to_string()
+    };
+    let needs_quote = p
+        .chars()
+        .any(|c| matches!(c, ' ' | '&' | '(' | ')' | '^' | ';' | '<' | '>' | '|' | ','));
+    if needs_quote {
+        format!("\"{}\"", escaped)
+    } else {
+        escaped
+    }
+}
+
 /// 把子进程退出结果转成 `Result`：成功返回 `Ok`；失败提取 stderr（空则回退 stdout）
 /// 的末尾若干行作为错误详情，避免把整段安装日志塞进 toast。
 fn finish_lifecycle_output(output: &std::process::Output) -> Result<(), String> {
     if output.status.success() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = decode_command_output(&output.stderr);
+    let stdout = decode_command_output(&output.stdout);
     let raw = if stderr.trim().is_empty() {
         stdout.trim()
     } else {
@@ -402,7 +545,7 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
         Command::new("brew").args(["list"]).output()
     };
     if let Ok(out) = brew_check {
-        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stdout = decode_command_output(&out.stdout);
         let brew_name = match tool {
             "claude" => "claude-code",
             "codex" => "codex",
@@ -428,7 +571,7 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
     };
     if !npm_pkg.is_empty() {
         if let Ok(out) = Command::new("npm").args(["list", "-g", npm_pkg]).output() {
-            let stdout = String::from_utf8_lossy(&out.stdout);
+            let stdout = decode_command_output(&out.stdout);
             if stdout.contains(npm_pkg) {
                 return ToolInstallSource::Npm;
             }
@@ -465,12 +608,25 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
 
     // 5. 通过 which 路径推断
     if let Ok(out) = Command::new("which").arg(tool).output() {
-        let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if path.contains("/Caskroom/") || path.contains("/Cellar/") {
+        let path = decode_command_output(&out.stdout).trim().to_string();
+        if path.contains("/Caskroom/")
+            || path.contains("/Cellar/")
+            || path.contains("/opt/homebrew/")
+        {
             return ToolInstallSource::Brew;
         }
         if path.contains("/node_modules/") {
             return ToolInstallSource::Npm;
+        }
+        // 检测 install script 安装路径
+        if path.contains("/.local/share/claude/") || path.contains("/.local/bin/claude") {
+            return ToolInstallSource::InstallScript;
+        }
+        if path.contains("/.opencode/") {
+            return ToolInstallSource::InstallScript;
+        }
+        if path.contains("/.local/bin/hermes") || path.contains("/.hermes/") {
+            return ToolInstallSource::InstallScript;
         }
     }
 
@@ -491,7 +647,7 @@ fn detect_tool_install_source(tool: &str) -> ToolInstallSource {
     };
     if !npm_pkg.is_empty() {
         if let Ok(out) = Command::new("npm").args(["list", "-g", npm_pkg]).output() {
-            let stdout = String::from_utf8_lossy(&out.stdout);
+            let stdout = decode_command_output(&out.stdout);
             if stdout.contains(npm_pkg) {
                 return ToolInstallSource::Npm;
             }
@@ -599,8 +755,11 @@ fn build_tool_lifecycle_command(
             ("opencode", ToolLifecycleAction::Update, ToolInstallSource::Npm) => {
                 "npm update -g opencode-ai".to_string()
             }
+            ("opencode", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
+                "opencode upgrade 2>/dev/null || npm install -g opencode-ai@latest".to_string()
+            }
             ("opencode", ToolLifecycleAction::Update, _) => {
-                "npm install -g opencode-ai@latest".to_string()
+                "opencode upgrade 2>/dev/null || npm install -g opencode-ai@latest".to_string()
             }
 
             // ── OpenClaw ─────────────────────────────────────────────
@@ -625,13 +784,16 @@ fn build_tool_lifecycle_command(
                 "brew install hermes-agent".to_string()
             }
             ("hermes", ToolLifecycleAction::Update, ToolInstallSource::Brew) => {
-                "brew upgrade hermes-agent 2>/dev/null || pip install --upgrade hermes-agent".to_string()
+                "brew upgrade hermes-agent 2>/dev/null || hermes update".to_string()
             }
             ("hermes", ToolLifecycleAction::Install, _) => {
-                "pip install hermes-agent".to_string()
+                "bash -c 'tmp=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'".to_string()
+            }
+            ("hermes", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
+                "hermes update 2>/dev/null || bash -c 'tmp=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'".to_string()
             }
             ("hermes", ToolLifecycleAction::Update, _) => {
-                "pip install --upgrade hermes-agent".to_string()
+                "hermes update 2>/dev/null || bash -c 'tmp=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'".to_string()
             }
 
             _ => continue,
@@ -832,6 +994,47 @@ fn pick_latest_version(
 
 /// 获取 npm 包的最新版本,支持预发布通道(见 `npm_prerelease_tags`)补查 ——
 /// 复用同一次 registry 响应,无额外请求。
+/// Helper function to fetch latest version from GitHub releases
+async fn fetch_github_latest_version(client: &reqwest::Client, repo: &str) -> Option<String> {
+    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
+    match client
+        .get(&url)
+        .header("User-Agent", "cc-gateway-pro")
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                json.get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.strip_prefix('v').unwrap_or(s).to_string())
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    }
+}
+
+/// Helper function to fetch latest version from PyPI
+async fn fetch_pypi_latest_version(client: &reqwest::Client, package: &str) -> Option<String> {
+    let url = format!("https://pypi.org/pypi/{package}/json");
+    match client.get(&url).send().await {
+        Ok(resp) => {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                json.get("info")
+                    .and_then(|info| info.get("version"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    }
+}
+
 async fn fetch_npm_latest_for_tool(
     client: &reqwest::Client,
     package: &str,
@@ -881,8 +1084,8 @@ fn try_get_version(tool: &str) -> (Option<String>, Option<String>) {
 
     match output {
         Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            let stdout = decode_command_output(&out.stdout).trim().to_string();
+            let stderr = decode_command_output(&out.stderr).trim().to_string();
             if out.status.success() {
                 let raw = if stdout.is_empty() { &stderr } else { &stdout };
                 if raw.is_empty() {
@@ -1005,8 +1208,8 @@ fn try_get_version_wsl(
 
     match output {
         Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            let stdout = decode_command_output(&out.stdout).trim().to_string();
+            let stderr = decode_command_output(&out.stderr).trim().to_string();
             if out.status.success() {
                 let raw = if stdout.is_empty() { &stderr } else { &stdout };
                 if raw.is_empty() {
@@ -1265,8 +1468,8 @@ fn scan_cli_version(tool: &str) -> (Option<String>, Option<String>) {
             };
 
             if let Ok(out) = output {
-                let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+                let stdout = decode_command_output(&out.stdout).trim().to_string();
+                let stderr = decode_command_output(&out.stderr).trim().to_string();
                 if out.status.success() {
                     let raw = if stdout.is_empty() { &stderr } else { &stdout };
                     if !raw.is_empty() {
@@ -1578,7 +1781,7 @@ end tell"#,
         .map_err(|e| format!("执行 osascript 失败: {e}"))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "Terminal.app 执行失败 (exit code: {:?}): {}",
             output.status.code(),
@@ -1639,7 +1842,7 @@ fn launch_macos_iterm2(script_file: &std::path::Path) -> Result<(), String> {
         .map_err(|e| format!("执行 osascript 失败: {e}"))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "iTerm2 执行失败 (exit code: {:?}): {}",
             output.status.code(),
@@ -1670,7 +1873,7 @@ fn launch_macos_ghostty(script_file: &std::path::Path) -> Result<(), String> {
         .map_err(|e| format!("启动 Ghostty 失败: {e}"))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "Ghostty 启动失败 (exit code: {:?}): {}",
             output.status.code(),
@@ -1703,7 +1906,7 @@ fn launch_macos_open_app(
         .map_err(|e| format!("启动 {app_name} 失败: {e}"))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "{} 启动失败 (exit code: {:?}): {}",
             app_name,
@@ -1755,7 +1958,7 @@ fn launch_macos_warp(script_file: &std::path::Path) -> Result<(), String> {
 
     let output = cmd.output().map_err(|e| format!("启动 Warp 失败: {e}"))?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "Warp 启动失败 (exit code: {:?}): {}",
             output.status.code(),
@@ -1998,7 +2201,7 @@ fn run_windows_start_command(args: &[&str], terminal_name: &str) -> Result<(), S
         .map_err(|e| format!("启动 {} 失败: {e}", terminal_name))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = decode_command_output(&output.stderr);
         return Err(format!(
             "{} 启动失败 (exit code: {:?}): {}",
             terminal_name,

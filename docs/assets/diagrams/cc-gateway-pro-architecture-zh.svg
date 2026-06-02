@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+  <defs>
+    <style>
+      .bg{fill:#f7fbff}
+      .title{font:700 46px Arial,"Microsoft YaHei",sans-serif;fill:#101828}
+      .subtitle{font:400 20px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .section{fill:#fff;stroke:#c8d7ea;stroke-width:2}
+      .sectionTitle{font:700 24px Arial,"Microsoft YaHei",sans-serif;fill:#1849a9}
+      .card{fill:#f8fbff;stroke:#d6e3f5;stroke-width:1.5}
+      .card2{fill:#f6fef9;stroke:#c7ead6;stroke-width:1.5}
+      .card3{fill:#fff8f0;stroke:#f8d6a4;stroke-width:1.5}
+      .card4{fill:#fbf7ff;stroke:#dec9ff;stroke-width:1.5}
+      .label{font:700 17px Arial,"Microsoft YaHei",sans-serif;fill:#1d2939}
+      .small{font:400 14px Arial,"Microsoft YaHei",sans-serif;fill:#475467}
+      .tiny{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#3478c9;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .dash{stroke:#12a05c;stroke-width:2.5;fill:none;stroke-dasharray:8 8;marker-end:url(#arrowGreen)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#3478c9"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#12a05c"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1400" height="980"/>
+  <text class="title" x="700" y="58" text-anchor="middle">本地 AI Provider 网关架构原理图</text>
+  <text class="subtitle" x="700" y="92" text-anchor="middle">统一配置 · 智能路由 · Vision Model · Project Provider · 高可用 · 用量观测</text>
+
+  <rect class="section" x="36" y="145" width="210" height="560" rx="16"/>
+  <text class="sectionTitle" x="141" y="185" text-anchor="middle">客户端</text>
+  <g>
+    <rect class="card" x="66" y="215" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="248" text-anchor="middle">Claude Code</text>
+    <rect class="card" x="66" y="292" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="326" text-anchor="middle">Claude Desktop</text>
+    <rect class="card" x="66" y="369" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="403" text-anchor="middle">Codex CLI</text>
+    <rect class="card" x="66" y="446" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="480" text-anchor="middle">Gemini CLI</text>
+    <rect class="card" x="66" y="523" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="557" text-anchor="middle">OpenCode</text>
+    <rect class="card" x="66" y="600" width="150" height="58" rx="10"/>
+    <text class="label" x="141" y="634" text-anchor="middle">OpenClaw / Hermes</text>
+  </g>
+
+  <rect class="section" x="315" y="135" width="770" height="590" rx="18"/>
+  <text class="sectionTitle" x="700" y="174" text-anchor="middle">本地网关</text>
+
+  <rect class="section" x="350" y="205" width="700" height="138" rx="14" fill="#ffffff"/>
+  <text class="sectionTitle" x="700" y="235" text-anchor="middle">管理界面层</text>
+  <g>
+    <rect class="card" x="375" y="258" width="120" height="62" rx="10"/>
+    <text class="label" x="435" y="284" text-anchor="middle">Provider</text>
+    <text class="tiny" x="435" y="304" text-anchor="middle">预设/切换/测速</text>
+    <rect class="card" x="515" y="258" width="120" height="62" rx="10"/>
+    <text class="label" x="575" y="284" text-anchor="middle">Proxy</text>
+    <text class="tiny" x="575" y="304" text-anchor="middle">接管/高可用</text>
+    <rect class="card" x="655" y="258" width="120" height="62" rx="10"/>
+    <text class="label" x="715" y="284" text-anchor="middle">Usage</text>
+    <text class="tiny" x="715" y="304" text-anchor="middle">Token/成本</text>
+    <rect class="card" x="795" y="258" width="120" height="62" rx="10"/>
+    <text class="label" x="855" y="284" text-anchor="middle">MCP/Skills</text>
+    <text class="tiny" x="855" y="304" text-anchor="middle">统一同步</text>
+    <rect class="card" x="935" y="258" width="80" height="62" rx="10"/>
+    <text class="label" x="975" y="284" text-anchor="middle">Session</text>
+    <text class="tiny" x="975" y="304" text-anchor="middle">会话/项目</text>
+  </g>
+
+  <rect class="section" x="350" y="370" width="700" height="170" rx="14" fill="#ffffff"/>
+  <text class="sectionTitle" x="700" y="400" text-anchor="middle">核心能力层</text>
+  <g>
+    <rect class="card2" x="375" y="424" width="135" height="78" rx="10"/>
+    <text class="label" x="442" y="454" text-anchor="middle">配置写入</text>
+    <text class="tiny" x="442" y="476" text-anchor="middle">JSON / TOML / env</text>
+    <rect class="card2" x="525" y="424" width="135" height="78" rx="10"/>
+    <text class="label" x="592" y="454" text-anchor="middle">Provider 选择</text>
+    <text class="tiny" x="592" y="476" text-anchor="middle">当前 / 队列</text>
+    <rect class="card2" x="675" y="424" width="135" height="78" rx="10"/>
+    <text class="label" x="742" y="454" text-anchor="middle">Project 路由</text>
+    <text class="tiny" x="742" y="476" text-anchor="middle">session -> cwd</text>
+    <rect class="card2" x="825" y="424" width="135" height="78" rx="10"/>
+    <text class="label" x="892" y="454" text-anchor="middle">Vision 路由</text>
+    <text class="tiny" x="892" y="476" text-anchor="middle">image -> vision_model</text>
+    <rect class="card2" x="525" y="512" width="135" height="62" rx="10"/>
+    <text class="label" x="592" y="542" text-anchor="middle">协议转换</text>
+    <text class="tiny" x="592" y="562" text-anchor="middle">Anthropic/OpenAI/Gemini</text>
+    <rect class="card2" x="675" y="512" width="135" height="62" rx="10"/>
+    <text class="label" x="742" y="542" text-anchor="middle">高可用</text>
+    <text class="tiny" x="742" y="562" text-anchor="middle">Retry / Circuit Breaker</text>
+  </g>
+
+  <rect class="section" x="350" y="600" width="700" height="92" rx="14" fill="#ffffff"/>
+  <text class="sectionTitle" x="700" y="630" text-anchor="middle">治理与观测层</text>
+  <g>
+    <rect class="card4" x="385" y="646" width="135" height="38" rx="8"/>
+    <text class="small" x="452" y="670" text-anchor="middle">请求日志 / Token</text>
+    <rect class="card4" x="535" y="646" width="135" height="38" rx="8"/>
+    <text class="small" x="602" y="670" text-anchor="middle">Provider 健康</text>
+    <rect class="card4" x="685" y="646" width="135" height="38" rx="8"/>
+    <text class="small" x="752" y="670" text-anchor="middle">原子写入 / 备份</text>
+    <rect class="card4" x="835" y="646" width="135" height="38" rx="8"/>
+    <text class="small" x="902" y="670" text-anchor="middle">WebDAV / 目录迁移</text>
+  </g>
+
+  <rect class="section" x="1155" y="145" width="210" height="560" rx="16"/>
+  <text class="sectionTitle" x="1260" y="185" text-anchor="middle">上游服务</text>
+  <rect class="card3" x="1185" y="230" width="150" height="74" rx="10"/>
+  <text class="label" x="1260" y="258" text-anchor="middle">官方 API</text>
+  <text class="tiny" x="1260" y="280" text-anchor="middle">Anthropic/OpenAI/Google</text>
+  <rect class="card3" x="1185" y="335" width="150" height="74" rx="10"/>
+  <text class="label" x="1260" y="363" text-anchor="middle">第三方中转</text>
+  <text class="tiny" x="1260" y="385" text-anchor="middle">OpenRouter / 聚合</text>
+  <rect class="card3" x="1185" y="440" width="150" height="74" rx="10"/>
+  <text class="label" x="1260" y="468" text-anchor="middle">OAuth / Copilot</text>
+  <text class="tiny" x="1260" y="490" text-anchor="middle">官方授权复用</text>
+  <rect class="card3" x="1185" y="545" width="150" height="74" rx="10"/>
+  <text class="label" x="1260" y="573" text-anchor="middle">私有网关</text>
+  <text class="tiny" x="1260" y="595" text-anchor="middle">团队 / 企业接入</text>
+
+  <rect class="section" x="96" y="775" width="1208" height="112" rx="16"/>
+  <text class="sectionTitle" x="700" y="810" text-anchor="middle">基础支撑层</text>
+  <rect class="card" x="140" y="832" width="205" height="44" rx="8"/>
+  <text class="small" x="242" y="860" text-anchor="middle">SQLite：Provider / Settings / Logs</text>
+  <rect class="card" x="385" y="832" width="205" height="44" rx="8"/>
+  <text class="small" x="487" y="860" text-anchor="middle">应用配置：~/.claude / ~/.codex</text>
+  <rect class="card" x="630" y="832" width="205" height="44" rx="8"/>
+  <text class="small" x="732" y="860" text-anchor="middle">会话文件：JSONL / Codex Sessions</text>
+  <rect class="card" x="875" y="832" width="205" height="44" rx="8"/>
+  <text class="small" x="977" y="860" text-anchor="middle">Skills：统一 Skills 存储</text>
+  <rect class="card" x="1120" y="832" width="205" height="44" rx="8"/>
+  <text class="small" x="1222" y="860" text-anchor="middle">Backups / WebDAV Sync</text>
+
+  <path class="arrow" d="M246 425 C285 425 285 425 315 425"/>
+  <path class="arrow" d="M1085 425 C1120 425 1120 425 1155 425"/>
+  <path class="dash" d="M700 725 C700 752 700 752 700 775"/>
+  <path class="dash" d="M1260 705 C1260 744 1228 744 1228 775"/>
+  <path class="dash" d="M141 705 C141 744 242 744 242 775"/>
+
+  <rect x="120" y="918" width="1160" height="34" rx="8" fill="#eef6ff" stroke="#d6e3f5"/>
+  <text class="small" x="700" y="941" text-anchor="middle">工作流：客户端请求 → 本地代理接收 → Provider/Project/Vision 路由 → 协议转换与故障转移 → 上游执行 → 用量与健康记录 → 响应返回</text>
+</svg>

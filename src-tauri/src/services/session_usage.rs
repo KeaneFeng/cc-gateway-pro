@@ -451,33 +451,33 @@ fn insert_session_log_entry(
             provider_type, is_streaming, cost_multiplier, created_at, data_source
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
             rusqlite::params![
-            request_id,
-            "_session",         // provider_id: 标记为会话来源
-            "claude",           // app_type
-            msg.model,
-            msg.model,          // request_model = model
-            msg.input_tokens,
-            msg.output_tokens,
-            msg.cache_read_tokens,
-            msg.cache_creation_tokens,
-            input_cost,
-            output_cost,
-            cache_read_cost,
-            cache_creation_cost,
-            total_cost,
-            0i64,               // latency_ms: 会话日志无此数据
-            Option::<i64>::None, // first_token_ms
-            200i64,             // status_code: 有 stop_reason 说明请求成功
-            Option::<String>::None, // error_message
-            msg.session_id,
-            Some("session_log"), // provider_type
-            1i64,               // is_streaming: Claude Code 通常使用流式
-            "1.0",              // cost_multiplier
-            created_at,
-            "session_log",      // data_source
-        ],
-    )
-    .map_err(|e| AppError::Database(format!("插入会话日志失败: {e}")))?;
+                request_id,
+                "_session",         // provider_id: 标记为会话来源
+                "claude",           // app_type
+                msg.model,
+                msg.model,          // request_model = model
+                msg.input_tokens,
+                msg.output_tokens,
+                msg.cache_read_tokens,
+                msg.cache_creation_tokens,
+                input_cost,
+                output_cost,
+                cache_read_cost,
+                cache_creation_cost,
+                total_cost,
+                0i64,               // latency_ms: 会话日志无此数据
+                Option::<i64>::None, // first_token_ms
+                200i64,             // status_code: 有 stop_reason 说明请求成功
+                Option::<String>::None, // error_message
+                msg.session_id,
+                Some("session_log"), // provider_type
+                1i64,               // is_streaming: Claude Code 通常使用流式
+                "1.0",              // cost_multiplier
+                created_at,
+                "session_log",      // data_source
+            ],
+        )
+        .map_err(|e| AppError::Database(format!("插入会话日志失败: {e}")))?;
 
     // 仅在确实写入新行时通知前端，避免 INSERT OR IGNORE 跳过时产生空刷新
     if inserted_rows > 0 {
@@ -661,5 +661,29 @@ mod tests {
         assert_eq!(count, 1);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_collect_jsonl_files_includes_subagents() {
+        let tmp =
+            std::env::temp_dir().join(format!("cc-gateway-pro-test-{}", uuid::Uuid::new_v4()));
+        let project = tmp.join("project");
+        let session_dir = project.join("test-session");
+        let subagents_dir = session_dir.join("subagents");
+        fs::create_dir_all(&subagents_dir).unwrap();
+
+        fs::write(project.join("main.jsonl"), "{}").unwrap();
+        fs::write(subagents_dir.join("agent-abc.jsonl"), "{}").unwrap();
+
+        let files = collect_jsonl_files(&tmp);
+        assert_eq!(files.len(), 2);
+        let paths: Vec<String> = files
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        assert!(paths.iter().any(|p| p.contains("main.jsonl")));
+        assert!(paths.iter().any(|p| p.contains("agent-abc.jsonl")));
+
+        fs::remove_dir_all(&tmp).ok();
     }
 }

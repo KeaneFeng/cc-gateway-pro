@@ -945,7 +945,7 @@ export function ClaudeFormFields({
               <div className="space-y-2 border-t pt-4">
                 <FormLabel htmlFor="visionModel">
                   {t("providerAdvanced.visionModel", {
-                    defaultValue: "Vision Model (图片路由)",
+                    defaultValue: "Vision Model",
                   })}
                 </FormLabel>
                 {renderModelInput(
@@ -960,7 +960,7 @@ export function ClaudeFormFields({
                 <p className="text-xs text-muted-foreground">
                   {t("providerAdvanced.visionModelDesc", {
                     defaultValue:
-                      "当请求包含图片内容时，自动切换到此模型。留空则使用兜底模型处理所有请求。",
+                      "Automatically switch to this model when the request contains image content. Leave empty to use the fallback model for all requests.",
                   })}
                 </p>
               </div>
