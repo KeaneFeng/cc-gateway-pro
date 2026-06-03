@@ -127,8 +127,8 @@ export async function relaunchApp(): Promise<void> {
 
   try {
     await Promise.race([relaunch(), timeout]);
-  } catch {
-    throw new Error("RELAUNCH_FAILED");
+  } catch (e) {
+    throw new Error("RELAUNCH_FAILED: " + String(e));
   }
 }
 

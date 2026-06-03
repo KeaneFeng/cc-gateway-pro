@@ -7,11 +7,9 @@ use serde_json::Value;
 ///
 /// 用法:
 ///   let effective_model = vision_router::route(request_model, body, provider, tag);
-///   if effective_model != request_model {
-///       body["model"] = json!(effective_model);
-///   }
+///   返回: effective_model (可能已切换到 vision model)
 /// 检查请求体是否包含图片内容
-pub fn has_image_content(body: &Value) -> bool {
+fn has_image_content(body: &Value) -> bool {
     crate::proxy::model_mapper::ModelMapping::has_image_content(body)
 }
 
