@@ -1044,7 +1044,7 @@ fn codex_proxy_error_json(
         .map(|status| format!("; upstream_status: HTTP {status}"))
         .unwrap_or_default();
     let message = format!(
-        "CC Switch local proxy failed while handling Codex endpoint {endpoint}. Provider: {provider_name}; model: {request_model}{status_fragment}; cause: {cause}"
+        "CC Gateway Pro local proxy failed while handling Codex endpoint {endpoint}. Provider: {provider_name}; model: {request_model}{status_fragment}; cause: {cause}"
     );
 
     error_obj.insert(
@@ -1485,7 +1485,7 @@ data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"message\"}}\n
         let body = codex_proxy_error_json("DeepSeek", "deepseek-chat", "/responses", &error);
 
         let message = body["error"]["message"].as_str().unwrap();
-        assert!(message.contains("CC Switch local proxy failed"));
+        assert!(message.contains("CC Gateway Pro local proxy failed"));
         assert!(message.contains("DeepSeek"));
         assert!(message.contains("deepseek-chat"));
         assert!(message.contains("/responses"));

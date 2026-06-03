@@ -140,6 +140,17 @@ pub fn apply_codex_chat_upstream_model(
         if catalog_model_ids.contains(request_model) {
             return Some(request_model.to_string());
         }
+
+        // CC-Gateway-Pro: Vision routing 已设置 vision model，不要覆盖
+        if let Some(vision) = provider
+            .meta
+            .as_ref()
+            .and_then(|m| m.vision_model.as_deref())
+        {
+            if request_model.eq_ignore_ascii_case(vision) {
+                return Some(request_model.to_string());
+            }
+        }
     }
 
     let upstream_model = codex_provider_upstream_model(provider)?;
