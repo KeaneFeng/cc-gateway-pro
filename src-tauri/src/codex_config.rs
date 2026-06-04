@@ -683,20 +683,19 @@ fn set_codex_model_catalog_json_field(
     let mut doc = config_text
         .parse::<DocumentMut>()
         .map_err(|e| AppError::Message(format!("Invalid Codex config.toml: {e}")))?;
-    let generated_path = get_codex_model_catalog_path();
 
     match catalog_path {
-        Some(path) => {
-            doc["model_catalog_json"] = toml_edit::value(path.to_string_lossy().as_ref());
+        Some(_) => {
+            doc["model_catalog_json"] =
+                toml_edit::value(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME);
         }
         None => {
             let should_remove = doc
                 .get("model_catalog_json")
                 .and_then(|item| item.as_str())
                 .map(|path| {
-                    path == generated_path.to_string_lossy().as_ref()
-                        || Path::new(path).file_name().and_then(|name| name.to_str())
-                            == Some(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME)
+                    Path::new(path).file_name().and_then(|name| name.to_str())
+                        == Some(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME)
                 })
                 .unwrap_or(false);
             if should_remove {
@@ -781,9 +780,8 @@ fn resolve_cc_switch_catalog_path(config_text: &str, generated_path: &Path) -> O
         .filter(|s| !s.is_empty())?;
 
     let referenced_path = Path::new(catalog_path_str);
-    let is_cc_switch_owned = catalog_path_str == generated_path.to_string_lossy().as_ref()
-        || referenced_path.file_name().and_then(|name| name.to_str())
-            == Some(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME);
+    let is_cc_switch_owned = referenced_path.file_name().and_then(|name| name.to_str())
+        == Some(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME);
     if !is_cc_switch_owned {
         return None;
     }
@@ -1792,7 +1790,7 @@ base_url = "https://production.api/v1"
     }
 
     #[test]
-    fn model_catalog_json_field_operates_on_top_level() {
+    fn model_catalog_json_field_writes_relative_filename() {
         let input = r#"model_provider = "any"
 
 [model_providers.any]
@@ -1806,7 +1804,7 @@ name = "any"
             parsed
                 .get("model_catalog_json")
                 .and_then(|value| value.as_str()),
-            Some("/tmp/cc-switch-model-catalog.json")
+            Some(CC_GATEWAY_PRO_CODEX_MODEL_CATALOG_FILENAME)
         );
         assert!(
             parsed

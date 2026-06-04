@@ -121,9 +121,10 @@ pub async fn fetch_models(
 ///
 /// 候选顺序：
 /// 1. `models_url_override` 非空 → 只返回它
-/// 2. baseURL 直接拼 `/v1/models`（若已有 `/v1` 结尾则拼 `/models`）
-/// 3. 若 baseURL 命中 [`KNOWN_COMPAT_SUFFIXES`]，剥离后缀再拼 `/v1/models`
-/// 4. 同上，但拼 `/models`（部分站点如 DeepSeek 官方只暴露 `/models`）
+/// 2. baseURL 拼 `/v1/models`；若已以版本段 `/v{N}` 结尾（`/v1`、智谱
+///    `/api/coding/paas/v4` 等），版本号已在路径里，改拼 `/models`
+/// 3. 版本段非 `/v1`（如 `/v4`）时再追加 `/v1/models` 作为兜底次候选
+/// 4. 若 baseURL 命中 [`KNOWN_COMPAT_SUFFIXES`]，剥离后缀再拼 `/v1/models`、`/models`
 ///
 /// 结果已去重且保持首次出现顺序。
 pub fn build_models_url_candidates(
@@ -160,12 +161,18 @@ pub fn build_models_url_candidates(
         return Ok(candidates);
     }
 
-    let primary = if trimmed.ends_with("/v1") {
-        format!("{trimmed}/models")
+    // baseURL 已以版本段 /v{N} 结尾时（如 `/v1`、智谱 `/api/coding/paas/v4`），
+    // OpenAI 惯例的模型端点是 `{base}/models`，不能再补 `/v1`
+    // （否则 .../coding/paas/v4/v1/models → 404）。
+    if ends_with_version_segment(trimmed) {
+        candidates.push(format!("{trimmed}/models"));
+        // 版本段非 /v1 时，保留旧的 /v1/models 作为兜底次候选（正确路径已在前）。
+        if !trimmed.ends_with("/v1") {
+            candidates.push(format!("{trimmed}/v1/models"));
+        }
     } else {
-        format!("{trimmed}/v1/models")
-    };
-    candidates.push(primary);
+        candidates.push(format!("{trimmed}/v1/models"));
+    }
 
     if let Some(stripped) = strip_compat_suffix(trimmed) {
         let root = stripped.trim_end_matches('/');
@@ -195,6 +202,15 @@ fn truncate_body(body: String) -> String {
         s.push('…');
         s
     }
+}
+
+/// 判断 baseURL 是否以 OpenAI 风格的版本段 `/v{N}` 结尾（`N` 为一个或多个数字），
+/// 例如 `/v1`、`.../paas/v4`。这类 URL 版本号已在路径中，模型端点应为
+/// `{base}/models`，不能再补 `/v1`（智谱 Coding Plan 即 `.../coding/paas/v4`）。
+fn ends_with_version_segment(url: &str) -> bool {
+    let last = url.rsplit('/').next().unwrap_or("");
+    last.strip_prefix('v')
+        .is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// 若 baseURL 以任一已知兼容子路径结尾，返回剥离后的剩余部分；否则 `None`。
@@ -410,5 +426,47 @@ mod tests {
         let json = r#"{"object":"list","data":[]}"#;
         let resp: ModelsResponse = serde_json::from_str(json).unwrap();
         assert!(resp.data.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_candidates_zhipu_coding_paas_v4() {
+        // 智谱 Coding Plan 端点以 /v4 版本段结尾：模型端点是 {base}/models，
+        // 正确路径必须排在 .../v4/v1/models（404）之前。
+        let c =
+            build_models_url_candidates("https://open.bigmodel.cn/api/coding/paas/v4", false, None)
+                .unwrap();
+        assert_eq!(
+            c,
+            vec![
+                "https://open.bigmodel.cn/api/coding/paas/v4/models",
+                "https://open.bigmodel.cn/api/coding/paas/v4/v1/models",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_candidates_zai_coding_paas_v4() {
+        let c = build_models_url_candidates("https://api.z.ai/api/coding/paas/v4", false, None)
+            .unwrap();
+        assert_eq!(
+            c,
+            vec![
+                "https://api.z.ai/api/coding/paas/v4/models",
+                "https://api.z.ai/api/coding/paas/v4/v1/models",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ends_with_version_segment() {
+        assert!(ends_with_version_segment("https://x.com/v1"));
+        assert!(ends_with_version_segment(
+            "https://open.bigmodel.cn/api/coding/paas/v4"
+        ));
+        assert!(ends_with_version_segment("https://x.com/v10"));
+        assert!(!ends_with_version_segment("https://x.com/api"));
+        assert!(!ends_with_version_segment("https://x.com/vX"));
+        assert!(!ends_with_version_segment("https://x.com/models"));
+        assert!(!ends_with_version_segment("https://api.siliconflow.cn"));
     }
 }
