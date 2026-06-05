@@ -1086,32 +1086,48 @@ impl ProxyService {
     async fn backup_live_configs(&self) -> Result<(), String> {
         // Claude
         if let Ok(config) = self.read_claude_live() {
-            let json_str = serde_json::to_string(&config)
-                .map_err(|e| format!("序列化 Claude 配置失败: {e}"))?;
-            self.db
-                .save_live_backup("claude", &json_str)
-                .await
-                .map_err(|e| format!("备份 Claude 配置失败: {e}"))?;
+            // 跳过已被代理接管的 Live：避免把代理占位符当作"原始 Live"存进备份槽。
+            // 否则下次 start_with_takeover 在异常历史状态下（Live 已是占位符）再次
+            // 调用本函数，会用代理配置覆盖一个原本正常的备份；之后 stop 恢复时
+            // 即便走到备份路径也会把代理占位符再写回 Live，永久卡在 127.0.0.1:15721。
+            if Self::live_has_proxy_placeholder_for_app(&AppType::Claude, &config) {
+                log::warn!("claude Live 已被代理接管，不备份（避免把代理配置固化进备份槽）；下次 stop 会从 SSOT 重建 Live");
+            } else {
+                let json_str = serde_json::to_string(&config)
+                    .map_err(|e| format!("序列化 Claude 配置失败: {e}"))?;
+                self.db
+                    .save_live_backup("claude", &json_str)
+                    .await
+                    .map_err(|e| format!("备份 Claude 配置失败: {e}"))?;
+            }
         }
 
         // Codex
         if let Ok(config) = self.read_codex_live() {
-            let json_str = serde_json::to_string(&config)
-                .map_err(|e| format!("序列化 Codex 配置失败: {e}"))?;
-            self.db
-                .save_live_backup("codex", &json_str)
-                .await
-                .map_err(|e| format!("备份 Codex 配置失败: {e}"))?;
+            if Self::live_has_proxy_placeholder_for_app(&AppType::Codex, &config) {
+                log::warn!("codex Live 已被代理接管，不备份（避免把代理配置固化进备份槽）；下次 stop 会从 SSOT 重建 Live");
+            } else {
+                let json_str = serde_json::to_string(&config)
+                    .map_err(|e| format!("序列化 Codex 配置失败: {e}"))?;
+                self.db
+                    .save_live_backup("codex", &json_str)
+                    .await
+                    .map_err(|e| format!("备份 Codex 配置失败: {e}"))?;
+            }
         }
 
         // Gemini
         if let Ok(config) = self.read_gemini_live() {
-            let json_str = serde_json::to_string(&config)
-                .map_err(|e| format!("序列化 Gemini 配置失败: {e}"))?;
-            self.db
-                .save_live_backup("gemini", &json_str)
-                .await
-                .map_err(|e| format!("备份 Gemini 配置失败: {e}"))?;
+            if Self::live_has_proxy_placeholder_for_app(&AppType::Gemini, &config) {
+                log::warn!("gemini Live 已被代理接管，不备份（避免把代理配置固化进备份槽）；下次 stop 会从 SSOT 重建 Live");
+            } else {
+                let json_str = serde_json::to_string(&config)
+                    .map_err(|e| format!("序列化 Gemini 配置失败: {e}"))?;
+                self.db
+                    .save_live_backup("gemini", &json_str)
+                    .await
+                    .map_err(|e| format!("备份 Gemini 配置失败: {e}"))?;
+            }
         }
 
         log::info!("已备份所有应用的 Live 配置");
@@ -1126,6 +1142,15 @@ impl ProxyService {
             AppType::Gemini => ("gemini", self.read_gemini_live()?),
             _ => return Err("该应用不支持代理功能".to_string()),
         };
+
+        // 跳过已被代理接管的 Live：避免把代理占位符当作"原始 Live"存进备份槽
+        // （见 backup_live_configs 中的注释）。
+        if Self::live_has_proxy_placeholder_for_app(app_type, &config) {
+            log::warn!(
+                "{app_type_str} Live 已被代理接管，不备份（避免把代理配置固化进备份槽）；下次 stop 会从 SSOT 重建 Live"
+            );
+            return Ok(());
+        }
 
         let json_str = serde_json::to_string(&config)
             .map_err(|e| format!("序列化 {app_type_str} 配置失败: {e}"))?;
@@ -1843,6 +1868,18 @@ impl ProxyService {
             None => return false,
         };
         env.get("GEMINI_API_KEY").and_then(|v| v.as_str()) == Some(PROXY_TOKEN_PLACEHOLDER)
+    }
+
+    /// 统一判断指定应用的 Live 配置是否已被代理占位符接管。
+    /// 用于 backup_live_configs / backup_live_config_strict 中跳过已被代理接管的 Live，
+    /// 避免把代理占位符当作"原始 Live"存进备份槽。
+    fn live_has_proxy_placeholder_for_app(app_type: &AppType, config: &Value) -> bool {
+        match app_type {
+            AppType::Claude => Self::is_claude_live_taken_over(config),
+            AppType::Codex => Self::codex_live_has_proxy_placeholder(config),
+            AppType::Gemini => Self::is_gemini_live_taken_over(config),
+            _ => false,
+        }
     }
 
     /// 从供应商配置更新 Live 备份（用于代理模式下的热切换）

@@ -230,12 +230,31 @@ fn parse_zhipu_token_tiers(data: &serde_json::Value) -> Vec<QuotaTier> {
         .collect()
 }
 
-async fn query_zhipu(api_key: &str) -> SubscriptionQuota {
-    let client = crate::proxy::http_client::get();
+/// Resolve the Zhipu quota endpoint from the user's configured `base_url`.
+///
+/// Zhipu ships as two distinct presets (Zhipu GLM = `open.bigmodel.cn`,
+/// Zhipu GLM en = `api.z.ai`) that share the same quota path and JSON shape.
+/// The quota endpoint lives on the same host as the user's coding endpoint,
+/// so we route by `base_url` and let the caller's existing reachability
+/// (they're already using this host to run coding) determine success — no
+/// cross-host fallback, no auth-error heuristics.
+fn zhipu_quota_base(base_url: &str) -> &'static str {
+    if base_url.to_lowercase().contains("bigmodel.cn") {
+        "https://open.bigmodel.cn"
+    } else {
+        "https://api.z.ai"
+    }
+}
 
-    // 统一走 api.z.ai 国际站（中国站 bigmodel.cn 有反爬机制）
+async fn query_zhipu(base_url: &str, api_key: &str) -> SubscriptionQuota {
+    let client = crate::proxy::http_client::get();
+    let url = format!(
+        "{}/api/monitor/usage/quota/limit",
+        zhipu_quota_base(base_url)
+    );
+
     let resp = client
-        .get("https://api.z.ai/api/monitor/usage/quota/limit")
+        .get(&url)
         .header("Authorization", api_key) // 注意：智谱不加 Bearer 前缀
         .header("Content-Type", "application/json")
         .header("Accept-Language", "en-US,en")
@@ -464,7 +483,9 @@ pub async fn get_coding_plan_quota(
 
     let quota = match provider {
         CodingPlanProvider::Kimi => query_kimi(api_key).await,
-        CodingPlanProvider::ZhipuCn | CodingPlanProvider::ZhipuEn => query_zhipu(api_key).await,
+        CodingPlanProvider::ZhipuCn | CodingPlanProvider::ZhipuEn => {
+            query_zhipu(base_url, api_key).await
+        }
         CodingPlanProvider::MiniMaxCn => query_minimax(api_key, true).await,
         CodingPlanProvider::MiniMaxEn => query_minimax(api_key, false).await,
     };
