@@ -309,7 +309,7 @@ pub fn run() {
                     log::warn!("初始化 Updater 插件失败，已跳过：{e}");
                 }
             }
-            // 初始化日志（单文件输出到 <app_config_dir>/logs/cc-gateway-pro.log）
+            // 初始化日志（按日切分，保留7天）
             {
                 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
@@ -320,9 +320,8 @@ pub fn run() {
                     eprintln!("创建日志目录失败: {e}");
                 }
 
-                // 启动时删除旧日志文件，实现单文件覆盖效果
-                let log_file_path = log_dir.join("cc-gateway-pro.log");
-                let _ = std::fs::remove_file(&log_file_path);
+                // 清理 7 天前的旧日志
+                crate::commands::log_viewer::cleanup_old_logs(7);
 
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -335,12 +334,10 @@ pub fn run() {
                                 file_name: Some("cc-gateway-pro".into()),
                             }),
                         ])
-                        // 单文件模式：启动时删除旧文件，达到大小时轮转
-                        // 注意：KeepSome(n) 内部会做 n-2 运算，n=1 会导致 usize 下溢
-                        // KeepSome(2) 是最小安全值，表示不保留轮转文件
-                        .rotation_strategy(RotationStrategy::KeepSome(2))
-                        // 单文件大小限制 1GB
-                        .max_file_size(1024 * 1024 * 1024)
+                        // 按日切分：达到 100MB 时轮转，轮转时按日期重命名旧文件
+                        // KeepSome(8) 保留最近 8 个文件（约7天+当天）
+                        .rotation_strategy(RotationStrategy::KeepSome(8))
+                        .max_file_size(100 * 1024 * 1024)
                         .timezone_strategy(TimezoneStrategy::UseLocal)
                         .build(),
                 )?;
@@ -1278,6 +1275,8 @@ pub fn run() {
             commands::run_tool_lifecycle_action,
             // Provider terminal
             commands::open_provider_terminal,
+            // Log viewer (fork-only)
+            open_log_viewer,
             // Universal Provider management
             commands::get_universal_providers,
             commands::get_universal_provider,

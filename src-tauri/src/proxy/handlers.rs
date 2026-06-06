@@ -1337,6 +1337,22 @@ fn log_forward_error(
     let error_message = get_error_message(error);
     let request_id = uuid::Uuid::new_v4().to_string();
 
+    // fork-only: 同步写入代理请求日志文件
+    crate::commands::log_viewer::append_proxy_request_line(
+        crate::commands::log_viewer::format_proxy_request_line(
+            ctx.app_type_str,
+            &ctx.provider.name,
+            &ctx.request_model,
+            &ctx.request_model,
+            0,
+            0,
+            0,
+            status_code,
+            ctx.latency_ms(),
+            Some(&error_message),
+        ),
+    );
+
     if let Err(e) = logger.log_error_with_context(
         request_id,
         ctx.provider.id.clone(),

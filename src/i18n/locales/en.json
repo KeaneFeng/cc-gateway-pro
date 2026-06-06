@@ -403,6 +403,11 @@
           "info": "General operation info (default)",
           "debug": "Detailed info including SSE stream and request/response",
           "trace": "All logs, most verbose"
+        },
+        "openLog": {
+          "title": "Proxy Request Logs",
+          "description": "View proxy request logs (7 days) in your preferred terminal with real-time scrolling",
+          "button": "View Logs"
         }
       }
     },

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { ScrollText } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,8 +13,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { settingsApi, type LogConfig } from "@/lib/api/settings";
+import { invoke } from "@tauri-apps/api/core";
 
 const LOG_LEVELS = ["error", "warn", "info", "debug", "trace"] as const;
+
+async function openLogViewer() {
+  try {
+    await invoke("open_log_viewer");
+  } catch (e) {
+    toast.error(String(e));
+  }
+}
 
 export function LogConfigPanel() {
   const { t } = useTranslation();
@@ -84,6 +95,25 @@ export function LogConfigPanel() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* 打开日志查看 */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label>{t("settings.advanced.logConfig.openLog.title")}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.advanced.logConfig.openLog.description")}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={openLogViewer}
+          className="gap-2"
+        >
+          <ScrollText className="h-4 w-4" />
+          {t("settings.advanced.logConfig.openLog.button")}
+        </Button>
       </div>
 
       {/* 日志级别说明 */}

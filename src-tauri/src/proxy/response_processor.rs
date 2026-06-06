@@ -786,6 +786,22 @@ async fn log_usage_internal(
         usage.cache_creation_tokens
     );
 
+    // fork-only: 同步写入代理请求日志文件
+    crate::commands::log_viewer::append_proxy_request_line(
+        crate::commands::log_viewer::format_proxy_request_line(
+            app_type,
+            provider_id,
+            model,
+            request_model,
+            usage.input_tokens,
+            usage.output_tokens,
+            usage.cache_read_tokens,
+            status_code,
+            latency_ms,
+            None,
+        ),
+    );
+
     if let Err(e) = logger.log_with_calculation(
         request_id,
         provider_id.to_string(),
