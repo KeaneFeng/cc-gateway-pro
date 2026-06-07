@@ -35,7 +35,6 @@ import type { AppId } from "@/lib/api/types";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { isWindows } from "@/lib/platform";
 import { isUpdateAvailable } from "@/lib/version";
-import { relaunchApp } from "@/lib/updater";
 
 interface AboutSectionProps {
   isPortable: boolean;
@@ -496,14 +495,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
       try {
         resetDismiss();
         await updateHandle.downloadAndInstall();
-        try {
-          await relaunchApp();
-        } catch {
-          // 下载成功但重启失败，提示手动重启
-          toast.success(t("settings.updateDownloaded"), { closeButton: true });
-          setIsDownloading(false);
-          return;
-        }
+        await settingsApi.restart();
       } catch (error) {
         console.error("[AboutSection] Update failed", error);
         toast.error(t("settings.updateFailed"));
