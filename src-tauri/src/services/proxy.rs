@@ -2583,6 +2583,14 @@ mod tests {
     use std::env;
     use tempfile::TempDir;
 
+    fn unused_local_port() -> u16 {
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .expect("bind ephemeral test port")
+            .local_addr()
+            .expect("read ephemeral test port")
+            .port()
+    }
+
     struct TempHome {
         #[allow(dead_code)]
         dir: TempDir,
@@ -2965,6 +2973,14 @@ wire_api = "responses"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let service = ProxyService::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_config = ProxyConfig {
+            listen_port: proxy_port,
+            ..Default::default()
+        };
+        db.update_proxy_config(proxy_config)
+            .await
+            .expect("set test proxy config");
         let oauth_auth = json!({
             "auth_mode": "chatgpt",
             "tokens": {
@@ -3133,6 +3149,14 @@ wire_api = "responses"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let service = ProxyService::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_config = ProxyConfig {
+            listen_port: proxy_port,
+            ..Default::default()
+        };
+        db.update_proxy_config(proxy_config)
+            .await
+            .expect("set test proxy config");
         let oauth_auth = json!({
             "auth_mode": "chatgpt",
             "tokens": {
@@ -3212,6 +3236,14 @@ wire_api = "responses"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let state = crate::store::AppState::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_config = ProxyConfig {
+            listen_port: proxy_port,
+            ..Default::default()
+        };
+        db.update_proxy_config(proxy_config)
+            .await
+            .expect("set test proxy config");
         let oauth_auth = json!({
             "auth_mode": "chatgpt",
             "tokens": {
@@ -3432,6 +3464,15 @@ wire_api = "responses"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let service = ProxyService::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_codex_base_url = format!("http://127.0.0.1:{proxy_port}/v1");
+        let global_proxy_config = ProxyConfig {
+            listen_port: proxy_port,
+            ..Default::default()
+        };
+        db.update_proxy_config(global_proxy_config)
+            .await
+            .expect("set test proxy config");
         let oauth_auth = json!({
             "auth_mode": "chatgpt",
             "tokens": {
@@ -3520,7 +3561,7 @@ wire_api = "responses"
         let live_config = std::fs::read_to_string(crate::codex_config::get_codex_config_path())
             .expect("read live config");
         assert!(
-            live_config.contains("http://127.0.0.1:15721/v1"),
+            live_config.contains(&proxy_codex_base_url),
             "stale enabled takeover must be rebuilt to the current proxy base_url"
         );
         assert!(
@@ -5138,8 +5179,10 @@ command = "shared-command"
         )
         .expect("set common config snippet");
 
-        let mut proxy_config = ProxyConfig::default();
-        proxy_config.listen_port = 0;
+        let proxy_config = ProxyConfig {
+            listen_port: 0,
+            ..Default::default()
+        };
         db.update_proxy_config(proxy_config)
             .await
             .expect("set test proxy config");
@@ -5276,8 +5319,10 @@ requires_openai_auth = true
         let db = Arc::new(Database::memory().expect("init db"));
         let state = crate::store::AppState::new(db.clone());
 
-        let mut proxy_config = ProxyConfig::default();
-        proxy_config.listen_port = 0;
+        let proxy_config = ProxyConfig {
+            listen_port: 0,
+            ..Default::default()
+        };
         db.update_proxy_config(proxy_config)
             .await
             .expect("set test proxy config");

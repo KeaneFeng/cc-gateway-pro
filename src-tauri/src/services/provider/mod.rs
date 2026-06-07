@@ -72,6 +72,14 @@ mod tests {
     use std::sync::{Arc, Mutex, OnceLock};
     use tempfile::TempDir;
 
+    fn unused_local_port() -> u16 {
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .expect("bind ephemeral test port")
+            .local_addr()
+            .expect("read ephemeral test port")
+            .port()
+    }
+
     struct TempHome {
         #[allow(dead_code)]
         dir: TempDir,
@@ -398,6 +406,8 @@ base_url = "http://localhost:8080"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let state = AppState::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_origin = format!("http://127.0.0.1:{proxy_port}");
 
         let original = Provider::with_id(
             "p1".into(),
@@ -421,6 +431,7 @@ base_url = "http://localhost:8080"
 
         db.update_proxy_config(ProxyConfig {
             live_takeover_active: true,
+            listen_port: proxy_port,
             ..Default::default()
         })
         .await
@@ -440,7 +451,7 @@ base_url = "http://localhost:8080"
             &get_claude_settings_path(),
             &json!({
                 "env": {
-                    "ANTHROPIC_BASE_URL": "http://127.0.0.1:15721",
+                    "ANTHROPIC_BASE_URL": proxy_origin.clone(),
                     "ANTHROPIC_API_KEY": "PROXY_MANAGED",
                     "ANTHROPIC_MODEL": "stale-model"
                 },
@@ -502,7 +513,7 @@ base_url = "http://localhost:8080"
             live.get("env")
                 .and_then(|env| env.get("ANTHROPIC_BASE_URL"))
                 .and_then(|v| v.as_str()),
-            Some("http://127.0.0.1:15721"),
+            Some(proxy_origin.as_str()),
             "proxy base URL should stay intact"
         );
         assert!(
@@ -522,6 +533,8 @@ base_url = "http://localhost:8080"
 
         let db = Arc::new(Database::memory().expect("init db"));
         let state = AppState::new(db.clone());
+        let proxy_port = unused_local_port();
+        let proxy_origin = format!("http://127.0.0.1:{proxy_port}");
 
         let mut original = Provider::with_id(
             "p1".into(),
@@ -559,6 +572,12 @@ base_url = "http://localhost:8080"
         db.save_live_backup("claude-desktop", "{}")
             .await
             .expect("seed live backup");
+        db.update_proxy_config(ProxyConfig {
+            listen_port: proxy_port,
+            ..Default::default()
+        })
+        .await
+        .expect("update proxy config");
         {
             let mut config = db
                 .get_proxy_config_for_app("claude-desktop")
@@ -618,7 +637,7 @@ base_url = "http://localhost:8080"
         let profile: Value = read_json_file(&profile_path).expect("read desktop profile");
         assert_eq!(
             profile["inferenceGatewayBaseUrl"],
-            json!("http://127.0.0.1:15721/claude-desktop"),
+            json!(format!("{proxy_origin}/claude-desktop")),
             "desktop profile should stay pointed at the local gateway during takeover"
         );
         assert_eq!(profile["inferenceGatewayAuthScheme"], json!("bearer"));

@@ -28,6 +28,7 @@ pub mod response_processor;
 pub(crate) mod server;
 pub mod session;
 pub mod session_project_router;
+pub(crate) mod session_trace;
 pub(crate) mod sse;
 pub(crate) mod switch_lock;
 pub mod thinking_budget_rectifier;

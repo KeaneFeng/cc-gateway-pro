@@ -8,6 +8,10 @@ use super::{
     handler_context::{RequestContext, StreamingTimeoutConfig},
     hyper_client::ProxyResponse,
     server::ProxyState,
+    session_trace::{
+        create_stream_trace_collector, spawn_record_non_streaming_trace,
+        SessionTraceRequestSnapshot, SseTraceCollector,
+    },
     sse::{strip_sse_field, take_sse_block},
     usage::parser::TokenUsage,
     ProxyError,
@@ -183,6 +187,7 @@ pub async fn handle_streaming(
     ctx: &RequestContext,
     state: &ProxyState,
     parser_config: &UsageParserConfig,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> Response {
     let status = response.status();
@@ -216,6 +221,8 @@ pub async fn handle_streaming(
 
     // 创建使用量收集器；关闭 usage logging 时不要在流式热路径上解析每个 SSE event。
     let usage_collector = create_usage_collector(ctx, state, status.as_u16(), parser_config);
+    let trace_collector =
+        create_stream_trace_collector(state, ctx, trace_snapshot, status.as_u16(), parser_config);
 
     // 获取流式超时配置
     let timeout_config = ctx.streaming_timeout_config();
@@ -225,6 +232,7 @@ pub async fn handle_streaming(
         stream,
         ctx.tag,
         usage_collector,
+        trace_collector,
         timeout_config,
         connection_guard,
     );
@@ -245,6 +253,7 @@ pub async fn handle_non_streaming(
     ctx: &RequestContext,
     state: &ProxyState,
     parser_config: &UsageParserConfig,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
     // guard 在函数 scope 内持有，整包响应读取完成后随函数返回一并 drop
     _connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<Response, ProxyError> {
@@ -328,6 +337,17 @@ pub async fn handle_non_streaming(
         log::debug!("[{}] usage logging 已关闭，跳过非流式 usage 解析", ctx.tag);
     }
 
+    if let Some(snapshot) = trace_snapshot {
+        spawn_record_non_streaming_trace(
+            state,
+            ctx,
+            snapshot,
+            status.as_u16(),
+            &body_bytes,
+            parser_config,
+        );
+    }
+
     // 构建响应
     let mut builder = axum::response::Response::builder().status(status);
     for (key, value) in response_headers.iter() {
@@ -349,6 +369,7 @@ pub async fn process_response(
     ctx: &RequestContext,
     state: &ProxyState,
     parser_config: &UsageParserConfig,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<Response, ProxyError> {
     // Codex + openai_chat: 需要将 Chat Completions 响应转换为 Responses API 格式
@@ -360,6 +381,7 @@ pub async fn process_response(
                 ctx,
                 state,
                 parser_config,
+                trace_snapshot,
                 connection_guard,
             )
             .await;
@@ -367,9 +389,25 @@ pub async fn process_response(
     }
 
     if is_sse_response(&response) {
-        Ok(handle_streaming(response, ctx, state, parser_config, connection_guard).await)
+        Ok(handle_streaming(
+            response,
+            ctx,
+            state,
+            parser_config,
+            trace_snapshot,
+            connection_guard,
+        )
+        .await)
     } else {
-        handle_non_streaming(response, ctx, state, parser_config, connection_guard).await
+        handle_non_streaming(
+            response,
+            ctx,
+            state,
+            parser_config,
+            trace_snapshot,
+            connection_guard,
+        )
+        .await
     }
 }
 
@@ -381,6 +419,7 @@ async fn handle_codex_chat_to_responses(
     ctx: &RequestContext,
     state: &ProxyState,
     parser_config: &UsageParserConfig,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<Response, ProxyError> {
     let status = response.status();
@@ -410,11 +449,19 @@ async fn handle_codex_chat_to_responses(
             super::providers::streaming_codex_chat::create_responses_sse_stream_from_chat(stream);
 
         let usage_collector = create_usage_collector(ctx, state, status.as_u16(), parser_config);
+        let trace_collector = create_stream_trace_collector(
+            state,
+            ctx,
+            trace_snapshot,
+            status.as_u16(),
+            parser_config,
+        );
         let timeout_config = ctx.streaming_timeout_config();
         let logged_stream = create_logged_passthrough_stream(
             sse_stream,
             ctx.tag,
             usage_collector,
+            trace_collector,
             timeout_config,
             connection_guard,
         );
@@ -471,6 +518,25 @@ async fn handle_codex_chat_to_responses(
                     false,
                 );
             }
+        }
+
+        if let Some(snapshot) = trace_snapshot {
+            let response_bytes = serde_json::to_vec(&responses_response).map_err(|e| {
+                ProxyError::TransformError(format!("Failed to serialize responses: {e}"))
+            })?;
+            spawn_record_non_streaming_trace(
+                state,
+                ctx,
+                snapshot,
+                status.as_u16(),
+                &response_bytes,
+                parser_config,
+            );
+            let mut builder = axum::response::Response::builder().status(status);
+            builder = builder.header("content-type", "application/json");
+            return builder
+                .body(axum::body::Body::from(response_bytes))
+                .map_err(|e| ProxyError::Internal(format!("Failed to build response: {e}")));
         }
 
         let response_bytes = serde_json::to_vec(&responses_response).map_err(|e| {
@@ -599,6 +665,36 @@ impl Drop for SseUsageFinishGuard {
                 });
             } else {
                 log::warn!("SSE 用量收尾保护触发时 Tokio runtime 不可用，跳过异步 finish");
+            }
+        }
+    }
+}
+
+struct SseTraceFinishGuard {
+    collector: Option<SseTraceCollector>,
+}
+
+impl SseTraceFinishGuard {
+    fn new(collector: SseTraceCollector) -> Self {
+        Self {
+            collector: Some(collector),
+        }
+    }
+
+    fn disarm(&mut self) {
+        self.collector = None;
+    }
+}
+
+impl Drop for SseTraceFinishGuard {
+    fn drop(&mut self) {
+        if let Some(collector) = self.collector.take() {
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                handle.spawn(async move {
+                    collector.finish().await;
+                });
+            } else {
+                log::warn!("SSE trace 收尾保护触发时 Tokio runtime 不可用，跳过异步 finish");
             }
         }
     }
@@ -827,6 +923,7 @@ pub fn create_logged_passthrough_stream(
     stream: impl Stream<Item = Result<Bytes, std::io::Error>> + Send + 'static,
     tag: &'static str,
     usage_collector: Option<SseUsageCollector>,
+    trace_collector: Option<SseTraceCollector>,
     timeout_config: StreamingTimeoutConfig,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> impl Stream<Item = Result<Bytes, std::io::Error>> + Send {
@@ -836,8 +933,10 @@ pub fn create_logged_passthrough_stream(
         let mut utf8_remainder: Vec<u8> = Vec::new();
         let mut collector = usage_collector;
         let mut finish_guard = collector.clone().map(SseUsageFinishGuard::new);
+        let mut trace_collector = trace_collector;
+        let mut trace_finish_guard = trace_collector.clone().map(SseTraceFinishGuard::new);
         let inspect_sse_events =
-            collector.is_some() || log::log_enabled!(log::Level::Debug);
+            collector.is_some() || trace_collector.is_some() || log::log_enabled!(log::Level::Debug);
         let mut is_first_chunk = true;
 
         // 超时配置
@@ -898,18 +997,25 @@ pub fn create_logged_passthrough_stream(
                                 for line in event_text.lines() {
                                     if let Some(data) = strip_sse_field(line, "data") {
                                         if data.trim() != "[DONE]" {
-                                            let collected = match &collector {
-                                                Some(c) if c.should_collect(data) => {
-                                                    match serde_json::from_str::<Value>(data) {
-                                                        Ok(json_value) => {
-                                                            c.push(json_value).await;
-                                                            true
+                                            let usage_should_collect = collector
+                                                .as_ref()
+                                                .map(|c| c.should_collect(data))
+                                                .unwrap_or(false);
+                                            let trace_should_collect = trace_collector.is_some();
+                                            let mut collected = false;
+                                            if usage_should_collect || trace_should_collect {
+                                                if let Ok(json_value) = serde_json::from_str::<Value>(data) {
+                                                    if usage_should_collect {
+                                                        if let Some(c) = &collector {
+                                                            c.push(json_value.clone()).await;
                                                         }
-                                                        Err(_) => false,
                                                     }
+                                                    if let Some(c) = &trace_collector {
+                                                        c.push(json_value).await;
+                                                    }
+                                                    collected = true;
                                                 }
-                                                _ => false,
-                                            };
+                                            }
                                             if collected {
                                                 log::debug!("[{tag}] <<< SSE 事件: {data}");
                                             } else {
@@ -942,6 +1048,12 @@ pub fn create_logged_passthrough_stream(
             c.finish().await;
         }
         if let Some(guard) = &mut finish_guard {
+            guard.disarm();
+        }
+        if let Some(c) = trace_collector.take() {
+            c.finish().await;
+        }
+        if let Some(guard) = &mut trace_finish_guard {
             guard.disarm();
         }
     }

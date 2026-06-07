@@ -15,6 +15,7 @@ import {
   FolderOpen,
   X,
   CheckSquare,
+  BarChart2,
 } from "lucide-react";
 import {
   useDeleteSessionMutation,
@@ -65,7 +66,13 @@ type ProviderFilter =
   | "gemini"
   | "hermes";
 
-export function SessionManagerPage({ appId }: { appId: string }) {
+export function SessionManagerPage({
+  appId,
+  onAnalyzeSessionTraces,
+}: {
+  appId: string;
+  onAnalyzeSessionTraces?: (session: SessionMeta) => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useSessionsQuery();
@@ -889,6 +896,32 @@ export function SessionManagerPage({ appId }: { appId: string }) {
 
                       {/* 右侧：操作按钮组 */}
                       <div className="flex items-center gap-2 shrink-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() =>
+                                onAnalyzeSessionTraces?.(selectedSession)
+                              }
+                              disabled={!onAnalyzeSessionTraces}
+                            >
+                              <BarChart2 className="size-3.5" />
+                              <span className="hidden sm:inline">
+                                {t("sessionManager.analyzeTraces", {
+                                  defaultValue: "分析 Traces",
+                                })}
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t("sessionManager.analyzeTracesTooltip", {
+                              defaultValue:
+                                "在 Session Traces 中查看此旧会话的 usage 与上下文统计",
+                            })}
+                          </TooltipContent>
+                        </Tooltip>
                         {isMac() && (
                           <Tooltip>
                             <TooltipTrigger asChild>

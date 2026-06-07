@@ -8,6 +8,7 @@ pub mod prompts;
 pub mod providers;
 pub mod providers_seed;
 pub mod proxy;
+pub mod session_traces;
 pub mod settings;
 pub mod skills;
 pub mod stream_check;

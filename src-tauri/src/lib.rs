@@ -1271,6 +1271,10 @@ pub fn run() {
             commands::delete_session,
             commands::delete_sessions,
             commands::launch_session_terminal,
+            commands::get_session_trace_settings,
+            commands::set_session_trace_settings,
+            commands::list_trace_sessions,
+            commands::get_trace_session_detail,
             commands::get_tool_versions,
             commands::run_tool_lifecycle_action,
             // Provider terminal

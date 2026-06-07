@@ -29,6 +29,10 @@ use super::{
         usage_logging_enabled, SseUsageCollector,
     },
     server::ProxyState,
+    session_trace::{
+        build_request_snapshot, create_stream_trace_collector, spawn_record_non_streaming_trace,
+        SessionTraceRequestSnapshot,
+    },
     sse::{strip_sse_field, take_sse_block},
     types::*,
     usage::parser::TokenUsage,
@@ -153,6 +157,7 @@ async fn handle_messages_for_app(
         .get("stream")
         .and_then(|s| s.as_bool())
         .unwrap_or(false);
+    let trace_snapshot = build_request_snapshot(&ctx, &body);
 
     // 转发请求
     let forwarder = ctx.create_forwarder(&state);
@@ -197,10 +202,13 @@ async fn handle_messages_for_app(
             response,
             &ctx,
             &state,
-            &body,
-            is_stream,
-            &api_format,
-            connection_guard,
+            ClaudeTransformOptions {
+                original_body: &body,
+                is_stream,
+                api_format: &api_format,
+                trace_snapshot,
+                connection_guard,
+            },
         )
         .await;
     }
@@ -211,6 +219,7 @@ async fn handle_messages_for_app(
         &ctx,
         &state,
         &CLAUDE_PARSER_CONFIG,
+        trace_snapshot,
         connection_guard,
     )
     .await
@@ -246,15 +255,27 @@ fn validate_claude_desktop_gateway_auth(
 /// Claude 格式转换处理（独有逻辑）
 ///
 /// 支持 OpenAI Chat Completions 和 Responses API 两种格式的转换
+struct ClaudeTransformOptions<'a> {
+    original_body: &'a Value,
+    is_stream: bool,
+    api_format: &'a str,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
+    connection_guard: Option<ActiveConnectionGuard>,
+}
+
 async fn handle_claude_transform(
     response: super::hyper_client::ProxyResponse,
     ctx: &RequestContext,
     state: &ProxyState,
-    original_body: &Value,
-    is_stream: bool,
-    api_format: &str,
-    connection_guard: Option<ActiveConnectionGuard>,
+    options: ClaudeTransformOptions<'_>,
 ) -> Result<axum::response::Response, ProxyError> {
+    let ClaudeTransformOptions {
+        original_body,
+        is_stream,
+        api_format,
+        trace_snapshot,
+        connection_guard,
+    } = options;
     let status = response.status();
     let is_codex_oauth = ctx
         .provider
@@ -345,6 +366,13 @@ async fn handle_claude_transform(
         } else {
             None
         };
+        let trace_collector = create_stream_trace_collector(
+            state,
+            ctx,
+            trace_snapshot,
+            status.as_u16(),
+            &CLAUDE_PARSER_CONFIG,
+        );
 
         // 获取流式超时配置
         let timeout_config = ctx.streaming_timeout_config();
@@ -353,6 +381,7 @@ async fn handle_claude_transform(
             sse_stream,
             "Claude/OpenRouter",
             usage_collector,
+            trace_collector,
             timeout_config,
             connection_guard,
         );
@@ -465,6 +494,17 @@ async fn handle_claude_transform(
         ProxyError::TransformError(format!("Failed to serialize response: {e}"))
     })?;
 
+    if let Some(snapshot) = trace_snapshot {
+        spawn_record_non_streaming_trace(
+            state,
+            ctx,
+            snapshot,
+            status.as_u16(),
+            &response_body,
+            &CLAUDE_PARSER_CONFIG,
+        );
+    }
+
     let body = axum::body::Body::from(response_body);
     builder.body(body).map_err(|e| {
         log::error!("[Claude] 构建响应失败: {e}");
@@ -516,6 +556,7 @@ pub async fn handle_chat_completions(
         .get("stream")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+    let trace_snapshot = build_request_snapshot(&ctx, &body);
 
     let forwarder = ctx.create_forwarder(&state);
     let mut result = match forwarder
@@ -549,6 +590,7 @@ pub async fn handle_chat_completions(
         &ctx,
         &state,
         &OPENAI_PARSER_CONFIG,
+        trace_snapshot,
         connection_guard,
     )
     .await
@@ -588,6 +630,7 @@ pub async fn handle_responses(
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let codex_tool_context = transform_codex_chat::build_codex_tool_context_from_request(&body);
+    let trace_snapshot = build_request_snapshot(&ctx, &body);
 
     let forwarder = ctx.create_forwarder(&state);
     let mut result = match forwarder
@@ -624,6 +667,7 @@ pub async fn handle_responses(
             is_stream,
             connection_guard,
             codex_tool_context,
+            trace_snapshot,
         )
         .await;
     }
@@ -633,6 +677,7 @@ pub async fn handle_responses(
         &ctx,
         &state,
         &CODEX_PARSER_CONFIG,
+        trace_snapshot,
         connection_guard,
     )
     .await
@@ -672,6 +717,7 @@ pub async fn handle_responses_compact(
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let codex_tool_context = transform_codex_chat::build_codex_tool_context_from_request(&body);
+    let trace_snapshot = build_request_snapshot(&ctx, &body);
 
     let forwarder = ctx.create_forwarder(&state);
     let mut result = match forwarder
@@ -708,6 +754,7 @@ pub async fn handle_responses_compact(
             is_stream,
             connection_guard,
             codex_tool_context,
+            trace_snapshot,
         )
         .await;
     }
@@ -717,6 +764,7 @@ pub async fn handle_responses_compact(
         &ctx,
         &state,
         &CODEX_PARSER_CONFIG,
+        trace_snapshot,
         connection_guard,
     )
     .await
@@ -729,6 +777,7 @@ async fn handle_codex_chat_to_responses_transform(
     is_stream: bool,
     connection_guard: Option<ActiveConnectionGuard>,
     tool_context: transform_codex_chat::CodexToolContext,
+    trace_snapshot: Option<SessionTraceRequestSnapshot>,
 ) -> Result<axum::response::Response, ProxyError> {
     let status = response.status();
 
@@ -786,11 +835,19 @@ async fn handle_codex_chat_to_responses_transform(
         } else {
             None
         };
+        let trace_collector = create_stream_trace_collector(
+            state,
+            ctx,
+            trace_snapshot,
+            status.as_u16(),
+            &CODEX_PARSER_CONFIG,
+        );
 
         let logged_stream = create_logged_passthrough_stream(
             sse_stream,
             ctx.tag,
             usage_collector,
+            trace_collector,
             ctx.streaming_timeout_config(),
             connection_guard,
         );
@@ -885,6 +942,17 @@ async fn handle_codex_chat_to_responses_transform(
         log::error!("[Codex] 序列化 Responses 响应失败: {e}");
         ProxyError::TransformError(format!("Failed to serialize responses response: {e}"))
     })?;
+
+    if let Some(snapshot) = trace_snapshot {
+        spawn_record_non_streaming_trace(
+            state,
+            ctx,
+            snapshot,
+            status.as_u16(),
+            &response_body,
+            &CODEX_PARSER_CONFIG,
+        );
+    }
 
     builder
         .body(axum::body::Body::from(response_body))
@@ -1201,6 +1269,7 @@ pub async fn handle_gemini(
         .get("stream")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+    let trace_snapshot = build_request_snapshot(&ctx, &body);
 
     let forwarder = ctx.create_forwarder(&state);
     let mut result = match forwarder
@@ -1234,6 +1303,7 @@ pub async fn handle_gemini(
         &ctx,
         &state,
         &GEMINI_PARSER_CONFIG,
+        trace_snapshot,
         connection_guard,
     )
     .await

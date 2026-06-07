@@ -176,6 +176,81 @@ impl WebDavSyncSettings {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum SessionTraceMode {
+    #[default]
+    Off,
+    Summary,
+    Full,
+}
+
+fn default_session_trace_retention_days() -> u32 {
+    14
+}
+
+fn default_session_trace_preview_limit() -> u32 {
+    2000
+}
+
+/// Session Traces 采集设置。
+///
+/// 默认关闭，只有用户显式开启后才会记录上下文 trace。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionTraceSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub mode: SessionTraceMode,
+    #[serde(default = "default_session_trace_retention_days")]
+    pub retention_days: u32,
+    #[serde(default = "default_session_trace_preview_limit")]
+    pub max_response_text_chars: u32,
+    #[serde(default)]
+    pub capture_request_json: bool,
+    #[serde(default)]
+    pub capture_response_json: bool,
+    #[serde(default = "default_true")]
+    pub redact_sensitive_values: bool,
+}
+
+impl Default for SessionTraceSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            mode: SessionTraceMode::Off,
+            retention_days: default_session_trace_retention_days(),
+            max_response_text_chars: default_session_trace_preview_limit(),
+            capture_request_json: false,
+            capture_response_json: false,
+            redact_sensitive_values: true,
+        }
+    }
+}
+
+impl SessionTraceSettings {
+    pub fn normalize(&mut self) {
+        if !self.enabled {
+            self.mode = SessionTraceMode::Off;
+        }
+        if self.mode == SessionTraceMode::Off {
+            self.enabled = false;
+            self.capture_request_json = false;
+            self.capture_response_json = false;
+        }
+        if self.mode != SessionTraceMode::Full {
+            self.capture_request_json = false;
+            self.capture_response_json = false;
+        }
+        if self.retention_days == 0 {
+            self.retention_days = default_session_trace_retention_days();
+        }
+        self.max_response_text_chars = self.max_response_text_chars.clamp(200, 50_000);
+        self.redact_sensitive_values = true;
+    }
+}
+
 /// 应用设置结构
 ///
 /// 存储设备级别设置，保存在本地 `~/.cc-gateway-pro/settings.json`，不随数据库同步。
@@ -304,6 +379,10 @@ pub struct AppSettings {
     /// - Linux: "gnome-terminal" | "konsole" | "xfce4-terminal" | "alacritty" | "kitty" | "ghostty"
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preferred_terminal: Option<String>,
+
+    /// Session Traces 采集设置（默认关闭）
+    #[serde(default)]
+    pub session_traces: SessionTraceSettings,
 }
 
 fn default_show_in_tray() -> bool {
@@ -355,6 +434,7 @@ impl Default for AppSettings {
             backup_interval_hours: None,
             backup_retain_count: None,
             preferred_terminal: None,
+            session_traces: SessionTraceSettings::default(),
         }
     }
 }
@@ -425,6 +505,8 @@ impl AppSettings {
                 self.webdav_sync = None;
             }
         }
+
+        self.session_traces.normalize();
     }
 
     fn load_from_file() -> Self {

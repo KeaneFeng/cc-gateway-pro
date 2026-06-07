@@ -140,7 +140,7 @@ export function CodexProjectRoutingPage({
       <div className="mx-auto px-4 sm:px-6 flex flex-col h-full min-h-0">
         <div className="flex-1 min-h-0 flex flex-col gap-4">
           {/* 顶部工具栏 */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
                 {t("projectRouting.projectCount", {
@@ -192,14 +192,23 @@ export function CodexProjectRoutingPage({
                     key={project.project_path}
                     className="transition-colors hover:border-primary/30"
                   >
-                    <CardHeader className="py-3 px-4">
-                      <div className="flex items-start justify-between gap-3">
+                    <CardHeader className="px-3 py-3 sm:px-4">
+                      <div className="flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex min-w-0 items-center gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0"
+                              aria-label={
+                                expandedProject === project.project_path
+                                  ? t("projectRouting.collapseSessions", {
+                                      defaultValue: "收起会话",
+                                    })
+                                  : t("projectRouting.expandSessions", {
+                                      defaultValue: "展开会话",
+                                    })
+                              }
                               onClick={() =>
                                 setExpandedProject(
                                   expandedProject === project.project_path
@@ -218,11 +227,11 @@ export function CodexProjectRoutingPage({
                               {project.project_path}
                             </CardTitle>
                           </div>
-                          <div className="flex items-center gap-2 mt-1.5 ml-8">
+                          <div className="ml-8 mt-1.5 flex min-w-0 flex-wrap items-center gap-2">
                             {project.session_count > 0 && (
                               <Badge
                                 variant="secondary"
-                                className="text-[10px] px-1.5 py-0"
+                                className="shrink-0 px-1.5 py-0 text-[10px]"
                               >
                                 {t("projectRouting.sessionCount", {
                                   defaultValue: "{{count}} 个会话",
@@ -233,19 +242,21 @@ export function CodexProjectRoutingPage({
                             {project.provider_name ? (
                               <Badge
                                 variant="default"
-                                className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                className="min-w-0 max-w-full border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0 text-[10px] text-emerald-600 dark:text-emerald-400"
                               >
-                                {project.provider_name}
-                                {project.provider_notes && (
-                                  <span className="ml-1 opacity-70">
-                                    ({project.provider_notes})
-                                  </span>
-                                )}
+                                <span className="min-w-0 truncate">
+                                  {project.provider_name}
+                                  {project.provider_notes && (
+                                    <span className="ml-1 opacity-70">
+                                      ({project.provider_notes})
+                                    </span>
+                                  )}
+                                </span>
                               </Badge>
                             ) : (
                               <Badge
                                 variant="outline"
-                                className="text-[10px] px-1.5 py-0 text-muted-foreground"
+                                className="px-1.5 py-0 text-[10px] text-muted-foreground"
                               >
                                 {t("projectRouting.noProvider", {
                                   defaultValue: "使用默认供应商",
@@ -254,7 +265,7 @@ export function CodexProjectRoutingPage({
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex w-full min-w-0 items-center justify-end gap-1.5 min-[560px]:w-auto min-[560px]:shrink-0">
                           {editingProject === project.project_path ? (
                             <Select
                               defaultValue={project.provider_id || undefined}
@@ -269,7 +280,7 @@ export function CodexProjectRoutingPage({
                               }}
                               defaultOpen
                             >
-                              <SelectTrigger className="w-[180px] h-8 text-xs">
+                              <SelectTrigger className="h-8 w-full max-w-[220px] text-xs min-[560px]:w-[180px]">
                                 <SelectValue
                                   placeholder={t(
                                     "projectRouting.selectProvider",
@@ -304,6 +315,12 @@ export function CodexProjectRoutingPage({
                                     setEditingProject(project.project_path)
                                   }
                                   className="h-8 w-8 p-0"
+                                  aria-label={t(
+                                    "projectRouting.changeProvider",
+                                    {
+                                      defaultValue: "更改供应商",
+                                    },
+                                  )}
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </Button>
@@ -327,6 +344,12 @@ export function CodexProjectRoutingPage({
                                     )
                                   }
                                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  aria-label={t(
+                                    "projectRouting.removeProvider",
+                                    {
+                                      defaultValue: "移除绑定",
+                                    },
+                                  )}
                                 >
                                   <Unlink className="w-3.5 h-3.5" />
                                 </Button>
@@ -343,7 +366,7 @@ export function CodexProjectRoutingPage({
 
                       {/* Sessions 列表 */}
                       {expandedProject === project.project_path && (
-                        <div className="mt-3 ml-8 border-l-2 border-muted pl-4">
+                        <div className="mt-3 border-l-2 border-muted pl-3 sm:ml-8 sm:pl-4">
                           <ProjectSessionList
                             app={app}
                             projectPath={project.project_path}

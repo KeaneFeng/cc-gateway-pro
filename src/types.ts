@@ -400,6 +400,9 @@ export interface Settings {
   // Windows: "cmd" | "powershell" | "wt"
   // Linux: "gnome-terminal" | "konsole" | "xfce4-terminal" | "alacritty" | "kitty" | "ghostty"
   preferredTerminal?: string;
+
+  // Session Traces 采集设置（默认关闭）
+  sessionTraces?: import("./types/session-traces").SessionTraceSettings;
 }
 
 export interface SessionMeta {

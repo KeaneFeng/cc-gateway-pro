@@ -287,6 +287,8 @@ impl Database {
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
 
+        Self::create_session_traces_table(conn)?;
+
         // 尝试添加 live_takeover_active 列到 proxy_config 表
         let _ = conn.execute(
             "ALTER TABLE proxy_config ADD COLUMN live_takeover_active INTEGER NOT NULL DEFAULT 0",
@@ -430,6 +432,11 @@ impl Database {
                         log::info!("迁移数据库从 v9 到 v10（添加 Hermes Agent 支持）");
                         Self::migrate_v9_to_v10(conn)?;
                         Self::set_user_version(conn, 10)?;
+                    }
+                    10 => {
+                        log::info!("迁移数据库从 v10 到 v11（Session Traces 表）");
+                        Self::migrate_v10_to_v11(conn)?;
+                        Self::set_user_version(conn, 11)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1197,6 +1204,81 @@ impl Database {
         }
 
         log::info!("v9 -> v10 迁移完成：已添加 Hermes Agent 支持");
+        Ok(())
+    }
+
+    fn create_session_traces_table(conn: &Connection) -> Result<(), AppError> {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS session_traces (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trace_id TEXT NOT NULL UNIQUE,
+                proxy_request_id TEXT,
+                session_id TEXT NOT NULL,
+                turn_index INTEGER,
+                app_type TEXT NOT NULL,
+                provider_id TEXT,
+                model TEXT,
+                request_model TEXT,
+                is_streaming INTEGER NOT NULL DEFAULT 0,
+                status_code INTEGER,
+                system_prompt_preview TEXT,
+                system_prompt_hash TEXT,
+                message_count INTEGER NOT NULL DEFAULT 0,
+                tool_count INTEGER NOT NULL DEFAULT 0,
+                request_summary_json TEXT NOT NULL DEFAULT '{}',
+                context_stats_json TEXT NOT NULL DEFAULT '{}',
+                context_window_tokens INTEGER,
+                context_used_tokens INTEGER,
+                context_usage_ratio REAL,
+                request_json TEXT,
+                response_text_preview TEXT,
+                response_text TEXT,
+                response_json TEXT,
+                tool_calls_json TEXT NOT NULL DEFAULT '[]',
+                stop_reason TEXT,
+                input_tokens INTEGER NOT NULL DEFAULT 0,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+                cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+                latency_ms INTEGER,
+                first_token_ms INTEGER,
+                trace_mode TEXT NOT NULL DEFAULT 'summary',
+                redaction_version INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("创建 session_traces 表失败: {e}")))?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_session_traces_session
+             ON session_traces(session_id, turn_index)",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("创建 session_traces session 索引失败: {e}")))?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_session_traces_created_at
+             ON session_traces(created_at)",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("创建 session_traces created_at 索引失败: {e}")))?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_session_traces_app
+             ON session_traces(app_type, provider_id)",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("创建 session_traces app 索引失败: {e}")))?;
+
+        Ok(())
+    }
+
+    /// v10 -> v11 迁移：添加 Session Traces 表。
+    fn migrate_v10_to_v11(conn: &Connection) -> Result<(), AppError> {
+        Self::create_session_traces_table(conn)?;
+        log::info!("v10 -> v11 迁移完成：已添加 Session Traces 表");
         Ok(())
     }
 

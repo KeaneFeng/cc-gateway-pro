@@ -6,6 +6,10 @@ fn merge_settings_for_save(
     mut incoming: crate::settings::AppSettings,
     existing: &crate::settings::AppSettings,
 ) -> crate::settings::AppSettings {
+    // Session Traces is controlled by dedicated commands so ordinary settings
+    // saves cannot accidentally enable/disable context capture.
+    incoming.session_traces = existing.session_traces.clone();
+
     match (&mut incoming.webdav_sync, &existing.webdav_sync) {
         // incoming 没有 webdav → 保留现有
         (None, _) => {
@@ -202,6 +206,27 @@ mod tests {
         assert_eq!(
             merged.webdav_sync.as_ref().map(|v| v.password.as_str()),
             Some("")
+        );
+    }
+
+    #[test]
+    fn save_settings_should_preserve_session_trace_settings() {
+        let existing = AppSettings {
+            session_traces: crate::settings::SessionTraceSettings {
+                enabled: true,
+                mode: crate::settings::SessionTraceMode::Summary,
+                ..crate::settings::SessionTraceSettings::default()
+            },
+            ..AppSettings::default()
+        };
+
+        let incoming = AppSettings::default();
+        let merged = merge_settings_for_save(incoming, &existing);
+
+        assert!(merged.session_traces.enabled);
+        assert_eq!(
+            merged.session_traces.mode,
+            crate::settings::SessionTraceMode::Summary
         );
     }
 }

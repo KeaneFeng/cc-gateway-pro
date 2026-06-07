@@ -32,7 +32,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { Provider, VisibleApps } from "@/types";
+import type { Provider, SessionMeta, VisibleApps } from "@/types";
 import type { EnvConflict } from "@/types/env";
 import { useProvidersQuery, useSettingsQuery } from "@/lib/query";
 import {
@@ -82,6 +82,10 @@ import { UniversalProviderPanel } from "@/components/universal";
 import { McpIcon } from "@/components/BrandIcons";
 import { Button } from "@/components/ui/button";
 import { SessionManagerPage } from "@/components/sessions/SessionManagerPage";
+import {
+  SessionTracesPage,
+  type SessionTraceTarget,
+} from "@/components/session-traces/SessionTracesPage";
 import { ProjectRoutingPage } from "@/components/projects/ProjectRoutingPage";
 import { CodexProjectRoutingPage } from "@/components/projects/CodexProjectRoutingPage";
 import {
@@ -105,6 +109,7 @@ type View =
   | "agents"
   | "universal"
   | "sessions"
+  | "sessionTraces"
   | "workspace"
   | "projectRouting"
   | "codexProjectRouting"
@@ -152,6 +157,7 @@ const VALID_VIEWS: View[] = [
   "agents",
   "universal",
   "sessions",
+  "sessionTraces",
   "workspace",
   "projectRouting",
   "openclawEnv",
@@ -176,6 +182,8 @@ function App() {
   const sharedFeatureApp: AppId =
     activeApp === "claude-desktop" ? "claude" : activeApp;
   const [currentView, setCurrentView] = useState<View>(getInitialView);
+  const [sessionTraceTarget, setSessionTraceTarget] =
+    useState<SessionTraceTarget | null>(null);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState("general");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWindowMaximized, setIsWindowMaximized] = useState(false);
@@ -199,6 +207,18 @@ function App() {
     hermes: true,
   };
 
+  const openSessionTraces = (target?: SessionTraceTarget | null) => {
+    setSessionTraceTarget(target ?? null);
+    setCurrentView("sessionTraces");
+  };
+
+  const handleAnalyzeSessionTraces = (session: SessionMeta) => {
+    openSessionTraces({
+      sessionId: session.sessionId,
+      appType: session.providerId,
+    });
+  };
+
   const getFirstVisibleApp = (): AppId => {
     if (visibleApps.claude) return "claude";
     if (visibleApps["claude-desktop"]) return "claude-desktop";
@@ -216,11 +236,11 @@ function App() {
     }
   }, [visibleApps, activeApp]);
 
-  // Fallback from sessions view when switching to an app without session support
+  // Fallback from session views when switching to an app without session support
   // Also fallback from projectRouting (Claude Code only)
   useEffect(() => {
     if (
-      currentView === "sessions" &&
+      (currentView === "sessions" || currentView === "sessionTraces") &&
       sharedFeatureApp !== "claude" &&
       sharedFeatureApp !== "codex" &&
       sharedFeatureApp !== "opencode" &&
@@ -319,6 +339,7 @@ function App() {
     (currentView === "providers" ||
       currentView === "workspace" ||
       currentView === "sessions" ||
+      currentView === "sessionTraces" ||
       currentView === "openclawEnv" ||
       currentView === "openclawTools" ||
       currentView === "openclawAgents");
@@ -961,8 +982,11 @@ function App() {
             <SessionManagerPage
               key={sharedFeatureApp}
               appId={sharedFeatureApp}
+              onAnalyzeSessionTraces={handleAnalyzeSessionTraces}
             />
           );
+        case "sessionTraces":
+          return <SessionTracesPage target={sessionTraceTarget} />;
         case "projectRouting":
           return <ProjectRoutingPage app="claude" />;
         case "codexProjectRouting":
@@ -1191,6 +1215,10 @@ function App() {
                       defaultValue: "统一供应商",
                     })}
                   {currentView === "sessions" && t("sessionManager.title")}
+                  {currentView === "sessionTraces" &&
+                    t("sessionTraces.title", {
+                      defaultValue: "Session Traces",
+                    })}
                   {currentView === "projectRouting" &&
                     t("projectRouting.title", {
                       defaultValue: "项目路由",
@@ -1452,6 +1480,26 @@ function App() {
                               >
                                 <McpIcon size={16} />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentView("sessions")}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("sessionManager.title")}
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openSessionTraces()}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("sessionTraces.title", {
+                                  defaultValue: "Session Traces",
+                                })}
+                              >
+                                <BarChart2 className="w-4 h-4" />
+                              </Button>
                             </>
                           ) : activeApp === "openclaw" ? (
                             <>
@@ -1500,6 +1548,17 @@ function App() {
                               >
                                 <History className="w-4 h-4" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openSessionTraces()}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("sessionTraces.title", {
+                                  defaultValue: "Session Traces",
+                                })}
+                              >
+                                <BarChart2 className="w-4 h-4" />
+                              </Button>
                             </>
                           ) : (
                             <>
@@ -1541,6 +1600,23 @@ function App() {
                                 title={t("sessionManager.title")}
                               >
                                 <History className="flex-shrink-0 w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openSessionTraces()}
+                                className={cn(
+                                  "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                  "transition-all duration-200 ease-in-out overflow-hidden",
+                                  hasSessionSupport
+                                    ? "opacity-100 w-8 scale-100 px-2"
+                                    : "opacity-0 w-0 scale-75 pointer-events-none px-0 -ml-1",
+                                )}
+                                title={t("sessionTraces.title", {
+                                  defaultValue: "Session Traces",
+                                })}
+                              >
+                                <BarChart2 className="flex-shrink-0 w-4 h-4" />
                               </Button>
                               <Button
                                 variant="ghost"

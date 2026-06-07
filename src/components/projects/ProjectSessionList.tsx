@@ -117,22 +117,22 @@ export function ProjectSessionList({
         {sessions.map((session) => (
           <div
             key={session.sessionId}
-            className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
+            className="grid gap-2 rounded-md p-2 hover:bg-muted/50 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
-                <p className="text-sm font-medium truncate">
+                <p className="min-w-0 truncate text-sm font-medium">
                   {session.title || session.sessionId}
                 </p>
               </div>
               {session.projectDir && (
-                <p className="text-xs text-muted-foreground truncate ml-6">
+                <p className="ml-6 truncate text-xs text-muted-foreground">
                   {session.projectDir}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="ml-6 flex min-w-0 items-center justify-end gap-1 min-[520px]:ml-0 min-[520px]:shrink-0">
               {/* 复制恢复命令 */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -140,6 +140,9 @@ export function ProjectSessionList({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0"
+                    aria-label={t("projectRouting.copyCommand", {
+                      defaultValue: "复制恢复命令",
+                    })}
                     onClick={() => void handleCopyCommand(session)}
                   >
                     <Copy className="w-3.5 h-3.5" />
@@ -159,6 +162,9 @@ export function ProjectSessionList({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    aria-label={t("projectRouting.deleteSession", {
+                      defaultValue: "删除会话",
+                    })}
                     onClick={() => setDeleteTarget(session)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
