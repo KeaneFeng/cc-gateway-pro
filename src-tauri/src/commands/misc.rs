@@ -171,19 +171,19 @@ pub async fn get_tool_versions(
         } else {
             VALID_TOOLS.to_vec()
         };
-        let mut results = Vec::new();
 
-        for tool in requested {
-            let pref = wsl_shell_by_tool.as_ref().and_then(|m| m.get(tool));
-            let tool_wsl_shell = pref.and_then(|p| p.wsl_shell.as_deref());
-            let tool_wsl_shell_flag = pref.and_then(|p| p.wsl_shell_flag.as_deref());
+        // 并行获取所有工具版本，避免单个网络请求慢导致整体卡死
+        let futures: Vec<_> = requested
+            .iter()
+            .map(|tool| {
+                let pref = wsl_shell_by_tool.as_ref().and_then(|m| m.get(*tool));
+                let tool_wsl_shell = pref.and_then(|p| p.wsl_shell.as_deref());
+                let tool_wsl_shell_flag = pref.and_then(|p| p.wsl_shell_flag.as_deref());
+                get_single_tool_version_impl(tool, tool_wsl_shell, tool_wsl_shell_flag)
+            })
+            .collect();
 
-            results.push(
-                get_single_tool_version_impl(tool, tool_wsl_shell, tool_wsl_shell_flag).await,
-            );
-        }
-
-        Ok(results)
+        Ok(futures::future::join_all(futures).await)
     }
 }
 
@@ -216,28 +216,38 @@ async fn get_single_tool_version_impl(
         }
     };
 
-    // 2. 获取远程最新版本（npm 工具在本地领先 latest 时会按预发布通道补查，见
-    //    fetch_npm_latest_for_tool / npm_prerelease_tags）
+    // 2. 获取远程最新版本（带 15 秒超时，避免网络请求慢导致 UI 卡死）
+    //    npm 工具在本地领先 latest 时会按预发布通道补查
     let local = local_version.as_deref();
-    let latest_version = match tool {
-        "claude" => {
-            fetch_npm_latest_for_tool(&client, "@anthropic-ai/claude-code", tool, local).await
-        }
-        "codex" => fetch_npm_latest_for_tool(&client, "@openai/codex", tool, local).await,
-        "gemini" => fetch_npm_latest_for_tool(&client, "@google/gemini-cli", tool, local).await,
-        "opencode" => {
-            if let Some(version) =
-                fetch_npm_latest_for_tool(&client, "opencode-ai", tool, local).await
-            {
-                Some(version)
-            } else {
-                fetch_github_latest_version(&client, "anomalyco/opencode").await
+    let latest_version = async {
+        match tool {
+            "claude" => {
+                fetch_npm_latest_for_tool(&client, "@anthropic-ai/claude-code", tool, local).await
             }
+            "codex" => fetch_npm_latest_for_tool(&client, "@openai/codex", tool, local).await,
+            "gemini" => fetch_npm_latest_for_tool(&client, "@google/gemini-cli", tool, local).await,
+            "opencode" => {
+                if let Some(version) =
+                    fetch_npm_latest_for_tool(&client, "opencode-ai", tool, local).await
+                {
+                    Some(version)
+                } else {
+                    fetch_github_latest_version(&client, "anomalyco/opencode").await
+                }
+            }
+            "openclaw" => fetch_npm_latest_for_tool(&client, "openclaw", tool, local).await,
+            "hermes" => fetch_pypi_latest_version(&client, "hermes-agent").await,
+            _ => None,
         }
-        "openclaw" => fetch_npm_latest_for_tool(&client, "openclaw", tool, local).await,
-        "hermes" => fetch_pypi_latest_version(&client, "hermes-agent").await,
-        _ => None,
     };
+    let latest_version =
+        match tokio::time::timeout(std::time::Duration::from_secs(15), latest_version).await {
+            Ok(result) => result,
+            Err(_) => {
+                log::warn!("[get_tool_versions] {tool} latest version check timed out");
+                None
+            }
+        };
 
     ToolVersion {
         name: tool.to_string(),
