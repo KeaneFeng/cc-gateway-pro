@@ -15,7 +15,7 @@
 
 ## CC-Gateway-Pro 是什么？
 
-CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以管理不同 AI 编程工具的 Provider 配置，写入各工具原生配置文件，也可以通过本地代理接管实时请求，实现日志记录、故障转移、模型转换、项目级 Provider 绑定和 Vision Model 自动路由。
+CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以管理不同 AI 编程工具的 Provider 配置，写入各工具原生配置文件，也可以通过本地代理接管实时请求，实现请求日志、Session Traces、故障转移、模型转换、项目级 Provider 绑定和 Vision Model 自动路由。
 
 本项目基于 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) fork 后继续开发。CC-Gateway-Pro 保留了原项目“可视化切换供应商”的核心思路，并扩展出 Rust/Tauri 本地网关、多应用配置管理、请求路由、用量统计、同步能力和更多 Provider 适配。
 
@@ -39,7 +39,9 @@ CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以
 - **项目级路由**：从 Claude/Codex 本地会话文件识别项目目录，将指定项目绑定到指定 Provider。
 - **Vision Model 路由**：当请求包含图片内容时，自动切换到当前 Provider 配置的 `vision_model`。
 - **高可用策略**：应用级故障转移队列、熔断、重试、健康状态、流式与非流式超时控制。
+- **代理请求日志**：点击 View Logs，即可在偏好的终端中实时滚动查看最近 7 天的代理请求日志。
 - **用量统计**：请求日志、Token 用量、成本估算、趋势、Provider/模型拆分和自定义计价。
+- **Session Traces**：默认关闭，开启后才会记录新的上下文摘要、工具调用和每轮 usage；Summary 保存提取字段，Full 保存脱敏后的 request/response JSON。
 - **MCP、Prompts、Skills**：统一管理并同步到支持的应用，支持 Deep Link、仓库和 ZIP 技能安装。
 - **数据安全**：SQLite 存储、原子写入、自动备份、可迁移数据目录和 WebDAV 同步。
 
@@ -68,6 +70,10 @@ CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以
 |                                项目路由                                |                                  Vision Model 配置                                  |
 | :--------------------------------------------------------------------: | :---------------------------------------------------------------------------------: |
 | ![项目路由界面预览](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model 配置界面预览](assets/screenshots/vision-model-config-preview-zh.svg) |
+
+|                                  Session Traces 设置                                  |                                  Session Traces 分析                                  |
+| :-----------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: |
+| ![Session Traces 设置界面预览](assets/screenshots/session-traces-settings-preview.svg) | ![Session Traces 分析界面预览](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## 下载安装
 
@@ -129,7 +135,7 @@ pnpm tauri build
 - [用户手册](docs/user-manual/zh/README.md)
 - [架构与核心流程](docs/architecture-and-flows-zh.md)
 - [代理使用指南](docs/proxy-guide-zh.md)
-- [发布说明](docs/release-notes/v3.15.0-zh.md)
+- [发布说明](docs/release-notes/v3.16.10-zh.md)
 
 ## 数据位置
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.16.10] - 2026-06-08
+
+Development since v3.15.0 focuses on local observability: faster access to proxy request logs, opt-in Session Traces for context analysis, safer trace defaults, and refreshed documentation/screenshot previews that avoid exposing real local paths.
+
+### Added
+
+- **View Logs for proxy requests**: Added a Log Configuration action that opens the last 7 days of proxy request logs in the user's preferred terminal with real-time scrolling.
+- **Session Traces**: Added opt-in local context analysis capture. It is off by default and starts recording only after it is enabled.
+- **Session Traces capture modes**: Summary mode stores extracted fields, context categories, tool calls, per-turn usage, and response previews. Full mode stores redacted request/response JSON for deeper debugging on trusted devices.
+- **Session Traces page**: Added a dedicated analysis view for trace sessions with Overview, Context, Traces, and Usage tabs.
+
+### Changed
+
+- **Trace privacy defaults**: Session Traces stays local, defaults to 14-day retention, truncates response previews to 2000 characters, and redacts sensitive keys before storage.
+- **Documentation refresh**: Updated README files, proxy docs, architecture docs, and user manual pages for View Logs and Session Traces.
+- **Interface previews**: Refreshed Project Routing and Vision Model previews with demo-only data, removed black borders, and added Session Traces preview images.
+
 ## [3.15.0] - 2026-05-16
 
 Development since v3.14.1 focuses on a dedicated Claude Desktop surface with third-party provider switching through a proxy gateway, a large reverse-proxy hardening pass (reliability, retries, cache, takeover, Gemini/Vertex/Codex paths), expansion of the third-party provider preset catalog (BytePlus / Volcengine / ClaudeAPI / ClaudeCN / RunAPI / RelaxyCode / PatewayAI / Baidu Qianfan), role-based model mapping with a 1M context flag, Codex OAuth live model discovery, and a long tail of usage, OAuth, Codex, and session quality-of-life fixes.

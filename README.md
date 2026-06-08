@@ -15,7 +15,7 @@ English | [中文](README_ZH.md) | [日本語](README_JA.md) | [Changelog](CHANG
 
 ## What Is CC-Gateway-Pro?
 
-CC-Gateway-Pro is a desktop control plane and local AI Provider Gateway for AI coding tools. It manages provider profiles, writes each tool's native configuration files, and can route live requests through a local proxy for logging, failover, model transformation, project-level provider binding, and Vision Model routing.
+CC-Gateway-Pro is a desktop control plane and local AI Provider Gateway for AI coding tools. It manages provider profiles, writes each tool's native configuration files, and can route live requests through a local proxy for request logging, session traces, failover, model transformation, project-level provider binding, and Vision Model routing.
 
 This project is forked from [farion1231/cc-switch](https://github.com/farion1231/cc-switch). It keeps the original visual provider-switching idea, then extends it with a Rust/Tauri local gateway, multi-app configuration management, request routing, usage analytics, synchronization, and provider-specific integrations.
 
@@ -39,7 +39,9 @@ This project is forked from [farion1231/cc-switch](https://github.com/farion1231
 - **Project-level routing**: Claude and Codex sessions can be mapped from local session files to project directories, then routed to project-bound providers.
 - **Vision Model routing**: requests containing image blocks can automatically switch to the provider's configured `vision_model`.
 - **High availability**: per-app failover queues, circuit breakers, retries, health state, stream and non-stream timeout controls.
+- **Proxy request logs**: View the last 7 days of proxy request logs in your preferred terminal with real-time scrolling.
 - **Usage analytics**: request logs, token usage, cost estimation, trends, provider/model breakdowns and custom pricing.
+- **Session Traces**: opt-in local context analysis for new requests, with Summary capture for extracted fields and Full capture for redacted request/response JSON.
 - **MCP, prompts and skills**: unified management, sync across supported apps, deep links, repository/ZIP skill installation.
 - **Data safety**: SQLite storage, atomic config writes, automatic backups, configurable storage directory and WebDAV sync.
 
@@ -68,6 +70,10 @@ More diagrams for failover, usage logging, MCP/Prompts/Skills synchronization an
 |                                Project routing                                |                                  Vision Model configuration                                  |
 | :---------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
 | ![Project routing preview](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model configuration preview](assets/screenshots/vision-model-config-preview-zh.svg) |
+
+|                                  Session Traces settings                                  |                                  Session Traces analysis                                  |
+| :---------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: |
+| ![Session Traces settings preview](assets/screenshots/session-traces-settings-preview.svg) | ![Session Traces analysis preview](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## Installation
 
@@ -129,7 +135,7 @@ The repository also includes a helper:
 - [User manual](docs/user-manual/zh/README.md)
 - [Architecture and flows](docs/architecture-and-flows-zh.md)
 - [Proxy guide](docs/proxy-guide-zh.md)
-- [Release notes](docs/release-notes/v3.15.0-zh.md)
+- [Release notes](docs/release-notes/v3.16.10-en.md)
 
 ## Data Locations
 

@@ -1,6 +1,6 @@
 # CC-Gateway-Pro 架构与核心流程
 
-本文根据当前代码实现整理 CC-Gateway-Pro 的运行方式，重点说明本项目相对原始 cc-switch 的增强：本地代理网关、项目级 Provider 绑定、Vision Model 自动路由、故障转移、用量统计和多应用配置管理。
+本文根据当前代码实现整理 CC-Gateway-Pro 的运行方式，重点说明本项目相对原始 cc-switch 的增强：本地代理网关、项目级 Provider 绑定、Vision Model 自动路由、故障转移、用量统计、Session Traces 和多应用配置管理。
 
 > 项目来源说明：CC-Gateway-Pro 基于 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) fork 后继续开发。原项目的核心价值是可视化管理和切换 AI 编程工具的供应商配置；本项目在此基础上扩展了本地网关、代理接管、请求转换、高可用、用量分析以及更多应用集成。
 
@@ -41,7 +41,7 @@ flowchart TB
         end
 
         subgraph Governance["治理与观测层"]
-            UsageLog["请求日志 / Token / 成本"]
+            UsageLog["请求日志 / Token / 成本 / Trace"]
             Health["Provider 健康状态"]
             Backup["原子写入 / 自动备份"]
             Sync["目录迁移 / WebDAV 同步"]
@@ -79,7 +79,7 @@ flowchart TB
 | 智能路由   | 代理链路中按故障转移、项目绑定、Vision Model 和模型映射决定最终上游   |
 | 安全可恢复 | 接管前备份原配置，写入使用原子流程，关闭接管时恢复                    |
 | 高可用     | 每个应用有独立故障转移队列、熔断器、重试与超时配置                    |
-| 可观测     | 记录请求日志、Token、成本、延迟、错误和 Provider 健康状态             |
+| 可观测     | 记录请求日志、Token、成本、延迟、错误、Provider 健康状态和会话 Trace |
 | 可扩展     | 支持 Provider 预设、Deep Link、WebDAV、Skills 仓库和多应用同步        |
 
 ## 关键流程图索引
@@ -92,6 +92,7 @@ flowchart TB
 | [故障转移与熔断](#故障转移与熔断)                                 | 说明高可用队列、熔断和恢复机制            |
 | [MCP / Prompts / Skills 同步流程](#mcp--prompts--skills-同步流程) | 说明扩展能力如何统一管理并同步到各应用    |
 | [用量统计流程](#用量统计流程)                                     | 说明 Token、成本和日志如何沉淀到仪表盘    |
+| [Session Traces](#session-traces)                                 | 说明上下文 Trace 如何按用户显式开启采集   |
 
 ### 主要模块
 
@@ -99,8 +100,8 @@ flowchart TB
 | -------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | 前端界面       | `src/components`, `src/hooks`, `src/lib/api`                                          | 管理供应商、代理、故障转移、用量、MCP、Prompts、Skills     |
 | Tauri 命令     | `src-tauri/src/commands`                                                              | 暴露 Provider、Proxy、Project Routing、Settings 等后端能力 |
-| 数据库         | `src-tauri/src/database`                                                              | 保存供应商、设置、请求日志、健康状态、备份信息             |
-| 代理服务       | `src-tauri/src/proxy`                                                                 | 接收本地请求、选择 Provider、转换格式、转发、记录日志      |
+| 数据库         | `src-tauri/src/database`                                                              | 保存供应商、设置、请求日志、Session Traces、健康状态、备份信息 |
+| 代理服务       | `src-tauri/src/proxy`                                                                 | 接收本地请求、选择 Provider、转换格式、转发、记录日志与 Trace |
 | Provider 配置  | `src-tauri/src/services/provider`, `src/config/*ProviderPresets.ts`                   | 维护不同应用的预设和配置写入逻辑                           |
 | 会话与项目路由 | `src-tauri/src/proxy/session_project_router.rs`, `src-tauri/src/proxy/project_router` | 从 Claude/Codex 会话文件识别项目路径并匹配 Provider        |
 
@@ -406,6 +407,31 @@ sequenceDiagram
 ```
 
 代理会尽量从不同 Provider 的响应结构中提取 token 用量；无法直接获取时，会保留请求日志和状态信息，供后续统计或定价补录。
+
+## Session Traces
+
+Session Traces 是独立于普通 usage 统计的上下文观察能力。它默认关闭，只有用户在「设置 → 高级 → Session Traces」或独立 Session Traces 页面显式开启后，才会记录新的会话上下文摘要、工具调用和每轮 usage。
+
+```mermaid
+flowchart TD
+    Req["代理请求进入"] --> Enabled{"Session Traces 已开启?"}
+    Enabled -- 否 --> UsageOnly["仅保留普通 usage / request log"]
+    Enabled -- 是 --> Mode{"采集模式"}
+    Mode -- Summary --> Summary["提取字段\ncontext 分类 / 工具调用 / usage / 响应预览"]
+    Mode -- Full --> Full["保存脱敏 JSON\nrequest / response"]
+    Summary --> Redact["敏感 key 脱敏"]
+    Full --> Redact
+    Redact --> DB[("session_traces")]
+    DB --> UI["Session Traces 页面\nOverview / Context / Traces / Usage"]
+```
+
+| 项目     | 行为                                                                 |
+| -------- | -------------------------------------------------------------------- |
+| 默认状态 | 关闭；历史 usage 仍可查看，但不会新增上下文 Trace                    |
+| Summary  | 保存提取后的字段、上下文分类、工具/Skills/MCP 统计和响应预览         |
+| Full     | 在脱敏后保存 request/response JSON，适合可信设备上的深度排查         |
+| 保留策略 | 默认保留 14 天，响应预览默认截断到 2000 字符                         |
+| 数据边界 | 数据保存在本机 SQLite；Session Traces 开关独立于普通代理日志开关     |
 
 ## 数据与备份
 
