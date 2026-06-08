@@ -747,6 +747,30 @@ export const hermesProviderPresets: HermesProviderPreset[] = [
     },
   },
   {
+    name: "CoderPlan",
+    websiteUrl: "https://coderplan.ai",
+    apiKeyUrl: "https://coderplan.ai/register?aff=cc-gateway-pro",
+    settingsConfig: {
+      name: "coderplan",
+      base_url: "https://api.coderplan.ai",
+      api_key: "",
+      api_mode: "anthropic_messages",
+      models: [
+        { id: "claude-opus-4-8", name: "Claude Opus 4.8" },
+        { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+        { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5" },
+      ],
+    },
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "coderplan",
+    icon: "coderplan",
+    iconColor: "#4F46E5",
+    suggestedDefaults: {
+      model: { default: "claude-sonnet-4-6", provider: "coderplan" },
+    },
+  },
+  {
     name: "Cubence",
     websiteUrl: "https://cubence.com",
     apiKeyUrl: "https://cubence.com/signup?code=CCGATEWAYPRO&source=ccs",

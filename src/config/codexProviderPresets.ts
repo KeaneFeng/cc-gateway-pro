@@ -837,6 +837,23 @@ requires_openai_auth = true`,
     icon: "packycode",
   },
   {
+    name: "CoderPlan",
+    websiteUrl: "https://coderplan.ai",
+    apiKeyUrl: "https://coderplan.ai/register?aff=cc-gateway-pro",
+    category: "aggregator",
+    auth: generateThirdPartyAuth(""),
+    config: generateThirdPartyConfig(
+      "coderplan",
+      "https://api.coderplan.ai/v1",
+      "gpt-5.5",
+    ),
+    endpointCandidates: ["https://api.coderplan.ai/v1"],
+    isPartner: true, // 合作伙伴
+    partnerPromotionKey: "coderplan", // 促销信息 i18n key
+    icon: "coderplan",
+    iconColor: "#4F46E5",
+  },
+  {
     name: "APIKEY.FUN",
     websiteUrl: "https://apikey.fun",
     apiKeyUrl: "https://apikey.fun/register?aff=CCGATEWAYPRO",

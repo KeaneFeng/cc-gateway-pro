@@ -1424,6 +1424,52 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     },
   },
   {
+    name: "CoderPlan",
+    websiteUrl: "https://coderplan.ai",
+    apiKeyUrl: "https://coderplan.ai/register?aff=cc-gateway-pro",
+    settingsConfig: {
+      baseUrl: "https://api.coderplan.ai",
+      apiKey: "",
+      api: "anthropic-messages",
+      models: [
+        {
+          id: "claude-opus-4-8",
+          name: "Claude Opus 4.8",
+          contextWindow: 1000000,
+          cost: { input: 5, output: 25 },
+        },
+        {
+          id: "claude-sonnet-4-6",
+          name: "Claude Sonnet 4.6",
+          contextWindow: 1000000,
+          cost: { input: 3, output: 15 },
+        },
+      ],
+    },
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "coderplan",
+    icon: "coderplan",
+    iconColor: "#4F46E5",
+    templateValues: {
+      apiKey: {
+        label: "API Key",
+        placeholder: "",
+        editorValue: "",
+      },
+    },
+    suggestedDefaults: {
+      model: {
+        primary: "coderplan/claude-sonnet-4-6",
+        fallbacks: ["coderplan/claude-opus-4-8"],
+      },
+      modelCatalog: {
+        "coderplan/claude-opus-4-8": { alias: "Opus" },
+        "coderplan/claude-sonnet-4-6": { alias: "Sonnet" },
+      },
+    },
+  },
+  {
     name: "APIKEY.FUN",
     websiteUrl: "https://apikey.fun",
     apiKeyUrl: "https://apikey.fun/register?aff=CCSwitch",

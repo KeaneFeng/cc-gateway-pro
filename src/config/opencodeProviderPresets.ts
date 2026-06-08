@@ -1189,6 +1189,37 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
     },
   },
   {
+    name: "CoderPlan",
+    websiteUrl: "https://coderplan.ai",
+    apiKeyUrl: "https://coderplan.ai/register?aff=cc-gateway-pro",
+    settingsConfig: {
+      npm: "@ai-sdk/anthropic",
+      name: "CoderPlan",
+      options: {
+        baseURL: "https://api.coderplan.ai/v1",
+        apiKey: "",
+        setCacheKey: true,
+      },
+      models: {
+        "claude-sonnet-4-6": { name: "Claude Sonnet 4.6" },
+        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-haiku-4-5": { name: "Claude Haiku 4.5" },
+      },
+    },
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "coderplan",
+    icon: "coderplan",
+    iconColor: "#4F46E5",
+    templateValues: {
+      apiKey: {
+        label: "API Key",
+        placeholder: "",
+        editorValue: "",
+      },
+    },
+  },
+  {
     name: "APIKEY.FUN",
     websiteUrl: "https://apikey.fun",
     apiKeyUrl: "https://apikey.fun/register?aff=CCGATEWAYPRO",

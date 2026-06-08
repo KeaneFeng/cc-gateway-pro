@@ -630,6 +630,23 @@ export const providerPresets: ProviderPreset[] = [
     icon: "packycode",
   },
   {
+    name: "CoderPlan",
+    websiteUrl: "https://coderplan.ai",
+    apiKeyUrl: "https://coderplan.ai/register?aff=cc-gateway-pro",
+    settingsConfig: {
+      env: {
+        ANTHROPIC_BASE_URL: "https://api.coderplan.ai",
+        ANTHROPIC_AUTH_TOKEN: "",
+      },
+    },
+    endpointCandidates: ["https://api.coderplan.ai"],
+    category: "aggregator",
+    isPartner: true, // 合作伙伴
+    partnerPromotionKey: "coderplan", // 促销信息 i18n key
+    icon: "coderplan",
+    iconColor: "#4F46E5",
+  },
+  {
     name: "APIKEY.FUN",
     websiteUrl: "https://apikey.fun",
     apiKeyUrl: "https://apikey.fun/register?aff=CCGATEWAYPRO",
