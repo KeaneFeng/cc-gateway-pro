@@ -180,8 +180,9 @@ export function ProviderCard({
 
   const usageEnabled = provider.meta?.usage_script?.enabled ?? false;
   const isOfficial = isOfficialProvider(provider, appId);
+  // 代理接管下的封号保护只认显式官方分类，避免误拦截尚未填写 endpoint 的自定义 provider。
   const isOfficialBlockedByProxy =
-    isProxyTakeover && (provider.category === "official" || isOfficial);
+    isProxyTakeover && provider.category === "official";
   const isCopilot =
     provider.meta?.providerType === PROVIDER_TYPES.GITHUB_COPILOT ||
     provider.meta?.usage_script?.templateType === "github_copilot";

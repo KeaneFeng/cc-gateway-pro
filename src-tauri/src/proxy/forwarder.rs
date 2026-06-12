@@ -122,6 +122,53 @@ pub struct RequestForwarder {
 }
 
 impl RequestForwarder {
+    /// 预防式 media 降级：发送前对 text-only 模型把图片块替换为标记。
+    ///
+    /// 受 `enabled && request_media_fallback` 管辖；其中"启发式模型名单预测"
+    /// 再受 `request_media_heuristic` 单独管辖（显式声明 text-only 始终生效）。
+    /// 返回被替换的图片块数量（0 = 未触发或开关关闭）。
+    #[allow(dead_code)]
+    fn apply_media_prevention(&self, body: &mut Value, provider: &Provider) -> usize {
+        if !(self.rectifier_config.enabled && self.rectifier_config.request_media_fallback) {
+            return 0;
+        }
+        let replaced_images = super::media_sanitizer::replace_images_for_text_only_model(
+            body,
+            provider,
+            self.rectifier_config.request_media_heuristic,
+        );
+        if replaced_images > 0 {
+            let model = body.get("model").and_then(Value::as_str).unwrap_or("");
+            log::info!(
+                "[Media] Replaced {replaced_images} image block(s) with {} for text-only provider={}, model={}",
+                super::media_sanitizer::UNSUPPORTED_IMAGE_MARKER,
+                provider.id,
+                model
+            );
+        }
+        replaced_images
+    }
+
+    /// 反应式 media 重试判定：上游因图片输入报错后，是否应替换图片块并对同一供应商重试一次。
+    ///
+    /// 受 `enabled && request_media_fallback` 管辖；不涉及 `request_media_heuristic`——
+    /// 这里是上游"实测"错误后的纯恢复，不是预测，故启发式开关与它无关。
+    #[allow(dead_code)]
+    fn media_retry_should_trigger(
+        &self,
+        adapter_name: &str,
+        already_retried: bool,
+        provider_body: &Value,
+        error: &ProxyError,
+    ) -> bool {
+        adapter_name == "Claude"
+            && self.rectifier_config.enabled
+            && self.rectifier_config.request_media_fallback
+            && !already_retried
+            && super::media_sanitizer::contains_image_blocks(provider_body)
+            && super::media_sanitizer::is_unsupported_image_error(error)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         router: Arc<ProviderRouter>,
@@ -1109,7 +1156,7 @@ impl RequestForwarder {
         };
         if adapter.name() == "Claude" {
             if let Some(api_format) = resolved_claude_api_format.as_deref() {
-                super::providers::normalize_anthropic_tool_thinking_history_for_provider(
+                super::providers::normalize_anthropic_messages_for_provider(
                     &mut mapped_body,
                     provider,
                     api_format,

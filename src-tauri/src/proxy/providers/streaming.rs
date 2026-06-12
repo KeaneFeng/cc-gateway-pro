@@ -100,9 +100,14 @@ struct ToolBlockState {
 const INFINITE_WHITESPACE_THRESHOLD: usize = 500;
 
 fn build_anthropic_usage_json(usage: &Usage) -> Value {
-    // OpenAI prompt_tokens 含缓存，Anthropic input_tokens 不含，需减去
+    // OpenAI prompt_tokens 含缓存，Anthropic input_tokens 不含，需减去 cache_read 与 cache_creation
+    // （三桶互斥，恒等 input + cache_read + cache_creation == prompt_tokens）。
     let cached = extract_cache_read_tokens(usage).unwrap_or(0);
-    let input_tokens = usage.prompt_tokens.saturating_sub(cached);
+    let cache_creation = usage.cache_creation_input_tokens.unwrap_or(0);
+    let input_tokens = usage
+        .prompt_tokens
+        .saturating_sub(cached)
+        .saturating_sub(cache_creation);
     let mut usage_json = json!({
         "input_tokens": input_tokens,
         "output_tokens": usage.completion_tokens
@@ -110,8 +115,8 @@ fn build_anthropic_usage_json(usage: &Usage) -> Value {
     if cached > 0 {
         usage_json["cache_read_input_tokens"] = json!(cached);
     }
-    if let Some(created) = usage.cache_creation_input_tokens {
-        usage_json["cache_creation_input_tokens"] = json!(created);
+    if cache_creation > 0 {
+        usage_json["cache_creation_input_tokens"] = json!(cache_creation);
     }
     usage_json
 }
@@ -227,13 +232,19 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                                             });
                                             if let Some(u) = &chunk.usage {
                                                 let cached = extract_cache_read_tokens(u).unwrap_or(0);
-                                                let input = u.prompt_tokens.saturating_sub(cached);
+                                                let cache_creation =
+                                                    u.cache_creation_input_tokens.unwrap_or(0);
+                                                let input = u
+                                                    .prompt_tokens
+                                                    .saturating_sub(cached)
+                                                    .saturating_sub(cache_creation);
                                                 start_usage["input_tokens"] = json!(input);
                                                 if cached > 0 {
                                                     start_usage["cache_read_input_tokens"] = json!(cached);
                                                 }
-                                                if let Some(created) = u.cache_creation_input_tokens {
-                                                    start_usage["cache_creation_input_tokens"] = json!(created);
+                                                if cache_creation > 0 {
+                                                    start_usage["cache_creation_input_tokens"] =
+                                                        json!(cache_creation);
                                                 }
                                             }
 

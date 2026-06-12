@@ -618,6 +618,14 @@ wire_api = "responses"
         "normal switch should inject the DeepSeek key into config.toml"
     );
 
+    let mut proxy_config = state.db.get_proxy_config().await.expect("get proxy config");
+    proxy_config.listen_port = 0;
+    state
+        .db
+        .update_proxy_config(proxy_config)
+        .await
+        .expect("use ephemeral proxy port");
+
     state
         .proxy_service
         .set_takeover_for_app("codex", true)
@@ -634,8 +642,13 @@ wire_api = "responses"
 
     let config_after_takeover =
         std::fs::read_to_string(cc_gateway_pro_lib::get_codex_config_path()).expect("read config");
+    let proxy_status = state
+        .proxy_service
+        .get_status()
+        .await
+        .expect("read proxy status after takeover");
     assert!(
-        config_after_takeover.contains("http://127.0.0.1:15721/v1"),
+        config_after_takeover.contains(&format!("http://127.0.0.1:{}/v1", proxy_status.port)),
         "enabling takeover should point Codex config.toml at the local proxy"
     );
     assert!(

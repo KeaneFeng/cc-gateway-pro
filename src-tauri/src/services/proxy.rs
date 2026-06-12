@@ -48,7 +48,7 @@ const CLAUDE_ONE_M_MARKER_FOR_CLIENT: &str = "[1M]";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ClaudeTakeoverAuthPolicy {
     PreserveExistingOrAuthToken,
-    ManagedAccount,
+    ManagedAccount { keep_auth_token: bool },
 }
 
 #[derive(Clone)]
@@ -90,7 +90,12 @@ impl ProxyService {
         provider: &Provider,
     ) {
         let auth_policy = if provider.uses_managed_account_auth() {
-            ClaudeTakeoverAuthPolicy::ManagedAccount
+            // Codex 系（含仅凭 base_url 识别、无 provider_type meta 的）必须保留
+            // ANTHROPIC_AUTH_TOKEN 占位符：Claude Code 缺该键会弹登录提示（#3784）。
+            // Copilot 维持仅 API_KEY 占位，避免与 /login 管理的 key 冲突（#1049）。
+            ClaudeTakeoverAuthPolicy::ManagedAccount {
+                keep_auth_token: !provider.is_github_copilot(),
+            }
         } else {
             ClaudeTakeoverAuthPolicy::PreserveExistingOrAuthToken
         };
@@ -180,7 +185,7 @@ impl ProxyService {
                     );
                 }
             }
-            ClaudeTakeoverAuthPolicy::ManagedAccount => {
+            ClaudeTakeoverAuthPolicy::ManagedAccount { keep_auth_token } => {
                 for key in token_keys {
                     env.remove(key);
                 }
@@ -188,6 +193,14 @@ impl ProxyService {
                     "ANTHROPIC_API_KEY".to_string(),
                     json!(PROXY_TOKEN_PLACEHOLDER),
                 );
+                if keep_auth_token {
+                    // 无条件注入而非"已存在才保留"：热切换路径传入的是 provider
+                    // settings（预设不含该键），且旧版接管已把存量用户 live 中的键删光。
+                    env.insert(
+                        "ANTHROPIC_AUTH_TOKEN".to_string(),
+                        json!(PROXY_TOKEN_PLACEHOLDER),
+                    );
+                }
             }
         }
     }
@@ -438,12 +451,50 @@ impl ProxyService {
             .start()
             .await
             .map_err(|e| format!("启动代理服务器失败: {e}"))?;
+        if let Err(e) = self
+            .persist_ephemeral_listen_port_if_needed(&config, info.port)
+            .await
+        {
+            let _ = server.stop().await;
+            return Err(e);
+        }
 
         // 5. 保存服务器实例
         *self.server.write().await = Some(server);
 
         log::info!("代理服务器已启动: {}:{}", info.address, info.port);
         Ok(info)
+    }
+
+    async fn persist_ephemeral_listen_port_if_needed(
+        &self,
+        config: &ProxyConfig,
+        actual_port: u16,
+    ) -> Result<(), String> {
+        if config.listen_port != 0 {
+            return Ok(());
+        }
+
+        let mut resolved_config = config.clone();
+        resolved_config.listen_port = actual_port;
+        self.db
+            .update_proxy_config(resolved_config)
+            .await
+            .map_err(|e| format!("保存动态代理端口失败: {e}"))
+    }
+
+    async fn start_before_takeover_if_ephemeral_port(&self) -> Result<bool, String> {
+        let config = self
+            .db
+            .get_proxy_config()
+            .await
+            .map_err(|e| format!("获取代理配置失败: {e}"))?;
+        if config.listen_port != 0 || self.is_running().await {
+            return Ok(false);
+        }
+
+        self.start().await?;
+        Ok(true)
     }
 
     /// 启动代理服务器（带 Live 配置接管）
@@ -460,11 +511,26 @@ impl ProxyService {
             return Err(e);
         }
 
+        // 端口 0 需要先启动代理拿到 OS 分配的真实端口，否则接管 Live 配置会写出 :0。
+        let started_proxy_before_takeover =
+            match self.start_before_takeover_if_ephemeral_port().await {
+                Ok(started) => started,
+                Err(e) => {
+                    if let Err(clean_err) = self.db.delete_all_live_backups().await {
+                        log::warn!("清理 Live 备份失败: {clean_err}");
+                    }
+                    return Err(e);
+                }
+            };
+
         // 3. 在写入接管配置之前先落盘接管标志：
         //    这样即使在接管过程中断电/kill，下次启动也能检测到并自动恢复。
         if let Err(e) = self.db.set_live_takeover_active(true).await {
             if let Err(clean_err) = self.db.delete_all_live_backups().await {
                 log::warn!("清理 Live 备份失败: {clean_err}");
+            }
+            if started_proxy_before_takeover {
+                let _ = self.stop().await;
             }
             return Err(format!("设置接管状态失败: {e}"));
         }
@@ -481,6 +547,9 @@ impl ProxyService {
                 Err(restore_err) => {
                     log::error!("恢复原始配置失败，将保留备份以便下次启动恢复: {restore_err}");
                 }
+            }
+            if started_proxy_before_takeover {
+                let _ = self.stop().await;
             }
             return Err(e);
         }
@@ -499,6 +568,9 @@ impl ProxyService {
                     Err(restore_err) => {
                         log::error!("恢复原始配置失败，将保留备份以便下次启动恢复: {restore_err}");
                     }
+                }
+                if started_proxy_before_takeover {
+                    let _ = self.stop().await;
                 }
                 Err(e)
             }
@@ -1183,7 +1255,18 @@ impl ProxyService {
             connect_host
         };
 
-        let proxy_origin = format!("http://{}:{}", connect_host_for_url, config.listen_port);
+        let mut listen_port = config.listen_port;
+        if let Some(server) = self.server.read().await.as_ref() {
+            let status = server.get_status().await;
+            if status.running {
+                listen_port = status.port;
+            }
+        }
+        if listen_port == 0 {
+            return Err("代理监听端口为 0，但代理服务器尚未运行，无法生成接管地址".to_string());
+        }
+
+        let proxy_origin = format!("http://{}:{}", connect_host_for_url, listen_port);
         let proxy_url = proxy_origin.clone();
         let proxy_codex_base_url = format!("{}/v1", proxy_origin.trim_end_matches('/'));
 
@@ -2475,11 +2558,18 @@ impl ProxyService {
             }
 
             let app_handle = self.app_handle.read().await.clone();
-            let new_server = ProxyServer::new(new_config, self.db.clone(), app_handle);
-            new_server
+            let new_server = ProxyServer::new(new_config.clone(), self.db.clone(), app_handle);
+            let info = new_server
                 .start()
                 .await
                 .map_err(|e| format!("重启代理服务器失败: {e}"))?;
+            if let Err(e) = self
+                .persist_ephemeral_listen_port_if_needed(&new_config, info.port)
+                .await
+            {
+                let _ = new_server.stop().await;
+                return Err(e);
+            }
 
             *server_guard = Some(new_server);
             log::info!("代理配置已更新，服务器已自动重启应用最新配置");
@@ -2640,6 +2730,14 @@ mod tests {
 
     fn assert_env_str(env: &Map<String, Value>, key: &str, expected: Option<&str>) {
         assert_eq!(env.get(key).and_then(|value| value.as_str()), expected);
+    }
+
+    async fn use_ephemeral_proxy_port(db: &Arc<Database>) {
+        let mut proxy_config = db.get_proxy_config().await.expect("get test proxy config");
+        proxy_config.listen_port = 0;
+        db.update_proxy_config(proxy_config)
+            .await
+            .expect("set test proxy config to an ephemeral port");
     }
 
     fn seed_codex_model_template() {
@@ -2840,7 +2938,8 @@ mod tests {
         assert_env_str(env, "ANTHROPIC_DEFAULT_OPUS_MODEL", Some("claude-opus-4-8"));
         assert_env_str(env, "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME", Some("gpt-5.4"));
         assert_env_str(env, "ANTHROPIC_API_KEY", Some(PROXY_TOKEN_PLACEHOLDER));
-        assert_env_str(env, "ANTHROPIC_AUTH_TOKEN", None);
+        // Codex（非 Copilot）必须无条件注入 AUTH_TOKEN 占位符（upstream: 2d64d8c6）
+        assert_env_str(env, "ANTHROPIC_AUTH_TOKEN", Some(PROXY_TOKEN_PLACEHOLDER));
     }
 
     #[test]
@@ -2868,6 +2967,72 @@ mod tests {
                 .is_none(),
             "non-managed providers should retain the legacy fallback behavior"
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn start_with_takeover_ephemeral_port_writes_actual_live_url() {
+        let _home = TempHome::new();
+        crate::settings::reload_settings().expect("reload settings");
+
+        let db = Arc::new(Database::memory().expect("init db"));
+        use_ephemeral_proxy_port(&db).await;
+        let service = ProxyService::new(db.clone());
+
+        let provider = Provider::with_id(
+            "p1".to_string(),
+            "P1".to_string(),
+            json!({
+                "env": {
+                    "ANTHROPIC_API_KEY": "provider-key",
+                    "ANTHROPIC_BASE_URL": "https://api.anthropic.com"
+                }
+            }),
+            None,
+        );
+        db.save_provider("claude", &provider)
+            .expect("save provider");
+        db.set_current_provider("claude", "p1")
+            .expect("set db current provider");
+        crate::settings::set_current_provider(&AppType::Claude, Some("p1"))
+            .expect("set local current provider");
+        service
+            .write_claude_live(&json!({
+                "env": {
+                    "ANTHROPIC_API_KEY": "live-key",
+                    "ANTHROPIC_BASE_URL": "https://api.anthropic.com"
+                }
+            }))
+            .expect("seed claude live config");
+
+        let info = service
+            .start_with_takeover()
+            .await
+            .expect("start proxy with takeover");
+        assert_ne!(info.port, 0, "OS should assign a concrete port");
+
+        let stored_config = db.get_proxy_config().await.expect("read proxy config");
+        assert_eq!(
+            stored_config.listen_port, info.port,
+            "resolved dynamic port should be persisted for DB-only proxy URL paths"
+        );
+
+        let live = service.read_claude_live().expect("read taken-over live");
+        let base_url = live
+            .get("env")
+            .and_then(|env| env.get("ANTHROPIC_BASE_URL"))
+            .and_then(|value| value.as_str())
+            .expect("taken-over base url");
+        assert_eq!(base_url, format!("http://127.0.0.1:{}", info.port));
+        assert!(
+            !base_url.contains(":0"),
+            "takeover must never write an unresolved :0 port"
+        );
+
+        service
+            .stop_with_restore()
+            .await
+            .expect("stop proxy and restore live config");
     }
 
     #[test]
@@ -3148,6 +3313,7 @@ wire_api = "responses"
         .expect("enable Codex official auth preservation");
 
         let db = Arc::new(Database::memory().expect("init db"));
+        use_ephemeral_proxy_port(&db).await;
         let service = ProxyService::new(db.clone());
         let proxy_port = unused_local_port();
         let proxy_config = ProxyConfig {
@@ -3235,6 +3401,7 @@ wire_api = "responses"
         .expect("enable Codex official auth preservation");
 
         let db = Arc::new(Database::memory().expect("init db"));
+        use_ephemeral_proxy_port(&db).await;
         let state = crate::store::AppState::new(db.clone());
         let proxy_port = unused_local_port();
         let proxy_config = ProxyConfig {
@@ -3463,6 +3630,7 @@ wire_api = "responses"
         .expect("enable Codex official auth preservation");
 
         let db = Arc::new(Database::memory().expect("init db"));
+        use_ephemeral_proxy_port(&db).await;
         let service = ProxyService::new(db.clone());
         let proxy_port = unused_local_port();
         let proxy_codex_base_url = format!("http://127.0.0.1:{proxy_port}/v1");
@@ -5443,7 +5611,7 @@ requires_openai_auth = true
         )
         .expect("seed generated catalog file");
 
-        let pointer = catalog_path.to_string_lossy().to_string();
+        let pointer = catalog_path.to_string_lossy().replace('\\', "/");
         let backup_config = format!(
             "model_provider = \"custom\"\n\
              model = \"deepseek-v4-flash\"\n\
