@@ -729,10 +729,12 @@ fn build_tool_lifecycle_command(
                 "npm update -g @openai/codex".to_string()
             }
             ("codex", ToolLifecycleAction::Update, ToolInstallSource::InstallScript) => {
-                "codex update 2>/dev/null || npm install -g @openai/codex@latest".to_string()
+                // 不跑 `codex update`：npm 安装上它会假成功（exit 0）却漏装平台二进制 optional 依赖
+                "npm install -g @openai/codex@latest".to_string()
             }
             ("codex", ToolLifecycleAction::Update, _) => {
-                "codex update 2>/dev/null || npm install -g @openai/codex@latest".to_string()
+                // 同上：不依赖 `codex update` 的假成功，直接 npm 升级
+                "npm install -g @openai/codex@latest".to_string()
             }
 
             // ── Gemini CLI ───────────────────────────────────────────
@@ -1771,35 +1773,73 @@ exec bash --norc --noprofile
     result
 }
 
-/// macOS: Terminal.app
+/// Escape a value as an AppleScript string literal.
 #[cfg(target_os = "macos")]
-fn launch_macos_terminal_app(script_file: &std::path::Path) -> Result<(), String> {
-    use std::process::Command;
+fn applescript_string_literal(value: &str) -> String {
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
+}
 
-    let applescript = format!(
-        r#"tell application "Terminal"
-    activate
-    do script "bash '{}'"
-end tell"#,
-        script_file.display()
-    );
+/// Build the launcher command literal used by AppleScript.
+#[cfg(target_os = "macos")]
+fn applescript_launcher_command(script_file: &std::path::Path) -> String {
+    applescript_string_literal(&format!(
+        "bash {}",
+        shell_single_quote(&script_file.to_string_lossy())
+    ))
+}
+
+/// Run AppleScript through `osascript -e` with shared error handling.
+#[cfg(target_os = "macos")]
+fn run_terminal_osascript(applescript: &str, terminal_label: &str) -> Result<(), String> {
+    use std::process::Command;
 
     let output = Command::new("osascript")
         .arg("-e")
-        .arg(&applescript)
+        .arg(applescript)
         .output()
         .map_err(|e| format!("执行 osascript 失败: {e}"))?;
 
     if !output.status.success() {
         let stderr = decode_command_output(&output.stderr);
         return Err(format!(
-            "Terminal.app 执行失败 (exit code: {:?}): {}",
+            "{terminal_label} 执行失败 (exit code: {:?}): {}",
             output.status.code(),
             stderr
         ));
     }
 
     Ok(())
+}
+
+/// macOS: Terminal.app AppleScript.
+/// A cold `activate` creates a default empty window before `do script` opens the command session.
+/// Use `launch` for cold starts so `do script` can create the only new session without reusing restored windows.
+#[cfg(target_os = "macos")]
+fn build_macos_terminal_applescript(script_file: &std::path::Path) -> String {
+    format!(
+        r#"set launcher_script to {launcher}
+set was_running to application "Terminal" is running
+tell application "Terminal"
+    if was_running then
+        activate
+        do script launcher_script
+    else
+        launch
+        do script launcher_script
+        activate
+    end if
+end tell"#,
+        launcher = applescript_launcher_command(script_file)
+    )
+}
+
+/// macOS: Terminal.app
+#[cfg(target_os = "macos")]
+fn launch_macos_terminal_app(script_file: &std::path::Path) -> Result<(), String> {
+    run_terminal_osascript(
+        &build_macos_terminal_applescript(script_file),
+        "Terminal.app",
+    )
 }
 
 /// macOS: iTerm2
