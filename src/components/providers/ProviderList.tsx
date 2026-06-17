@@ -47,6 +47,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { settingsApi } from "@/lib/api/settings";
+import { isTextEditableTarget } from "@/utils/domUtils";
 
 interface ProviderListProps {
   providers: Record<string, Provider>;
@@ -277,8 +278,13 @@ export function ProviderList({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+
       const key = event.key.toLowerCase();
       if ((event.metaKey || event.ctrlKey) && key === "f") {
+        // 正在输入框/可编辑区域中时不抢占 Ctrl+F（例如添加供应商表单里
+        // ProviderPresetSelector 的搜索框），避免与其同名快捷键冲突。
+        if (isTextEditableTarget(document.activeElement)) return;
         event.preventDefault();
         setIsSearchOpen(true);
         return;
@@ -289,8 +295,8 @@ export function ProviderList({
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
