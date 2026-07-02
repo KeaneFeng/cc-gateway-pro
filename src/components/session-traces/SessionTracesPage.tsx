@@ -144,6 +144,17 @@ function getResourceTotals(trace?: TraceTurnDetail | null) {
     });
 }
 
+function getLocalContextEnrichment(trace?: TraceTurnDetail | null) {
+  const enrichment = trace?.contextStats.localContextEnrichment;
+  if (!enrichment) return null;
+  const status = enrichment?.status;
+  if (status !== "found" && status !== "missing") return null;
+  return {
+    status,
+    source: enrichment.source,
+  };
+}
+
 function topResourceItems(groups: ResourceGroups, limit = 4) {
   return Object.values(groups)
     .flat()
@@ -465,6 +476,45 @@ function ResourceTags({ trace }: { trace: TraceTurnDetail }) {
   );
 }
 
+function LocalContextEnrichmentNotice({
+  trace,
+}: {
+  trace?: TraceTurnDetail | null;
+}) {
+  const { t } = useTranslation();
+  const enrichment = getLocalContextEnrichment(trace);
+  if (!enrichment) return null;
+
+  const isFound = enrichment.status === "found";
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-2 rounded-md border px-3 py-2 text-xs",
+        isFound
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200",
+      )}
+    >
+      {isFound ? (
+        <Database className="mt-0.5 size-3.5 shrink-0" />
+      ) : (
+        <FileSearch className="mt-0.5 size-3.5 shrink-0" />
+      )}
+      <span>
+        {isFound
+          ? t("sessionTraces.contextEnrichmentCached", {
+              defaultValue:
+                "Claude /context data has been saved to the trace database and will be reused without rescanning.",
+            })
+          : t("sessionTraces.contextEnrichmentMissing", {
+              defaultValue:
+                "No local Claude /context output was found for this session; this result is cached to avoid repeated scans.",
+            })}
+      </span>
+    </div>
+  );
+}
+
 function SessionOverview({
   session,
   detail,
@@ -692,6 +742,8 @@ function ContextBreakdown({
           value={formatTokens(detail.maxContextUsedTokens ?? 0)}
         />
       </div>
+
+      <LocalContextEnrichmentNotice trace={latestTrace} />
 
       <Card>
         <CardHeader className="py-3">

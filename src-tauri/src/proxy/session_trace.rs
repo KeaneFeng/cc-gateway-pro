@@ -907,6 +907,15 @@ fn infer_embedded_context_resources(text: &str) -> Value {
             ),
         );
     }
+    if !resources.contains_key("skills") {
+        let skill_items = parse_available_skill_bullets(text);
+        if !skill_items.is_empty() {
+            resources.insert(
+                "skills".to_string(),
+                resource_summary("Skills", vec![("Loaded", skill_items)]),
+            );
+        }
+    }
 
     let mcp_groups = parse_markdown_table_sections(
         text,
@@ -1060,6 +1069,53 @@ fn parse_markdown_table_sections(
         .collect()
 }
 
+fn parse_available_skill_bullets(text: &str) -> Vec<Value> {
+    let lower = text.to_ascii_lowercase();
+    let Some(start) = lower.find("available skills") else {
+        return Vec::new();
+    };
+    let rest = &text[start + "available skills".len()..];
+    let end = rest.find("\n## ").unwrap_or(rest.len());
+    let section = &rest[..end];
+
+    let items = section
+        .lines()
+        .filter_map(|raw_line| {
+            let line = raw_line.trim();
+            let item = line.strip_prefix("- ")?;
+            let name = item
+                .split(':')
+                .next()
+                .unwrap_or(item)
+                .split(" - ")
+                .next()
+                .unwrap_or(item)
+                .trim();
+            let name = clean_inline_code(name);
+            if !is_plausible_skill_name(&name) {
+                return None;
+            }
+            let tokens = estimate_tokens(line);
+            Some(json!({
+                "name": name,
+                "tokens": tokens,
+                "tokenLabel": format!("~{} tokens", tokens),
+                "source": "embeddedContext"
+            }))
+        })
+        .collect();
+
+    dedupe_resource_items(items)
+}
+
+fn is_plausible_skill_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.chars().count() <= 120
+        && name
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | ':' | '/' | '.'))
+}
+
 fn extract_section_until(text: &str, start_marker: &str, end_markers: &[&str]) -> String {
     let Some(start) = text.find(start_marker) else {
         return String::new();
@@ -1093,23 +1149,14 @@ fn infer_skill_usage_resources(text: &str) -> Value {
     let mut items = Vec::new();
     for raw_line in text.lines() {
         let line = raw_line.trim();
-        let Some(start) = line.find("Skill(") else {
-            continue;
-        };
-        let after = &line[start + "Skill(".len()..];
-        let Some((name, _)) = after.split_once(')') else {
-            continue;
-        };
-        let name = name.trim();
-        if name.is_empty() {
-            continue;
+        for name in extract_used_skill_names(line) {
+            items.push(json!({
+                "name": name,
+                "tokens": 0,
+                "tokenLabel": "used",
+                "source": "conversationUsage"
+            }));
         }
-        items.push(json!({
-            "name": name,
-            "tokens": 0,
-            "tokenLabel": "used",
-            "source": "conversationUsage"
-        }));
     }
 
     let items = dedupe_resource_items(items);
@@ -1120,6 +1167,48 @@ fn infer_skill_usage_resources(text: &str) -> Value {
     json!({
         "usedSkills": resource_summary("Used skills", vec![("Used", items)])
     })
+}
+
+fn extract_used_skill_names(line: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut remaining = line;
+    while let Some(start) = remaining.find("Skill(") {
+        let after = &remaining[start + "Skill(".len()..];
+        let Some((name, rest)) = after.split_once(')') else {
+            break;
+        };
+        let name = clean_inline_code(name);
+        if is_plausible_skill_name(&name) {
+            names.push(name);
+        }
+        remaining = rest;
+    }
+
+    let lower = line.to_ascii_lowercase();
+    if lower.starts_with("using ") && lower.contains(" skill") {
+        if let Some(name) = extract_backticked_name(line) {
+            if is_plausible_skill_name(&name) {
+                names.push(name);
+            }
+        } else {
+            let candidate = &line["using ".len()..];
+            let lower_candidate = candidate.to_ascii_lowercase();
+            if let Some(skill_index) = lower_candidate.find(" skill") {
+                let name = clean_inline_code(&candidate[..skill_index]);
+                if is_plausible_skill_name(&name) {
+                    names.push(name);
+                }
+            }
+        }
+    }
+
+    names
+}
+
+fn extract_backticked_name(line: &str) -> Option<String> {
+    let (_, rest) = line.split_once('`')?;
+    let (name, _) = rest.split_once('`')?;
+    Some(clean_inline_code(name))
 }
 
 fn dedupe_resource_items(items: Vec<Value>) -> Vec<Value> {
@@ -1781,5 +1870,46 @@ Contents of /Users/keane/.claude/projects/-Users-keane-www-ayd-company-Ayd/memor
             "ayd-butler"
         );
         assert_eq!(resources["agentTools"]["count"], 1);
+    }
+
+    #[test]
+    fn infers_available_skills_from_bullet_list_context() {
+        let body = json!({
+            "messages": [{
+                "role": "user",
+                "content": r#"
+### Available skills
+- cc-gateway: CC Gateway Pro development and upstream sync.
+- debugging: Systematic debugging workflow.
+- source-command-tdd: Test-driven development workflow.
+
+## MCP Tools
+"#
+            }]
+        });
+
+        let stats = build_context_stats(&body, None);
+        let skills = &stats["resources"]["skills"];
+
+        assert_eq!(skills["count"], 3);
+        assert_eq!(skills["groups"]["Loaded"][0]["name"], "cc-gateway");
+        assert_eq!(skills["groups"]["Loaded"][2]["name"], "source-command-tdd");
+    }
+
+    #[test]
+    fn infers_used_skills_from_plain_using_messages() {
+        let body = json!({
+            "messages": [{
+                "role": "assistant",
+                "content": "Using `cc-gateway` skill for session trace constraints.\nUsing debugging skill to isolate the scan loop."
+            }]
+        });
+
+        let stats = build_context_stats(&body, None);
+        let used = &stats["resources"]["usedSkills"];
+
+        assert_eq!(used["count"], 2);
+        assert_eq!(used["groups"]["Used"][0]["name"], "cc-gateway");
+        assert_eq!(used["groups"]["Used"][1]["name"], "debugging");
     }
 }

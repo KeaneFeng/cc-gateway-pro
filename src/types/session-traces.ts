@@ -85,6 +85,10 @@ export interface TraceTurnDetail {
         }
       >;
     };
+    localContextEnrichment?: {
+      status?: "found" | "missing" | string;
+      source?: string;
+    };
     estimator?: string;
     [key: string]: unknown;
   };

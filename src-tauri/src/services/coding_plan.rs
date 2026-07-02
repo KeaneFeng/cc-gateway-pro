@@ -183,10 +183,10 @@ async fn query_kimi(api_key: &str) -> SubscriptionQuota {
 
 // ── 智谱 GLM ────────────────────────────────────────────────
 
-/// 把智谱 `data` 里的 `limits[]` 解析成 tier 列表。
-///
-/// 双桶响应中，5 小时桶在 0% 等状态下可能没有 `nextResetTime`；
-/// 这类无 reset 条目应优先归为五小时桶。其余条目按 `nextResetTime` 升序。
+// 把智谱 `data` 里的 `limits[]` 解析成 tier 列表。
+//
+// 双桶响应中，5 小时桶在 0% 等状态下可能没有 `nextResetTime`；
+// 这类无 reset 条目应优先归为五小时桶。其余条目按 `nextResetTime` 升序。
 // ── 智谱 GLM ────────────────────────────────────────────────
 
 /// 智谱 TOKENS_LIMIT 条目按 `unit` 字段的显式窗口分类。

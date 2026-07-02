@@ -2,6 +2,10 @@ use crate::services::sql_helpers::fresh_input_sql;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+const LOCAL_CONTEXT_SCAN_MAX_ENTRIES: usize = 20_000;
+const LOCAL_CONTEXT_SCAN_MAX_DURATION: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -494,18 +498,6 @@ pub async fn get_trace_session_detail(
     for row in rows {
         traces.push(row.map_err(|e| e.to_string())?);
     }
-    if let Some(context_text) =
-        load_local_context_usage_text(&session_id, request.app_type.as_deref())
-    {
-        for trace in &mut traces {
-            trace.context_stats =
-                crate::proxy::session_trace::enrich_context_stats_from_context_text(
-                    trace.context_stats.clone(),
-                    &context_text,
-                );
-        }
-    }
-
     let turn_count = traces.len() as u32;
     let total_input_tokens = traces.iter().map(|trace| trace.input_tokens).sum();
     let total_output_tokens = traces.iter().map(|trace| trace.output_tokens).sum();
@@ -531,6 +523,15 @@ pub async fn get_trace_session_detail(
                 .rev()
                 .find_map(|trace| title_from_request_summary_value(&trace.request_summary))
         });
+    drop(stmt);
+    drop(conn);
+
+    if should_load_local_context_usage_text(request.app_type.as_deref(), &traces) {
+        let context_text = load_local_context_usage_text(&session_id, request.app_type.as_deref());
+        if apply_local_context_enrichment_to_traces(&mut traces, context_text.as_deref()) {
+            persist_trace_context_stats(&state, &traces);
+        }
+    }
 
     Ok(TraceSessionDetail {
         session_id,
@@ -579,23 +580,161 @@ fn load_local_context_usage_text(session_id: &str, app_type: Option<&str>) -> Op
     latest
 }
 
-fn find_claude_session_file(session_id: &str) -> Option<PathBuf> {
-    let root = crate::config::get_claude_config_dir().join("projects");
-    find_file_by_name(&root, &format!("{session_id}.jsonl"), 4)
+const LOCAL_CONTEXT_ENRICHMENT_KEY: &str = "localContextEnrichment";
+
+fn should_load_local_context_usage_text(
+    app_type: Option<&str>,
+    traces: &[TraceTurnDetail],
+) -> bool {
+    if traces.is_empty() || !matches!(app_type, None | Some("claude") | Some("claude-desktop")) {
+        return false;
+    }
+    traces
+        .iter()
+        .any(|trace| !has_local_context_enrichment_marker(&trace.context_stats))
 }
 
-fn find_file_by_name(root: &Path, file_name: &str, depth: usize) -> Option<PathBuf> {
-    if depth == 0 {
+fn has_local_context_enrichment_marker(context_stats: &Value) -> bool {
+    context_stats
+        .get(LOCAL_CONTEXT_ENRICHMENT_KEY)
+        .and_then(|value| value.get("status"))
+        .and_then(Value::as_str)
+        .is_some()
+}
+
+fn apply_local_context_enrichment_to_traces(
+    traces: &mut [TraceTurnDetail],
+    context_text: Option<&str>,
+) -> bool {
+    let mut changed = false;
+    for trace in traces {
+        if has_local_context_enrichment_marker(&trace.context_stats) {
+            continue;
+        }
+
+        trace.context_stats = match context_text {
+            Some(text) => {
+                let enriched = crate::proxy::session_trace::enrich_context_stats_from_context_text(
+                    trace.context_stats.clone(),
+                    text,
+                );
+                mark_local_context_enrichment(enriched, "found")
+            }
+            None => mark_local_context_enrichment(trace.context_stats.clone(), "missing"),
+        };
+        changed = true;
+    }
+    changed
+}
+
+fn mark_local_context_enrichment(mut context_stats: Value, status: &str) -> Value {
+    if let Some(map) = context_stats.as_object_mut() {
+        map.insert(
+            LOCAL_CONTEXT_ENRICHMENT_KEY.to_string(),
+            json!({
+                "status": status,
+                "source": "claude-jsonl-context-usage",
+            }),
+        );
+        context_stats
+    } else {
+        json!({
+            LOCAL_CONTEXT_ENRICHMENT_KEY: {
+                "status": status,
+                "source": "claude-jsonl-context-usage",
+            }
+        })
+    }
+}
+
+fn persist_trace_context_stats(state: &crate::AppState, traces: &[TraceTurnDetail]) {
+    let Ok(conn) = state.db.conn.lock() else {
+        log::warn!("[SessionTraces] 无法锁定数据库以持久化 context enrich 状态");
+        return;
+    };
+    let now = chrono::Utc::now().timestamp();
+    for trace in traces {
+        let Ok(context_stats_json) = serde_json::to_string(&trace.context_stats) else {
+            continue;
+        };
+        if let Err(err) = conn.execute(
+            "UPDATE session_traces
+             SET context_stats_json = ?1, updated_at = ?2
+             WHERE trace_id = ?3",
+            rusqlite::params![context_stats_json, now, trace.trace_id],
+        ) {
+            log::warn!(
+                "[SessionTraces] 持久化 trace context enrich 状态失败 trace_id={}: {err}",
+                trace.trace_id
+            );
+        }
+    }
+}
+
+fn find_claude_session_file(session_id: &str) -> Option<PathBuf> {
+    let root = crate::config::get_claude_config_dir().join("projects");
+    let mut budget = FileScanBudget::new(
+        LOCAL_CONTEXT_SCAN_MAX_ENTRIES,
+        LOCAL_CONTEXT_SCAN_MAX_DURATION,
+    );
+    find_file_by_name(&root, &format!("{session_id}.jsonl"), 4, &mut budget)
+}
+
+struct FileScanBudget {
+    started_at: Instant,
+    max_entries: usize,
+    max_duration: Duration,
+    visited_entries: usize,
+}
+
+impl FileScanBudget {
+    fn new(max_entries: usize, max_duration: Duration) -> Self {
+        Self {
+            started_at: Instant::now(),
+            max_entries,
+            max_duration,
+            visited_entries: 0,
+        }
+    }
+
+    fn can_continue(&self) -> bool {
+        self.visited_entries < self.max_entries && self.started_at.elapsed() <= self.max_duration
+    }
+
+    fn record_entry(&mut self) -> bool {
+        if !self.can_continue() {
+            return false;
+        }
+        self.visited_entries += 1;
+        true
+    }
+}
+
+fn find_file_by_name(
+    root: &Path,
+    file_name: &str,
+    depth: usize,
+    budget: &mut FileScanBudget,
+) -> Option<PathBuf> {
+    if depth == 0 || !budget.can_continue() {
         return None;
     }
     let entries = std::fs::read_dir(root).ok()?;
     for entry in entries.flatten() {
+        if !budget.record_entry() {
+            log::warn!(
+                "[SessionTraces] 本地 Claude context 文件扫描达到上限 entries={} depth={}",
+                budget.visited_entries,
+                depth
+            );
+            return None;
+        }
         let path = entry.path();
         if path.file_name().and_then(|value| value.to_str()) == Some(file_name) {
             return Some(path);
         }
         if path.is_dir() {
-            if let Some(found) = find_file_by_name(&path, file_name, depth - 1) {
+            if let Some(found) = find_file_by_name(&path, file_name, depth - 1, budget) {
                 return Some(found);
             }
         }
@@ -761,6 +900,101 @@ fn truncate_title(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn trace_with_context_stats(context_stats: Value) -> TraceTurnDetail {
+        TraceTurnDetail {
+            trace_id: "trace-1".to_string(),
+            turn_index: Some(1),
+            provider_id: Some("provider".to_string()),
+            model: Some("claude".to_string()),
+            request_model: Some("claude".to_string()),
+            is_streaming: false,
+            status_code: Some(200),
+            system_prompt_preview: None,
+            system_prompt_hash: None,
+            message_count: 1,
+            tool_count: 0,
+            request_summary: json!({}),
+            context_stats,
+            context_window_tokens: None,
+            context_used_tokens: None,
+            context_usage_ratio: None,
+            response_text_preview: None,
+            tool_calls: json!([]),
+            stop_reason: None,
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_read_tokens: 0,
+            cache_creation_tokens: 0,
+            latency_ms: None,
+            first_token_ms: None,
+            trace_mode: "summary".to_string(),
+            created_at: 1,
+        }
+    }
+
+    #[test]
+    fn local_context_enrichment_marks_found_and_prevents_rescan() {
+        let mut traces = vec![trace_with_context_stats(json!({}))];
+        let context_text = "Context Usage\nMCP tools · /mcp\nLoaded\n├ mcp__demo__tool: 12 tokens";
+
+        assert!(should_load_local_context_usage_text(
+            Some("claude"),
+            &traces
+        ));
+        let changed = apply_local_context_enrichment_to_traces(&mut traces, Some(context_text));
+
+        assert!(changed);
+        assert_eq!(traces[0].context_stats["resources"]["mcpTools"]["count"], 1);
+        assert_eq!(
+            traces[0].context_stats["localContextEnrichment"]["status"],
+            "found"
+        );
+        assert!(!should_load_local_context_usage_text(
+            Some("claude"),
+            &traces
+        ));
+    }
+
+    #[test]
+    fn local_context_enrichment_marks_missing_and_prevents_rescan() {
+        let mut traces = vec![trace_with_context_stats(json!({}))];
+
+        assert!(should_load_local_context_usage_text(
+            Some("claude"),
+            &traces
+        ));
+        let changed = apply_local_context_enrichment_to_traces(&mut traces, None);
+
+        assert!(changed);
+        assert_eq!(
+            traces[0].context_stats["localContextEnrichment"]["status"],
+            "missing"
+        );
+        assert!(!should_load_local_context_usage_text(
+            Some("claude"),
+            &traces
+        ));
+    }
+
+    #[test]
+    fn local_context_file_search_respects_scan_budget() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let file_path = temp.path().join("session-1.jsonl");
+        std::fs::write(&file_path, "{}\n").expect("write session file");
+
+        let mut exhausted_budget = FileScanBudget::new(0, Duration::from_secs(60));
+        assert_eq!(
+            find_file_by_name(temp.path(), "session-1.jsonl", 4, &mut exhausted_budget),
+            None
+        );
+
+        let mut budget = FileScanBudget::new(10, Duration::from_secs(60));
+        assert_eq!(
+            find_file_by_name(temp.path(), "session-1.jsonl", 4, &mut budget),
+            Some(file_path)
+        );
+    }
 
     #[test]
     fn title_falls_back_to_legacy_request_json() {
