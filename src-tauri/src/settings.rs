@@ -186,7 +186,7 @@ pub enum SessionTraceMode {
 }
 
 fn default_session_trace_retention_days() -> u32 {
-    14
+    7
 }
 
 fn default_session_trace_preview_limit() -> u32 {
@@ -246,6 +246,7 @@ impl SessionTraceSettings {
         if self.retention_days == 0 {
             self.retention_days = default_session_trace_retention_days();
         }
+        self.retention_days = self.retention_days.clamp(1, 90);
         self.max_response_text_chars = self.max_response_text_chars.clamp(200, 50_000);
         self.redact_sensitive_values = true;
     }
@@ -916,5 +917,27 @@ mod tests {
         .expect("visible apps");
 
         assert!(!visible.is_visible(&AppType::ClaudeDesktop));
+    }
+
+    #[test]
+    fn session_trace_settings_default_to_seven_day_retention() {
+        assert_eq!(SessionTraceSettings::default().retention_days, 7);
+    }
+
+    #[test]
+    fn session_trace_retention_is_normalized_to_bounded_days() {
+        let mut zero_days = SessionTraceSettings {
+            retention_days: 0,
+            ..SessionTraceSettings::default()
+        };
+        zero_days.normalize();
+        assert_eq!(zero_days.retention_days, 7);
+
+        let mut too_many_days = SessionTraceSettings {
+            retention_days: 365,
+            ..SessionTraceSettings::default()
+        };
+        too_many_days.normalize();
+        assert_eq!(too_many_days.retention_days, 90);
     }
 }

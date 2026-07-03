@@ -10,6 +10,11 @@ export interface SessionTraceSettings {
   redactSensitiveValues: boolean;
 }
 
+export interface SessionTracePruneResult {
+  deleted: number;
+  compacted: number;
+}
+
 export interface TraceSessionFilters {
   appType?: string;
   search?: string;

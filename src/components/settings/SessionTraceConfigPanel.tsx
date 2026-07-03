@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  usePruneSessionTracesMutation,
   useSessionTraceSettingsQuery,
   useUpdateSessionTraceSettingsMutation,
 } from "@/lib/query/session-traces";
@@ -24,17 +25,20 @@ import type {
 const DEFAULT_SETTINGS: SessionTraceSettings = {
   enabled: false,
   mode: "off",
-  retentionDays: 14,
+  retentionDays: 7,
   maxResponseTextChars: 2000,
   captureRequestJson: false,
   captureResponseJson: false,
   redactSensitiveValues: true,
 };
 
+const RETENTION_DAY_OPTIONS = [3, 7, 14, 30, 90] as const;
+
 export function SessionTraceConfigPanel() {
   const { t } = useTranslation();
   const { data, isLoading } = useSessionTraceSettingsQuery();
   const updateMutation = useUpdateSessionTraceSettingsMutation();
+  const pruneMutation = usePruneSessionTracesMutation();
   const settings = data ?? DEFAULT_SETTINGS;
 
   const mode = useMemo<SessionTraceMode>(() => {
@@ -74,6 +78,31 @@ export function SessionTraceConfigPanel() {
       captureRequestJson: nextMode === "full",
       captureResponseJson: nextMode === "full",
     });
+  };
+
+  const handleRetentionChange = (value: string) => {
+    const retentionDays = Number.parseInt(value, 10);
+    if (!Number.isFinite(retentionDays)) return;
+    void save({
+      ...settings,
+      retentionDays,
+    });
+  };
+
+  const handlePrune = async () => {
+    try {
+      const result = await pruneMutation.mutateAsync();
+      toast.success(
+        t("sessionTraces.prunedOldTraces", {
+          defaultValue:
+            "已清理 {{deleted}} 条旧 Trace，并压缩 {{compacted}} 条超大历史记录。",
+          deleted: result.deleted,
+          compacted: result.compacted,
+        }),
+      );
+    } catch (error) {
+      toast.error(String(error));
+    }
   };
 
   if (isLoading) return null;
@@ -133,6 +162,40 @@ export function SessionTraceConfigPanel() {
         </Select>
       </div>
 
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label>
+            {t("sessionTraces.retentionPeriod", {
+              defaultValue: "数据保留周期",
+            })}
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            {t("sessionTraces.retentionPeriodDescription", {
+              defaultValue: "后台维护会自动清理超过该周期的 Session Traces。",
+            })}
+          </p>
+        </div>
+        <Select
+          value={String(settings.retentionDays)}
+          disabled={updateMutation.isPending}
+          onValueChange={handleRetentionChange}
+        >
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RETENTION_DAY_OPTIONS.map((days) => (
+              <SelectItem key={days} value={String(days)}>
+                {t("sessionTraces.retentionDaysOption", {
+                  defaultValue: "{{days}} 天",
+                  days,
+                })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-xs text-muted-foreground">
         <div className="flex items-start gap-2">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-500" />
@@ -146,7 +209,7 @@ export function SessionTraceConfigPanel() {
         <div className="flex flex-wrap items-center gap-2">
           <span>
             {t("sessionTraces.retention", {
-              defaultValue: "默认保留 {{days}} 天",
+              defaultValue: "保留 {{days}} 天",
               days: settings.retentionDays,
             })}
           </span>
@@ -161,7 +224,13 @@ export function SessionTraceConfigPanel() {
       </div>
 
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" disabled className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={pruneMutation.isPending}
+          className="gap-2"
+          onClick={() => void handlePrune()}
+        >
           <Trash2 className="size-3.5" />
           {t("sessionTraces.pruneOldTraces", {
             defaultValue: "清理旧 Traces",

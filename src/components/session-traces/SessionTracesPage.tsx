@@ -59,7 +59,7 @@ export interface SessionTraceTarget {
 const DEFAULT_TRACE_SETTINGS: SessionTraceSettings = {
   enabled: false,
   mode: "off",
-  retentionDays: 14,
+  retentionDays: 7,
   maxResponseTextChars: 2000,
   captureRequestJson: false,
   captureResponseJson: false,
@@ -1091,10 +1091,10 @@ export function SessionTracesPage({
       return;
     }
     if (
-      !selectedSessionId ||
+      selectedSessionId &&
       !sessions.some((s) => s.sessionId === selectedSessionId)
     ) {
-      setSelectedSessionId(sessions[0].sessionId);
+      setSelectedSessionId(null);
     }
   }, [selectedSessionId, sessions]);
 

@@ -937,6 +937,9 @@ pub fn run() {
                 if let Err(e) = state.db.periodic_backup_if_needed() {
                     log::warn!("Periodic backup failed on startup: {e}");
                 }
+                if let Err(e) = crate::commands::prune_session_traces_for_db(state.db.as_ref()) {
+                    log::warn!("Session trace cleanup failed on startup: {e}");
+                }
 
                 // Periodic maintenance timer: run once per day while the app is running
                 let db_for_timer = state.db.clone();
@@ -950,6 +953,11 @@ pub fn run() {
                         interval.tick().await;
                         if let Err(e) = db_for_timer.periodic_backup_if_needed() {
                             log::warn!("Periodic maintenance timer failed: {e}");
+                        }
+                        if let Err(e) =
+                            crate::commands::prune_session_traces_for_db(db_for_timer.as_ref())
+                        {
+                            log::warn!("Session trace periodic cleanup failed: {e}");
                         }
                     }
                 });
@@ -1273,6 +1281,7 @@ pub fn run() {
             commands::launch_session_terminal,
             commands::get_session_trace_settings,
             commands::set_session_trace_settings,
+            commands::prune_session_traces,
             commands::list_trace_sessions,
             commands::get_trace_session_detail,
             commands::get_tool_versions,

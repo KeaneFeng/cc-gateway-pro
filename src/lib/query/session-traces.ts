@@ -34,6 +34,17 @@ export function useUpdateSessionTraceSettingsMutation() {
   });
 }
 
+export function usePruneSessionTracesMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sessionTracesApi.prune,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["traceSessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["traceSessionDetail"] });
+    },
+  });
+}
+
 export function useTraceSessionsQuery(filters?: TraceSessionFilters) {
   return useQuery({
     queryKey: sessionTraceKeys.sessions(filters),

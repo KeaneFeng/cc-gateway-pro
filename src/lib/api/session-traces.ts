@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  SessionTracePruneResult,
   SessionTraceSettings,
   TraceSessionDetail,
   TraceSessionDetailRequest,
@@ -16,6 +17,10 @@ export const sessionTracesApi = {
     settings: SessionTraceSettings,
   ): Promise<SessionTraceSettings> {
     return await invoke("set_session_trace_settings", { settings });
+  },
+
+  async prune(): Promise<SessionTracePruneResult> {
+    return await invoke("prune_session_traces");
   },
 
   async listSessions(

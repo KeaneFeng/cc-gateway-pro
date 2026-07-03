@@ -25,6 +25,7 @@ use std::{
 use tokio::sync::Mutex;
 
 const REDACTED: &str = "[REDACTED]";
+const MAX_CAPTURED_JSON_BYTES: usize = 256 * 1024;
 const RESPONSE_EVENT_LIMIT: usize = 2_000;
 
 #[derive(Debug, Clone)]
@@ -53,25 +54,17 @@ pub(crate) fn build_request_snapshot(
         return None;
     }
 
-    let redacted_body = if settings.redact_sensitive_values {
-        redact_value(body)
-    } else {
-        body.clone()
-    };
-
-    let system_prompt = extract_system_prompt(&redacted_body);
+    let system_prompt = extract_system_prompt(body);
     let system_prompt_preview = system_prompt
         .as_deref()
         .map(|text| truncate_chars(text, 1_000));
     let system_prompt_hash = system_prompt.as_deref().map(sha256_hex);
 
-    let messages = redacted_body
-        .get("messages")
-        .or_else(|| redacted_body.get("input"));
+    let messages = body.get("messages").or_else(|| body.get("input"));
     let message_count = count_messages(messages);
-    let tool_count = count_tools(&redacted_body);
-    let request_summary = build_request_summary(&redacted_body, ctx, message_count, tool_count);
-    let context_stats = build_context_stats(&redacted_body, system_prompt.as_deref());
+    let tool_count = count_tools(body);
+    let request_summary = build_request_summary(body, ctx, message_count, tool_count);
+    let context_stats = build_context_stats(body, system_prompt.as_deref());
     let estimated_context_tokens = context_stats
         .get("totalTokens")
         .and_then(|v| v.as_u64())
@@ -82,7 +75,12 @@ pub(crate) fn build_request_snapshot(
         .map(|window| estimated_context_tokens as f64 / window as f64);
 
     let request_json = if settings.mode == SessionTraceMode::Full && settings.capture_request_json {
-        serde_json::to_string(&redacted_body).ok()
+        let value = if settings.redact_sensitive_values {
+            redact_value(body)
+        } else {
+            body.clone()
+        };
+        serialize_bounded_json(&value)
     } else {
         None
     };
@@ -137,7 +135,7 @@ pub(crate) fn spawn_record_non_streaming_trace(
         response_json
             .as_ref()
             .map(redact_value)
-            .and_then(|value| serde_json::to_string(&value).ok())
+            .and_then(|value| serialize_bounded_json(&value))
     } else {
         None
     };
@@ -197,7 +195,7 @@ pub(crate) fn create_stream_trace_collector(
             let response_json = if snapshot.settings.mode == SessionTraceMode::Full
                 && snapshot.settings.capture_response_json
             {
-                serde_json::to_string(&redact_value(&Value::Array(events.clone()))).ok()
+                serialize_bounded_json(&redact_value(&Value::Array(events.clone())))
             } else {
                 None
             };
@@ -420,6 +418,20 @@ fn insert_trace(
     }
 }
 
+fn serialize_bounded_json(value: &Value) -> Option<String> {
+    let serialized = serde_json::to_string(value).ok()?;
+    if serialized.len() <= MAX_CAPTURED_JSON_BYTES {
+        return Some(serialized);
+    }
+
+    Some(json_string(json!({
+        "truncated": true,
+        "reason": "session_trace_payload_too_large",
+        "originalBytes": serialized.len(),
+        "maxBytes": MAX_CAPTURED_JSON_BYTES,
+    })))
+}
+
 fn build_request_summary(
     body: &Value,
     ctx: &RequestContext,
@@ -475,41 +487,6 @@ fn build_context_stats(body: &Value, system_prompt: Option<&str>) -> Value {
         "contextCommand": parsed_context,
         "estimator": "chars/4"
     })
-}
-
-pub(crate) fn enrich_context_stats_from_request(
-    mut context_stats: Value,
-    request_json: Option<&str>,
-) -> Value {
-    let Some(request_json) = request_json else {
-        return context_stats;
-    };
-    let Ok(body) = serde_json::from_str::<Value>(request_json) else {
-        return context_stats;
-    };
-
-    let system_prompt = extract_system_prompt(&body);
-    let context_text = collect_request_text(&body, system_prompt.as_deref());
-    let inferred = build_resource_inventory(&body, &context_text);
-    let Some(inferred_resources) = inferred.as_object() else {
-        return context_stats;
-    };
-    if inferred_resources.is_empty() {
-        return context_stats;
-    }
-
-    let Some(context_map) = context_stats.as_object_mut() else {
-        return context_stats;
-    };
-    let resources_value = context_map
-        .entry("resources".to_string())
-        .or_insert_with(|| json!({}));
-    let Some(resources) = resources_value.as_object_mut() else {
-        *resources_value = Value::Object(inferred_resources.clone());
-        return context_stats;
-    };
-    merge_resource_map(resources, Value::Object(inferred_resources.clone()));
-    context_stats
 }
 
 pub(crate) fn enrich_context_stats_from_context_text(
@@ -1911,5 +1888,23 @@ Contents of /Users/keane/.claude/projects/-Users-keane-www-ayd-company-Ayd/memor
         assert_eq!(used["count"], 2);
         assert_eq!(used["groups"]["Used"][0]["name"], "cc-gateway");
         assert_eq!(used["groups"]["Used"][1]["name"], "debugging");
+    }
+
+    #[test]
+    fn bounded_json_replaces_oversized_payload_with_marker() {
+        let value = json!({
+            "messages": [{
+                "role": "user",
+                "content": "x".repeat(MAX_CAPTURED_JSON_BYTES + 1)
+            }]
+        });
+
+        let stored = serialize_bounded_json(&value).expect("serialize marker");
+        let parsed: Value = serde_json::from_str(&stored).expect("valid json marker");
+
+        assert!(stored.len() < 512);
+        assert_eq!(parsed["truncated"], true);
+        assert_eq!(parsed["reason"], "session_trace_payload_too_large");
+        assert!(parsed["originalBytes"].as_u64().unwrap() > MAX_CAPTURED_JSON_BYTES as u64);
     }
 }

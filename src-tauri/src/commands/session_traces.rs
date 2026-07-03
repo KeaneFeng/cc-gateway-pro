@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 
 const LOCAL_CONTEXT_SCAN_MAX_ENTRIES: usize = 20_000;
 const LOCAL_CONTEXT_SCAN_MAX_DURATION: Duration = Duration::from_secs(2);
+const TRACE_DETAIL_LIMIT: u32 = 200;
+const MAX_STORED_JSON_BYTES: i64 = 256 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +47,13 @@ pub struct SessionTraceSettingsPayload {
     pub capture_request_json: bool,
     pub capture_response_json: bool,
     pub redact_sensitive_values: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionTracePruneResult {
+    pub deleted: u64,
+    pub compacted: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +172,60 @@ pub async fn set_session_trace_settings(
 }
 
 #[tauri::command]
+pub async fn prune_session_traces(
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<SessionTracePruneResult, String> {
+    prune_session_traces_for_db(state.db.as_ref())
+}
+
+pub(crate) fn prune_session_traces_for_db(
+    db: &crate::Database,
+) -> Result<SessionTracePruneResult, String> {
+    let settings = crate::settings::get_settings().session_traces;
+    let cutoff =
+        chrono::Utc::now().timestamp() - i64::from(settings.retention_days.max(1)) * 24 * 60 * 60;
+    let conn = db
+        .conn
+        .lock()
+        .map_err(|e| format!("Mutex lock failed: {e}"))?;
+    let now = chrono::Utc::now().timestamp();
+
+    let compacted = conn
+        .execute(
+            "UPDATE session_traces
+         SET request_json = CASE
+                 WHEN request_json IS NOT NULL AND LENGTH(request_json) > ?1 THEN NULL
+                 ELSE request_json
+             END,
+             response_json = CASE
+                 WHEN response_json IS NOT NULL AND LENGTH(response_json) > ?1 THEN NULL
+                 ELSE response_json
+             END,
+             response_text = CASE
+                 WHEN response_text IS NOT NULL AND LENGTH(response_text) > ?1 THEN NULL
+                 ELSE response_text
+             END,
+             updated_at = ?2
+         WHERE (request_json IS NOT NULL AND LENGTH(request_json) > ?1)
+            OR (response_json IS NOT NULL AND LENGTH(response_json) > ?1)
+            OR (response_text IS NOT NULL AND LENGTH(response_text) > ?1)",
+            rusqlite::params![MAX_STORED_JSON_BYTES, now],
+        )
+        .map_err(|e| e.to_string())?;
+
+    let deleted = conn
+        .execute(
+            "DELETE FROM session_traces WHERE created_at < ?1",
+            rusqlite::params![cutoff],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(SessionTracePruneResult {
+        deleted: deleted as u64,
+        compacted: compacted as u64,
+    })
+}
+
+#[tauri::command]
 pub async fn list_trace_sessions(
     state: tauri::State<'_, crate::AppState>,
     filters: Option<TraceSessionFilters>,
@@ -228,7 +291,6 @@ pub async fn list_trace_sessions(
                 status_code,
                 created_at,
                 request_summary_json,
-                request_json,
                 response_text_preview,
                 1 AS trace_count,
                 0 AS log_count
@@ -250,7 +312,6 @@ pub async fn list_trace_sessions(
                 l.status_code,
                 l.created_at,
                 '{{}}' AS request_summary_json,
-                NULL AS request_json,
                 NULL AS response_text_preview,
                 0 AS trace_count,
                 1 AS log_count
@@ -299,13 +360,6 @@ pub async fn list_trace_sessions(
                 LIMIT 1
             ) AS title_summary_json,
             (
-                SELECT request_json
-                FROM filtered f
-                WHERE f.session_id = g.session_id AND f.app_type = g.app_type AND f.trace_count = 1
-                ORDER BY f.created_at ASC
-                LIMIT 1
-            ) AS title_request_json,
-            (
                 SELECT response_text_preview
                 FROM filtered f
                 WHERE f.session_id = g.session_id AND f.app_type = g.app_type AND f.trace_count = 1
@@ -351,30 +405,29 @@ pub async fn list_trace_sessions(
     let rows = stmt
         .query_map(param_refs.as_slice(), |row| {
             let title_summary: Option<String> = row.get(2)?;
-            let title_request: Option<String> = row.get(3)?;
-            let title_response: Option<String> = row.get(4)?;
-            let avg_latency: Option<f64> = row.get(13)?;
-            let status_code: Option<i64> = row.get(14)?;
+            let title_response: Option<String> = row.get(3)?;
+            let avg_latency: Option<f64> = row.get(12)?;
+            let status_code: Option<i64> = row.get(13)?;
             Ok(TraceSessionSummary {
                 session_id: row.get(0)?,
                 title: title_from_trace_sources(
                     title_summary.as_deref(),
-                    title_request.as_deref(),
+                    None,
                     title_response.as_deref(),
                 ),
                 app_type: row.get(1)?,
-                provider_id: row.get(5)?,
-                model: row.get(6)?,
-                turn_count: row.get::<_, i64>(7)? as u32,
-                total_input_tokens: row.get::<_, i64>(8)? as u64,
-                total_output_tokens: row.get::<_, i64>(9)? as u64,
-                total_cache_read_tokens: row.get::<_, i64>(10)? as u64,
-                total_cache_creation_tokens: row.get::<_, i64>(11)? as u64,
-                total_cost_usd: format!("{:.6}", row.get::<_, f64>(12)?),
+                provider_id: row.get(4)?,
+                model: row.get(5)?,
+                turn_count: row.get::<_, i64>(6)? as u32,
+                total_input_tokens: row.get::<_, i64>(7)? as u64,
+                total_output_tokens: row.get::<_, i64>(8)? as u64,
+                total_cache_read_tokens: row.get::<_, i64>(9)? as u64,
+                total_cache_creation_tokens: row.get::<_, i64>(10)? as u64,
+                total_cost_usd: format!("{:.6}", row.get::<_, f64>(11)?),
                 avg_latency_ms: avg_latency.map(|v| v.round() as u64),
                 last_status_code: status_code.map(|v| v as u16),
-                first_seen_at: row.get(15)?,
-                last_seen_at: row.get(16)?,
+                first_seen_at: row.get(14)?,
+                last_seen_at: row.get(15)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -416,6 +469,18 @@ pub async fn get_trace_session_detail(
 
     let where_clause = conditions.join(" AND ");
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let mut detail_params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(session_id.clone())];
+    if let Some(app_type) = request
+        .app_type
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && *value != "all")
+    {
+        detail_params.push(Box::new(app_type.to_string()));
+    }
+    detail_params.push(Box::new(i64::from(TRACE_DETAIL_LIMIT)));
+    let detail_param_refs: Vec<&dyn rusqlite::ToSql> =
+        detail_params.iter().map(|p| p.as_ref()).collect();
     let sql = format!(
         "SELECT
             trace_id,
@@ -444,24 +509,19 @@ pub async fn get_trace_session_detail(
             latency_ms,
             first_token_ms,
             trace_mode,
-            created_at,
-            request_json
+            created_at
          FROM session_traces
          WHERE {where_clause}
-         ORDER BY COALESCE(turn_index, 0) DESC, created_at DESC"
+         ORDER BY COALESCE(turn_index, 0) DESC, created_at DESC
+         LIMIT ?"
     );
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(param_refs.as_slice(), |row| {
+        .query_map(detail_param_refs.as_slice(), |row| {
             let status_code: Option<i64> = row.get(6)?;
             let turn_index: Option<i64> = row.get(1)?;
-            let request_json: Option<String> = row.get(27)?;
             let context_stats = parse_json_or(row.get::<_, String>(12)?, json!({}));
-            let context_stats = crate::proxy::session_trace::enrich_context_stats_from_request(
-                context_stats,
-                request_json.as_deref(),
-            );
             Ok(TraceTurnDetail {
                 trace_id: row.get(0)?,
                 turn_index: turn_index.map(|value| value as u32),
