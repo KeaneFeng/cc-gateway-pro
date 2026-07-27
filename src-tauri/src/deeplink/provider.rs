@@ -1,6 +1,6 @@
 //! Provider import from deep link
 //!
-//! Handles importing provider configurations via ccgatewaypro:// URLs.
+//! Handles importing provider configurations via ccswitch:// URLs.
 
 use super::utils::{decode_base64_param, infer_homepage_from_endpoint};
 use super::DeepLinkImportRequest;
@@ -122,7 +122,10 @@ pub fn import_provider_from_deeplink(
                 &provider_id,
                 normalized.clone(),
             ) {
-                log::warn!("Failed to add custom endpoint '{normalized}': {e}");
+                log::warn!(
+                    "Failed to add custom endpoint '{}': {e}",
+                    crate::url_for_log(&normalized)
+                );
             }
         }
     }
@@ -145,6 +148,7 @@ pub(crate) fn build_provider_from_request(
         AppType::Claude | AppType::ClaudeDesktop => build_claude_settings(request),
         AppType::Codex => build_codex_settings(request),
         AppType::Gemini => build_gemini_settings(request),
+        AppType::GrokBuild => build_grokbuild_settings(request),
         AppType::OpenCode => build_opencode_settings(request),
         AppType::OpenClaw => build_additive_app_settings(request),
         AppType::Hermes => build_hermes_settings(request),
@@ -265,6 +269,10 @@ fn build_provider_meta(request: &DeepLinkImportRequest) -> Result<Option<Provide
         template_type: None, // Deeplink providers don't specify template type (will use backward compatibility logic)
         auto_query_interval: request.usage_auto_interval,
         coding_plan_provider: None,
+        access_key_id: None,
+        secret_access_key: None,
+        team_organization_id: None,
+        team_project_id: None,
     };
 
     Ok(Some(ProviderMeta {
@@ -368,37 +376,19 @@ fn extract_claude_config_env(
 
 /// Build Codex settings configuration
 fn build_codex_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
-    // Generate a safe provider name identifier
-    let clean_provider_name = {
-        let raw: String = request
-            .name
-            .clone()
-            .unwrap_or_else(|| "custom".to_string())
-            .chars()
-            .filter(|c| !c.is_control())
-            .collect();
-        let lower = raw.to_lowercase();
-        let mut key: String = lower
-            .chars()
-            .map(|c| match c {
-                'a'..='z' | '0'..='9' | '_' => c,
-                _ => '_',
-            })
-            .collect();
-
-        // Remove leading/trailing underscores
-        while key.starts_with('_') {
-            key.remove(0);
-        }
-        while key.ends_with('_') {
-            key.pop();
-        }
-
-        if key.is_empty() {
-            "custom".to_string()
-        } else {
-            key
-        }
+    let provider_display_name = request
+        .name
+        .as_deref()
+        .unwrap_or("custom")
+        .chars()
+        .filter(|c| !c.is_control())
+        .collect::<String>()
+        .trim()
+        .to_string();
+    let provider_display_name = if provider_display_name.is_empty() {
+        "custom".to_string()
+    } else {
+        provider_display_name
     };
 
     // Model name: use deeplink model or default
@@ -414,16 +404,20 @@ fn build_codex_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
         .trim_end_matches('/')
         .to_string();
 
+    let provider_display_name = toml_edit::Value::from(provider_display_name.as_str()).to_string();
+    let model_name = toml_edit::Value::from(model_name.as_str()).to_string();
+    let endpoint = toml_edit::Value::from(endpoint.as_str()).to_string();
+
     // Build config.toml content
     let config_toml = format!(
-        r#"model_provider = "{clean_provider_name}"
-model = "{model_name}"
+        r#"model_provider = "custom"
+model = {model_name}
 model_reasoning_effort = "high"
 disable_response_storage = true
 
-[model_providers.{clean_provider_name}]
-name = "{clean_provider_name}"
-base_url = "{endpoint}"
+[model_providers.custom]
+name = {provider_display_name}
+base_url = {endpoint}
 wire_api = "responses"
 requires_openai_auth = true
 "#
@@ -452,6 +446,36 @@ fn build_gemini_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
     }
 
     json!({ "env": env })
+}
+
+fn build_grokbuild_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
+    let model = request
+        .model
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(crate::grok_config::DEFAULT_MODEL)
+        .trim();
+    let name = request
+        .name
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("custom")
+        .trim();
+    let endpoint = get_primary_endpoint(request).trim().to_string();
+    let api_key = request.api_key.as_deref().unwrap_or("").trim();
+
+    let model_value = toml_edit::Value::from(model).to_string();
+    let name_value = toml_edit::Value::from(name).to_string();
+    let endpoint_value = toml_edit::Value::from(endpoint.as_str()).to_string();
+    let api_key_value = toml_edit::Value::from(api_key).to_string();
+
+    json!({
+        "config": format!(
+            "[models]\ndefault = {model_value}\n\n[model.{model_value}]\nmodel = {model_value}\nbase_url = {endpoint_value}\nname = {name_value}\napi_key = {api_key_value}\napi_backend = \"{}\"\ncontext_window = {}\n",
+            crate::grok_config::DEFAULT_API_BACKEND,
+            crate::grok_config::DEFAULT_CONTEXT_WINDOW,
+        )
+    })
 }
 
 /// Build OpenCode settings configuration
@@ -610,6 +634,7 @@ pub fn parse_and_merge_config(
         "claude" => merge_claude_config(&mut merged, &config_value)?,
         "codex" => merge_codex_config(&mut merged, &config_value)?,
         "gemini" => merge_gemini_config(&mut merged, &config_value)?,
+        "grokbuild" => merge_grokbuild_config(&mut merged, &config_value)?,
         // Additive mode apps use JSON config directly; pass through as-is
         "openclaw" | "opencode" | "hermes" => {
             merge_additive_config(&mut merged, &config_value)?;
@@ -699,12 +724,11 @@ fn merge_codex_config(
     request: &mut DeepLinkImportRequest,
     config: &serde_json::Value,
 ) -> Result<(), AppError> {
-    // Auto-fill API key from auth.OPENAI_API_KEY
+    // Auto-fill API key from auth.OPENAI_API_KEY or Codex mobile-compatible bearer token.
     if request.api_key.as_ref().is_none_or(|s| s.is_empty()) {
-        if let Some(api_key) = config
-            .get("auth")
-            .and_then(|v| v.get("OPENAI_API_KEY"))
-            .and_then(|v| v.as_str())
+        let config_str = config.get("config").and_then(|v| v.as_str());
+        if let Some(api_key) =
+            crate::codex_config::extract_codex_api_key(config.get("auth"), config_str)
         {
             request.api_key = Some(api_key.to_string());
         }
@@ -785,6 +809,56 @@ fn merge_gemini_config(
     Ok(())
 }
 
+fn merge_grokbuild_config(
+    request: &mut DeepLinkImportRequest,
+    config: &serde_json::Value,
+) -> Result<(), AppError> {
+    let config_toml = if let Some(config_toml) = config.get("config").and_then(|v| v.as_str()) {
+        config_toml.to_string()
+    } else {
+        let toml_value: toml::Value = serde_json::from_value(config.clone()).map_err(|error| {
+            AppError::InvalidInput(format!("Invalid Grok Build config: {error}"))
+        })?;
+        toml::to_string(&toml_value).map_err(|error| {
+            AppError::InvalidInput(format!("Invalid Grok Build config: {error}"))
+        })?
+    };
+    let model = crate::grok_config::extract_model_config(&config_toml).ok_or_else(|| {
+        AppError::InvalidInput("Invalid Grok Build config.toml model profile".to_string())
+    })?;
+
+    if request
+        .api_key
+        .as_ref()
+        .is_none_or(|value| value.is_empty())
+    {
+        request.api_key = model.api_key.or_else(|| {
+            crate::grok_config::extract_credentials(&config_toml).map(|(_, api_key)| api_key)
+        });
+    }
+    if request
+        .endpoint
+        .as_ref()
+        .is_none_or(|value| value.is_empty())
+    {
+        request.endpoint = Some(model.base_url);
+    }
+    if request.model.is_none() {
+        request.model = Some(model.model);
+    }
+    if request
+        .homepage
+        .as_ref()
+        .is_none_or(|value| value.is_empty())
+    {
+        if let Some(endpoint) = request.endpoint.as_deref() {
+            request.homepage = infer_homepage_from_endpoint(endpoint);
+        }
+    }
+
+    Ok(())
+}
+
 /// Merge configuration for additive mode apps (OpenClaw, OpenCode)
 ///
 /// These apps use JSON config directly, so we only extract common fields
@@ -850,7 +924,7 @@ mod tests {
             name: Some("MyHermes".to_string()),
             endpoint: Some("https://api.example.com/v1".to_string()),
             api_key: Some("sk-test".to_string()),
-            model: Some("anthropic/claude-opus-4-7".to_string()),
+            model: Some("anthropic/claude-opus-4-8".to_string()),
             ..Default::default()
         }
     }
@@ -872,7 +946,7 @@ mod tests {
         // models array with the deeplink model id
         let models = obj.get("models").unwrap().as_array().unwrap();
         assert_eq!(models.len(), 1);
-        assert_eq!(models[0]["id"], "anthropic/claude-opus-4-7");
+        assert_eq!(models[0]["id"], "anthropic/claude-opus-4-8");
     }
 
     #[test]
@@ -904,6 +978,47 @@ mod tests {
         assert!(obj.get("api_key").is_none());
         assert!(obj.get("models").is_none());
         assert_eq!(obj.get("api_mode").unwrap(), "chat_completions");
+    }
+
+    #[test]
+    fn build_codex_settings_uses_custom_key_and_preserves_display_name() {
+        let request = DeepLinkImportRequest {
+            resource: "provider".to_string(),
+            app: Some("codex".to_string()),
+            name: Some("My \"Relay\"".to_string()),
+            endpoint: Some("https://api.example.com/v1/".to_string()),
+            api_key: Some("sk-test".to_string()),
+            model: Some("gpt-5-codex".to_string()),
+            ..Default::default()
+        };
+
+        let settings = build_codex_settings(&request);
+        let config_text = settings
+            .get("config")
+            .and_then(|value| value.as_str())
+            .expect("config text");
+        let parsed: toml::Value = toml::from_str(config_text).expect("valid Codex config");
+
+        assert_eq!(
+            parsed
+                .get("model_provider")
+                .and_then(|value| value.as_str()),
+            Some("custom")
+        );
+        let custom_provider = parsed
+            .get("model_providers")
+            .and_then(|value| value.get("custom"))
+            .expect("custom model provider");
+        assert_eq!(
+            custom_provider.get("name").and_then(|value| value.as_str()),
+            Some("My \"Relay\"")
+        );
+        assert_eq!(
+            custom_provider
+                .get("base_url")
+                .and_then(|value| value.as_str()),
+            Some("https://api.example.com/v1")
+        );
     }
 
     #[test]

@@ -54,11 +54,13 @@ pub fn append_proxy_request_line(line: String) {
 
     // 确保目录存在
     let _ = std::fs::create_dir_all(&log_dir);
+    let _ = crate::panic_hook::ensure_private_dir(&log_dir);
 
     let today = get_today_str();
     let log_path = log_dir.join(format!("proxy-{}.log", today));
 
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
+        let _ = crate::panic_hook::ensure_private_file(&log_path);
         let timestamp = chrono::Local::now().format("%H:%M:%S");
         let _ = writeln!(file, "[{}] {}", timestamp, line);
     }
@@ -108,7 +110,7 @@ pub fn format_proxy_request_line(
 
     // error — 增强显示
     if let Some(err) = error_message {
-        let enhanced = classify_error(err);
+        let enhanced = classify_error(&crate::redact_sensitive_text_for_storage(err));
         line.push_str(&format!(" | ERR: {}", enhanced));
     }
 

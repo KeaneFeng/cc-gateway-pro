@@ -155,7 +155,9 @@ describe("SettingsPage integration", () => {
     const appInput = await screen.findByPlaceholderText(
       "settings.browsePlaceholderApp",
     );
-    expect((appInput as HTMLInputElement).value).toBe("/home/mock/.cc-gateway-pro");
+    expect((appInput as HTMLInputElement).value).toBe(
+      "/home/mock/.cc-gateway-pro",
+    );
   });
 
   it("imports configuration and triggers success callback", async () => {
@@ -234,7 +236,9 @@ describe("SettingsPage integration", () => {
     );
 
     fireEvent.click(resetButtons[0]);
-    await waitFor(() => expect(appInput.value).toBe("/home/mock/.cc-gateway-pro"));
+    await waitFor(() =>
+      expect(appInput.value).toBe("/home/mock/.cc-gateway-pro"),
+    );
 
     const claudeInput = (await screen.findByPlaceholderText(
       "settings.browsePlaceholderClaude",

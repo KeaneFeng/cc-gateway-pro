@@ -9,9 +9,13 @@
 //! a direct (non-proxied) CLI request.
 
 use super::{
-    failover_switch::FailoverSwitchManager, handlers, log_codes::srv as log_srv,
-    provider_router::ProviderRouter, providers::gemini_shadow::GeminiShadowStore,
-    session_project_router::SessionProjectRouter, types::*, ProxyError,
+    failover_switch::FailoverSwitchManager,
+    handlers,
+    log_codes::srv as log_srv,
+    provider_router::ProviderRouter,
+    providers::{codex_chat_history::CodexChatHistoryStore, gemini_shadow::GeminiShadowStore},
+    types::*,
+    ProxyError,
 };
 use crate::database::Database;
 use axum::{
@@ -38,16 +42,16 @@ pub struct ProxyState {
     pub provider_router: Arc<ProviderRouter>,
     /// Gemini Native shadow state，用于 thoughtSignature / tool call 回放
     pub gemini_shadow: Arc<GeminiShadowStore>,
+    /// Codex Chat bridge history，用于恢复 previous_response_id 指向的 tool call
+    pub codex_chat_history: Arc<CodexChatHistoryStore>,
+    /// Fork-only Claude session-to-project provider router.
+    pub session_project_router: Arc<super::session_project_router::SessionProjectRouter>,
+    /// Fork-only Codex session-to-project provider router.
+    pub codex_session_project_router: Arc<crate::proxy::project_router::ProjectRouter>,
     /// AppHandle，用于发射事件和更新托盘菜单
     pub app_handle: Option<tauri::AppHandle>,
     /// 故障转移切换管理器
     pub failover_manager: Arc<FailoverSwitchManager>,
-    /// Codex Chat History Store (Chat↔Responses bridge history)
-    pub codex_chat_history: Arc<super::providers::codex_chat_history::CodexChatHistoryStore>,
-    /// CC-Gateway-Pro: Session → Project 路由器 (Claude)
-    pub session_project_router: Arc<SessionProjectRouter>,
-    /// CC-Gateway-Pro: Session → Project 路由器 (Codex)
-    pub codex_session_project_router: Arc<crate::proxy::project_router::ProjectRouter>,
 }
 
 /// 代理HTTP服务器
@@ -69,12 +73,10 @@ impl ProxyServer {
         let provider_router = Arc::new(ProviderRouter::new(db.clone()));
         // 创建故障转移切换管理器
         let failover_manager = Arc::new(FailoverSwitchManager::new(db.clone()));
-
-        let session_project_router = Arc::new(SessionProjectRouter::new(db.clone()));
-        // Scan ~/.claude/projects/ to build session → project mapping
+        let session_project_router = Arc::new(
+            super::session_project_router::SessionProjectRouter::new(db.clone()),
+        );
         session_project_router.scan_projects();
-
-        // 创建 Codex 项目路由器
         let codex_session_project_router = Arc::new(
             crate::proxy::project_router::ProjectRouter::new_codex(db.clone()),
         );
@@ -88,13 +90,11 @@ impl ProxyServer {
             current_providers: Arc::new(RwLock::new(std::collections::HashMap::new())),
             provider_router,
             gemini_shadow: Arc::new(GeminiShadowStore::default()),
-            codex_chat_history: Arc::new(
-                super::providers::codex_chat_history::CodexChatHistoryStore::default(),
-            ),
-            app_handle,
-            failover_manager,
+            codex_chat_history: Arc::new(CodexChatHistoryStore::default()),
             session_project_router,
             codex_session_project_router,
+            app_handle,
+            failover_manager,
         };
 
         Self {
@@ -341,6 +341,12 @@ impl ProxyServer {
             .route("/v1/responses", post(handlers::handle_responses))
             .route("/v1/v1/responses", post(handlers::handle_responses))
             .route("/codex/v1/responses", post(handlers::handle_responses))
+            // Grok Build uses the Responses protocol but has an independent
+            // provider namespace and failover queue.
+            .route(
+                "/grokbuild/v1/responses",
+                post(handlers::handle_grokbuild_responses),
+            )
             // OpenAI Responses Compact API (Codex CLI 远程压缩，透传)
             .route(
                 "/responses/compact",
@@ -357,6 +363,10 @@ impl ProxyServer {
             .route(
                 "/codex/v1/responses/compact",
                 post(handlers::handle_responses_compact),
+            )
+            .route(
+                "/grokbuild/v1/responses/compact",
+                post(handlers::handle_grokbuild_responses_compact),
             )
             // Gemini API (支持带前缀和不带前缀)
             //

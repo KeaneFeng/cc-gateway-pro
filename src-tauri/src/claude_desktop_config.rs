@@ -46,7 +46,7 @@ pub struct ClaudeDesktopDefaultRoute {
 
 pub const DEFAULT_PROXY_ROUTES: &[ClaudeDesktopDefaultRoute] = &[
     ClaudeDesktopDefaultRoute {
-        route_id: "claude-sonnet-4-6",
+        route_id: "claude-sonnet-5",
         env_key: "ANTHROPIC_DEFAULT_SONNET_MODEL",
         supports_1m: true,
     },
@@ -58,6 +58,16 @@ pub const DEFAULT_PROXY_ROUTES: &[ClaudeDesktopDefaultRoute] = &[
     ClaudeDesktopDefaultRoute {
         route_id: "claude-haiku-4-5",
         env_key: "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+        supports_1m: true,
+    },
+    // fable 置于末尾：next_catalog_safe_route_id 给非安全品牌 route 借用合法
+    // 角色名时仍按 sonnet→opus→haiku 顺序分配（向后兼容既有 catalog），不会把
+    // 无关品牌模型借用成 fable 顶配档名。UI 行序由前端 ROLE_ORDER 独立控制为
+    // Sonnet/Opus/Fable/Haiku（所有 proxy 路径都经 normalizeProxyRows 重排），
+    // 与此处物理顺序无关。
+    ClaudeDesktopDefaultRoute {
+        route_id: "claude-fable-5",
+        env_key: "ANTHROPIC_DEFAULT_FABLE_MODEL",
         supports_1m: true,
     },
 ];
@@ -238,11 +248,16 @@ pub fn is_claude_safe_model_id(model: &str) -> bool {
 
     // 角色前缀后必须还有实际模型标识，拒绝 claude-sonnet- 这类退化值
     // （否则会写入 profile 并触发 Claude Desktop fail-all 拒收整组）。
-    ["sonnet-", "opus-", "haiku-"].iter().any(|prefix| {
-        route_tail
-            .strip_prefix(prefix)
-            .is_some_and(|rest| !rest.is_empty())
-    })
+    // Claude Desktop 1.12603.1+ 的 fail-all validator 角色白名单已纳入 fable
+    // （app.asar 内 ["sonnet","opus","haiku","fable","mythos"]），故 claude-fable-*
+    // 可安全写入 profile。mythos 官方未公开发布，暂不暴露给用户。
+    ["sonnet-", "opus-", "haiku-", "fable-"]
+        .iter()
+        .any(|prefix| {
+            route_tail
+                .strip_prefix(prefix)
+                .is_some_and(|rest| !rest.is_empty())
+        })
 }
 
 fn inference_model_json(spec: &InferenceModelSpec) -> Value {
@@ -356,7 +371,7 @@ pub fn validate_direct_provider(provider: &Provider) -> Result<(), AppError> {
 
         if matches!(
             meta.provider_type.as_deref(),
-            Some("github_copilot") | Some("codex_oauth")
+            Some("github_copilot") | Some("codex_oauth") | Some("xai_oauth")
         ) {
             return Err(AppError::localized(
                 "claude_desktop.provider.type_unsupported",
@@ -461,7 +476,12 @@ fn is_managed_oauth_proxy_provider(provider: &Provider) -> bool {
         .meta
         .as_ref()
         .and_then(|meta| meta.provider_type.as_deref())
-        .is_some_and(|provider_type| matches!(provider_type, "github_copilot" | "codex_oauth"))
+        .is_some_and(|provider_type| {
+            matches!(
+                provider_type,
+                "github_copilot" | "codex_oauth" | "xai_oauth"
+            )
+        })
 }
 
 pub fn validate_provider(provider: &Provider) -> Result<(), AppError> {
@@ -664,11 +684,11 @@ pub fn model_list_response(provider: &Provider) -> Result<Value, AppError> {
 }
 
 pub fn map_proxy_request_model(mut body: Value, provider: &Provider) -> Result<Value, AppError> {
-    let requested = body
+    let requested_raw = body
         .get("model")
         .and_then(Value::as_str)
         .map(str::trim)
-        .map(|s| crate::proxy::model_mapper::strip_one_m_suffix_for_upstream(s).to_string())
+        .map(str::to_string)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
             AppError::localized(
@@ -677,6 +697,7 @@ pub fn map_proxy_request_model(mut body: Value, provider: &Provider) -> Result<V
                 "Claude Desktop request is missing the model field",
             )
         })?;
+    let requested = strip_one_m_suffix_for_route_lookup(&requested_raw);
 
     let routes = proxy_model_routes(provider)?;
     let upstream_model = routes
@@ -685,30 +706,43 @@ pub fn map_proxy_request_model(mut body: Value, provider: &Provider) -> Result<V
         .or_else(|| {
             routes
                 .iter()
-                .find(|r| is_compatible_opus_route_alias(&r.route_id, &requested))
+                .find(|r| is_compatible_opus_route_alias(&r.route_id, requested))
         })
         .map(|route| route.upstream_model.clone())
-        .or_else(|| legacy_raw_route_upstream_model(provider, &requested))
+        .or_else(|| legacy_raw_route_upstream_model(provider, requested))
         .or_else(|| {
             // 角色关键词回落:Claude Desktop 的部分调用(如子 agent)会请求带发布
             // 日期后缀的完整官方名(claude-haiku-4-5-20251001),与 manifest 暴露的
-            // 简短 route_id(claude-haiku-4-5)不精确相等。按 opus/haiku/sonnet 归类
-            // 到同档已配置路由,对齐 Claude Code model_mapper 的宽松匹配。
-            // 仅对 Claude Desktop 认可的安全模型名回落(排除 [1m] 标记等非法形式)。
-            if !is_claude_safe_model_id(&requested) {
+            // 简短 route_id(claude-haiku-4-5)不精确相等。按 opus/haiku/fable/sonnet
+            // 归类到同档已配置路由,对齐 Claude Code model_mapper 的宽松匹配。
+            // 匹配前已剥离本地 [1m] 标记；这里仍只对 Claude Desktop 认可的
+            // 安全模型名回落，避免非 Claude route 被误映射。
+            if !is_claude_safe_model_id(requested) {
                 return None;
             }
-            let role = claude_role_keyword(&requested)?;
+            let role = claude_role_keyword(requested)?;
             routes
                 .iter()
                 .find(|route| claude_role_keyword(&route.route_id) == Some(role))
+                // 老用户只配了 Sonnet/Opus/Haiku 三档时，fable 请求降级到 opus 档，
+                // 与官方安全分类器的降级方向一致，避免 route_unknown 硬错误。
+                // 用户一旦显式配置 fable 档，上面的精确角色匹配会优先命中。
+                .or_else(|| {
+                    (role == "fable")
+                        .then(|| {
+                            routes
+                                .iter()
+                                .find(|route| claude_role_keyword(&route.route_id) == Some("opus"))
+                        })
+                        .flatten()
+                })
                 .map(|route| route.upstream_model.clone())
         })
         .ok_or_else(|| {
             AppError::localized(
                 "claude_desktop.provider.route_unknown",
-                format!("Claude Desktop 模型路由未配置: {requested}"),
-                format!("Claude Desktop model route is not configured: {requested}"),
+                format!("Claude Desktop 模型路由未配置: {requested_raw}"),
+                format!("Claude Desktop model route is not configured: {requested_raw}"),
             )
         })?;
 
@@ -717,6 +751,18 @@ pub fn map_proxy_request_model(mut body: Value, provider: &Provider) -> Result<V
         normalize_mimo_anthropic_thinking_history(&mut body);
     }
     Ok(body)
+}
+
+fn strip_one_m_suffix_for_route_lookup(model: &str) -> &str {
+    let trimmed = model.trim();
+    let marker = ONE_M_CONTEXT_MARKER.as_bytes();
+    let bytes = trimmed.as_bytes();
+    if bytes.len() >= marker.len()
+        && bytes[bytes.len() - marker.len()..].eq_ignore_ascii_case(marker)
+    {
+        return trimmed[..trimmed.len() - marker.len()].trim_end();
+    }
+    trimmed
 }
 
 fn legacy_raw_route_upstream_model(provider: &Provider, requested: &str) -> Option<String> {
@@ -740,15 +786,17 @@ fn is_compatible_opus_route_alias(route_id: &str, requested: &str) -> bool {
     )
 }
 
-/// 按角色关键词(opus / haiku / sonnet)归类一个 Claude 模型名/route_id。
+/// 按角色关键词(opus / haiku / fable / sonnet)归类一个 Claude 模型名/route_id。
 /// 仅在命中明确角色词时返回 Some,未知模型返回 None(不回落,保持精确报错语义)。
-/// 与前端 `routeRoleFromId` 同序(opus → haiku → sonnet)。
+/// 与前端 `routeRoleFromId` 同序(opus → haiku → fable → sonnet)。
 fn claude_role_keyword(model: &str) -> Option<&'static str> {
     let normalized = model.to_ascii_lowercase();
     if normalized.contains("opus") {
         Some("opus")
     } else if normalized.contains("haiku") {
         Some("haiku")
+    } else if normalized.contains("fable") {
+        Some("fable")
     } else if normalized.contains("sonnet") {
         Some("sonnet")
     } else {
@@ -965,7 +1013,7 @@ fn apply_provider_to_paths_inner(
 fn restore_official_at_paths_inner(paths: &ClaudeDesktopPaths) -> Result<(), AppError> {
     write_deployment_mode(&paths.normal_config_path, "1p")?;
     write_deployment_mode(&paths.threep_config_path, "1p")?;
-    remove_cc_gateway_pro_enterprise_config(&paths.threep_config_path)?;
+    remove_cc_switch_enterprise_config(&paths.threep_config_path)?;
 
     if paths.profile_path.exists() {
         delete_file(&paths.profile_path)?;
@@ -1064,7 +1112,7 @@ fn write_deployment_mode(path: &Path, mode: &str) -> Result<(), AppError> {
     write_json_file(path, &value)
 }
 
-fn remove_cc_gateway_pro_enterprise_config(path: &Path) -> Result<(), AppError> {
+fn remove_cc_switch_enterprise_config(path: &Path) -> Result<(), AppError> {
     if !path.exists() {
         return Ok(());
     }
@@ -1540,6 +1588,7 @@ mod tests {
         for (provider_type, api_format) in [
             ("github_copilot", "openai_chat"),
             ("codex_oauth", "openai_responses"),
+            ("xai_oauth", "openai_responses"),
         ] {
             let provider = oauth_proxy_provider(provider_type, provider_type, api_format);
             validate_proxy_provider(&provider).expect("oauth proxy provider should validate");
@@ -1636,6 +1685,127 @@ mod tests {
         let err = map_proxy_request_model(json!({"model": "gpt-5"}), &provider)
             .expect_err("model without a role keyword should still fail");
         assert!(err.to_string().contains("gpt-5"));
+    }
+
+    #[test]
+    fn claude_desktop_proxy_maps_fable_to_opus_tier() {
+        // issue #4026/#4049：老用户只配 Sonnet/Opus/Haiku 三档、未显式配置
+        // fable 档时，fable 请求按官方分类器降级方向回落到 opus 档兜底。
+        let mut provider = proxy_provider("proxy");
+        provider
+            .meta
+            .as_mut()
+            .expect("meta")
+            .claude_desktop_model_routes = std::collections::HashMap::from([
+            (
+                "claude-opus-4-8".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-opus".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+            (
+                "claude-sonnet-4-6".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-sonnet".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+        ]);
+
+        let mapped = map_proxy_request_model(
+            json!({"model": "claude-fable-5", "messages": []}),
+            &provider,
+        )
+        .expect("fable should fall back to the opus tier");
+        assert_eq!(mapped["model"], json!("upstream-opus"));
+
+        // 带 [1m] 标记与日期后缀的形态也应命中同一回落。
+        let mapped_one_m = map_proxy_request_model(
+            json!({"model": "claude-fable-5[1m]", "messages": []}),
+            &provider,
+        )
+        .expect("fable with [1m] marker should fall back to the opus tier");
+        assert_eq!(mapped_one_m["model"], json!("upstream-opus"));
+
+        let mapped_dated = map_proxy_request_model(
+            json!({"model": "claude-fable-5-20260609", "messages": []}),
+            &provider,
+        )
+        .expect("dated fable alias should fall back to the opus tier");
+        assert_eq!(mapped_dated["model"], json!("upstream-opus"));
+    }
+
+    #[test]
+    fn claude_desktop_proxy_fable_without_opus_route_still_errors() {
+        // 没有 opus 档可回落时保持精确报错语义，不静默落到其他档。
+        let mut provider = proxy_provider("proxy");
+        provider
+            .meta
+            .as_mut()
+            .expect("meta")
+            .claude_desktop_model_routes = std::collections::HashMap::from([(
+            "claude-sonnet-4-6".to_string(),
+            ClaudeDesktopModelRoute {
+                model: "upstream-sonnet".to_string(),
+                label_override: None,
+                supports_1m: Some(true),
+            },
+        )]);
+
+        let err = map_proxy_request_model(
+            json!({"model": "claude-fable-5", "messages": []}),
+            &provider,
+        )
+        .expect_err("fable without an opus route should fail");
+        assert!(err.to_string().contains("claude-fable-5"));
+    }
+
+    #[test]
+    fn claude_desktop_proxy_maps_fable_to_dedicated_route() {
+        // Desktop 1.12603.1+ fail-all 校验已放行 claude-fable-5，用户可显式配置
+        // 独立 fable 档；此时 fable 请求精确命中 fable 档，不再降级到 opus。
+        let mut provider = proxy_provider("proxy");
+        provider
+            .meta
+            .as_mut()
+            .expect("meta")
+            .claude_desktop_model_routes = std::collections::HashMap::from([
+            (
+                "claude-opus-4-8".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-opus".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+            (
+                "claude-fable-5".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-fable".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+        ]);
+
+        // 精确匹配优先命中 fable 档
+        let mapped = map_proxy_request_model(
+            json!({"model": "claude-fable-5", "messages": []}),
+            &provider,
+        )
+        .expect("explicit fable route should match");
+        assert_eq!(mapped["model"], json!("upstream-fable"));
+
+        // 带日期后缀经角色关键词回落仍归 fable 档，而非降级 opus
+        let mapped_dated = map_proxy_request_model(
+            json!({"model": "claude-fable-5-20260609", "messages": []}),
+            &provider,
+        )
+        .expect("dated fable alias should map via fable role keyword");
+        assert_eq!(mapped_dated["model"], json!("upstream-fable"));
     }
 
     #[test]
@@ -1802,9 +1972,9 @@ mod tests {
                     },
                 ),
                 (
-                    "claude-sonnet-4-6".to_string(),
+                    "claude-sonnet-5".to_string(),
                     ClaudeDesktopModelRoute {
-                        model: "claude-sonnet-4-6".to_string(),
+                        model: "claude-sonnet-5".to_string(),
                         label_override: None,
                         supports_1m: Some(false),
                     },
@@ -1846,15 +2016,48 @@ mod tests {
     }
 
     #[test]
-    fn claude_desktop_strips_1m_suffix_before_route_lookup() {
-        let provider = proxy_provider("proxy");
+    fn claude_desktop_proxy_strips_1m_suffix_before_route_lookup() {
+        let mut provider = proxy_provider("proxy");
+        provider
+            .meta
+            .as_mut()
+            .expect("meta")
+            .claude_desktop_model_routes = std::collections::HashMap::from([
+            (
+                "claude-sonnet-4-6".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-sonnet".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+            (
+                "claude-opus-4-8".to_string(),
+                ClaudeDesktopModelRoute {
+                    model: "upstream-opus".to_string(),
+                    label_override: None,
+                    supports_1m: Some(true),
+                },
+            ),
+        ]);
 
-        let result = map_proxy_request_model(
+        let mapped = map_proxy_request_model(
+            json!({"model": "claude-opus-4-8[1m]", "messages": []}),
+            &provider,
+        )
+        .expect("compact 1M suffix should map to Opus route");
+        assert_eq!(mapped["model"], json!("upstream-opus"));
+
+        let mapped = map_proxy_request_model(
             json!({"model": "claude-sonnet-4-6 [1M]", "messages": []}),
             &provider,
         )
-        .expect("1M suffix should be stripped before route lookup");
-        assert_eq!(result["model"], "kimi-k2");
+        .expect("spaced uppercase 1M suffix should map to Sonnet route");
+        assert_eq!(mapped["model"], json!("upstream-sonnet"));
+
+        let err = map_proxy_request_model(json!({"model": "gpt-5[1m]", "messages": []}), &provider)
+            .expect_err("non-Claude route should still fail after stripping 1M suffix");
+        assert!(err.to_string().contains("gpt-5[1m]"));
     }
 
     #[test]
@@ -1923,7 +2126,7 @@ mod tests {
     }
 
     #[test]
-    fn claude_desktop_restore_switches_to_1p_and_removes_cc_gateway_pro_profile() {
+    fn claude_desktop_restore_switches_to_1p_and_removes_cc_switch_profile() {
         let temp = TempDir::new().expect("tempdir");
         let paths = test_paths(temp.path());
         let provider = direct_provider("direct");

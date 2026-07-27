@@ -6,3 +6,7 @@ allowBuilds:
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
+  - esbuild
+
+ignoredBuiltDependencies:
+  - msw

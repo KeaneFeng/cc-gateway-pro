@@ -60,6 +60,7 @@ import {
   DRAG_REGION_STYLE,
 } from "@/lib/platform";
 import { AppSwitcher } from "@/components/AppSwitcher";
+import { ProfileSwitcher } from "@/components/profiles/ProfileSwitcher";
 import { ProviderList } from "@/components/providers/ProviderList";
 import { AddProviderDialog } from "@/components/providers/AddProviderDialog";
 import { EditProviderDialog } from "@/components/providers/EditProviderDialog";
@@ -133,6 +134,7 @@ const VALID_APPS: AppId[] = [
   "claude-desktop",
   "codex",
   "gemini",
+  "grokbuild",
   "opencode",
   "openclaw",
   "hermes",
@@ -202,6 +204,7 @@ function App() {
     "claude-desktop": true,
     codex: true,
     gemini: true,
+    grokbuild: true,
     opencode: true,
     openclaw: true,
     hermes: true,
@@ -224,6 +227,7 @@ function App() {
     if (visibleApps["claude-desktop"]) return "claude-desktop";
     if (visibleApps.codex) return "codex";
     if (visibleApps.gemini) return "gemini";
+    if (visibleApps.grokbuild) return "grokbuild";
     if (visibleApps.opencode) return "opencode";
     if (visibleApps.openclaw) return "openclaw";
     if (visibleApps.hermes) return "hermes";
@@ -243,6 +247,7 @@ function App() {
       (currentView === "sessions" || currentView === "sessionTraces") &&
       sharedFeatureApp !== "claude" &&
       sharedFeatureApp !== "codex" &&
+      sharedFeatureApp !== "grokbuild" &&
       sharedFeatureApp !== "opencode" &&
       sharedFeatureApp !== "openclaw" &&
       sharedFeatureApp !== "gemini" &&
@@ -349,6 +354,7 @@ function App() {
   const hasSessionSupport =
     sharedFeatureApp === "claude" ||
     sharedFeatureApp === "codex" ||
+    sharedFeatureApp === "grokbuild" ||
     sharedFeatureApp === "opencode" ||
     sharedFeatureApp === "openclaw" ||
     sharedFeatureApp === "gemini" ||
@@ -441,8 +447,20 @@ function App() {
     }
   });
 
-  // Listen for webdav-sync-status-updated: refresh settings and show auto-sync error toast
-  useTauriEvent<WebDavSyncStatusUpdatedPayload>(
+  // 应用项目后刷新相关缓存（providers 由既有 provider-switched 监听承接；
+  // proxy 状态由后端直接改 DB，不走 mutation，必须显式刷新）
+  useTauriEvent("profile-applied", async () => {
+    await queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    await queryClient.invalidateQueries({ queryKey: ["mcp", "all"] });
+    await queryClient.invalidateQueries({ queryKey: ["skills"] });
+    await queryClient.invalidateQueries({ queryKey: ["proxyTakeoverStatus"] });
+    await queryClient.invalidateQueries({ queryKey: ["proxyStatus"] });
+    await queryClient.invalidateQueries({
+      queryKey: ["providers", "claude-desktop"],
+    });
+  });
+
+  useTauriEvent<WebDavSyncStatusUpdatedPayload | null | undefined>(
     "webdav-sync-status-updated",
     async (payload) => {
       const p = payload ?? ({} as WebDavSyncStatusUpdatedPayload);
@@ -1308,6 +1326,15 @@ function App() {
                     )}
                 </div>
               )}
+            {currentView === "providers" &&
+              (settingsData?.showProfileSwitcher ?? true) && (
+                <div
+                  className="flex shrink-0 items-center"
+                  style={{ WebkitAppRegion: "no-drag" } as any}
+                >
+                  <ProfileSwitcher activeApp={activeApp} />
+                </div>
+              )}
             <div
               ref={toolbarRef}
               className="flex flex-1 min-w-0 overflow-x-hidden items-center py-4 pr-2"
@@ -1434,7 +1461,9 @@ function App() {
                               ? "openclaw"
                               : activeApp === "hermes"
                                 ? "hermes"
-                                : "default"
+                                : activeApp === "grokbuild"
+                                  ? "grokbuild"
+                                  : "default"
                           }
                           className="flex items-center gap-1"
                           initial={{ opacity: 0 }}

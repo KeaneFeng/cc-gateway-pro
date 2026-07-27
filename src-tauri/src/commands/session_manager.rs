@@ -15,14 +15,11 @@ pub async fn list_sessions_for_project(
     app: String,
     projectPath: String,
 ) -> Result<Vec<session_manager::SessionMeta>, String> {
-    let project_path = projectPath.clone();
-    let app_type = app.clone();
-    let sessions = tauri::async_runtime::spawn_blocking(move || {
-        session_manager::scan_sessions_for_project(&app_type, &project_path)
+    tauri::async_runtime::spawn_blocking(move || {
+        session_manager::scan_sessions_for_project(&app, &projectPath)
     })
     .await
-    .map_err(|e| format!("Failed to scan sessions for project: {e}"))?;
-    Ok(sessions)
+    .map_err(|e| format!("Failed to scan sessions for project: {e}"))
 }
 
 #[tauri::command]

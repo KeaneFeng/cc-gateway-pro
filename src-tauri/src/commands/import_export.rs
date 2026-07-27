@@ -176,13 +176,13 @@ pub fn delete_db_backup(filename: String) -> Result<(), String> {
     Database::delete_backup(&filename).map_err(|e| e.to_string())
 }
 
-/// 从 cc-switch 同步供应商到 cc-gateway-pro
+/// 从原版 cc-switch 的只读数据库同步供应商到 CC Gateway Pro。
 #[tauri::command]
 pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, String> {
     let db = state.db.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        // 获取 cc-switch 数据库路径（旧版应用）
-        let home = dirs::home_dir().ok_or_else(|| AppError::Config("无法获取用户主目录".to_string()))?;
+        let home =
+            dirs::home_dir().ok_or_else(|| AppError::Config("无法获取用户主目录".to_string()))?;
         let legacy_db_path = home.join(".cc-switch").join("cc-switch.db");
 
         if !legacy_db_path.exists() {
@@ -192,68 +192,78 @@ pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, St
             )));
         }
 
-        // 打开 cc-switch 数据库（只读）
         let src_conn = rusqlite::Connection::open_with_flags(
             &legacy_db_path,
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
-        .map_err(|e| AppError::Database(format!("无法打开 cc-switch 数据库: {e}")))?;
+        .map_err(|e| AppError::Database(format!("无法只读打开 cc-switch 数据库: {e}")))?;
 
-        // 查询 cc-switch 中所有供应商（涵盖 claude/codex/gemini/opencode/hermes 等）
-        // 注：claude-desktop 不通过该路径同步（其配置走独立的 3P profile 流程）
+        // Claude Desktop 使用独立 3P profile 流程，不从 providers 表直接覆盖。
         let mut stmt = src_conn
             .prepare(
-                "SELECT id, app_type, name, settings_config, website_url, category, created_at, sort_index, notes, icon, icon_color, meta
+                "SELECT id, app_type, name, settings_config, website_url, category,
+                        created_at, sort_index, notes, icon, icon_color, meta
                  FROM providers
-                 WHERE app_type IN ('claude', 'codex', 'gemini', 'opencode', 'hermes')"
+                 WHERE app_type IN (
+                    'claude', 'codex', 'gemini', 'grokbuild',
+                    'opencode', 'openclaw', 'hermes'
+                 )",
             )
             .map_err(|e| AppError::Database(format!("查询 cc-switch 供应商失败: {e}")))?;
 
         let rows = stmt
             .query_map([], |row| {
                 Ok((
-                    row.get::<_, String>(0)?,          // id
-                    row.get::<_, String>(1)?,          // app_type
-                    row.get::<_, String>(2)?,          // name
-                    row.get::<_, String>(3)?,          // settings_config
-                    row.get::<_, Option<String>>(4)?,  // website_url
-                    row.get::<_, Option<String>>(5)?,  // category
-                    row.get::<_, Option<i64>>(6)?,     // created_at
-                    row.get::<_, Option<usize>>(7)?,   // sort_index
-                    row.get::<_, Option<String>>(8)?,  // notes
-                    row.get::<_, Option<String>>(9)?,  // icon
-                    row.get::<_, Option<String>>(10)?, // icon_color
-                    row.get::<_, Option<String>>(11)?, // meta
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
+                    row.get::<_, Option<i64>>(6)?,
+                    row.get::<_, Option<usize>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
+                    row.get::<_, Option<String>>(9)?,
+                    row.get::<_, Option<String>>(10)?,
+                    row.get::<_, Option<String>>(11)?,
                 ))
             })
             .map_err(|e| AppError::Database(format!("读取 cc-switch 供应商失败: {e}")))?;
 
         let mut synced_count = 0usize;
         let mut error_count = 0usize;
-        let mut per_app: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        let mut per_app = std::collections::BTreeMap::<String, usize>::new();
 
         for row in rows {
             match row {
-                Ok((id, app_type, name, settings_config_str, website_url, category, created_at, sort_index, notes, icon, icon_color, meta_str)) => {
-                    let settings_config: Value = serde_json::from_str(&settings_config_str)
-                        .unwrap_or(Value::Null);
-
-                    // 解析 meta，若 cc-switch 有 meta 字段则使用，否则用默认值
-                    let mut meta = meta_str
+                Ok((
+                    id,
+                    app_type,
+                    name,
+                    settings_config,
+                    website_url,
+                    category,
+                    created_at,
+                    sort_index,
+                    notes,
+                    icon,
+                    icon_color,
+                    meta,
+                )) => {
+                    let settings_config =
+                        serde_json::from_str(&settings_config).unwrap_or(Value::Null);
+                    let mut meta = meta
                         .as_deref()
-                        .and_then(|s| serde_json::from_str::<crate::provider::ProviderMeta>(s).ok())
+                        .and_then(|raw| {
+                            serde_json::from_str::<crate::provider::ProviderMeta>(raw).ok()
+                        })
                         .unwrap_or_default();
-
-                    // 清空 custom_endpoints，避免跨应用数据污染
+                    // 自定义端点属于目标应用的本机状态，不能跨库照搬。
                     meta.custom_endpoints.clear();
-
-                    // category：尊重源数据原值；仅当 claude 且为空时回填默认 "pro"
-                    // （为保持 fork 历史行为；其他 app_type 不应被强制改写）
                     let category = match (app_type.as_str(), category) {
                         ("claude", None) => Some("pro".to_string()),
-                        (_, c) => c,
+                        (_, category) => category,
                     };
-
                     let provider = Provider {
                         id: id.clone(),
                         name,
@@ -272,16 +282,18 @@ pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, St
                     match db.save_provider(&app_type, &provider) {
                         Ok(()) => {
                             synced_count += 1;
-                            *per_app.entry(app_type).or_insert(0) += 1;
+                            *per_app.entry(app_type).or_default() += 1;
                         }
-                        Err(e) => {
-                            log::warn!("[SyncFromCcSwitch] 保存供应商 {app_type}/{id} 失败: {e}");
+                        Err(error) => {
+                            log::warn!(
+                                "[SyncFromCcSwitch] 保存供应商 {app_type}/{id} 失败: {error}"
+                            );
                             error_count += 1;
                         }
                     }
                 }
-                Err(e) => {
-                    log::warn!("[SyncFromCcSwitch] 读取行失败: {e}");
+                Err(error) => {
+                    log::warn!("[SyncFromCcSwitch] 读取行失败: {error}");
                     error_count += 1;
                 }
             }
@@ -289,25 +301,23 @@ pub async fn sync_from_cc_switch(state: State<'_, AppState>) -> Result<Value, St
 
         let detail = per_app
             .iter()
-            .map(|(app, n)| format!("{app}={n}"))
+            .map(|(app, count)| format!("{app}={count}"))
             .collect::<Vec<_>>()
             .join(", ");
-        log::info!(
-            "[SyncFromCcSwitch] 同步完成: 成功 {synced_count} 个 ({detail}), 失败 {error_count} 个"
-        );
-        let by_app: serde_json::Map<String, Value> = per_app
+        let by_app = per_app
             .into_iter()
-            .map(|(k, v)| (k, Value::from(v)))
-            .collect();
+            .map(|(app, count)| (app, Value::from(count)))
+            .collect::<serde_json::Map<_, _>>();
+
         Ok::<_, AppError>(json!({
             "success": true,
             "syncedCount": synced_count,
             "errorCount": error_count,
             "byApp": by_app,
             "message": if detail.is_empty() {
-                format!("同步完成: {} 个供应商已导入", synced_count)
+                format!("同步完成: {synced_count} 个供应商已导入")
             } else {
-                format!("同步完成: {} 个供应商已导入 ({})", synced_count, detail)
+                format!("同步完成: {synced_count} 个供应商已导入 ({detail})")
             }
         }))
     })

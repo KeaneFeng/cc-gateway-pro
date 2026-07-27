@@ -9,7 +9,7 @@ use super::{AuthInfo, AuthStrategy, ProviderAdapter};
 use crate::provider::{CodexChatReasoningConfig, Provider};
 use crate::proxy::error::ProxyError;
 use regex::Regex;
-use serde_json::{json, Value as JsonValue};
+use serde_json::Value as JsonValue;
 use std::collections::HashSet;
 use std::sync::LazyLock;
 use toml::Value as TomlValue;
@@ -84,6 +84,176 @@ pub fn should_convert_codex_responses_to_chat(provider: &Provider, endpoint: &st
     ) && codex_provider_uses_chat_completions(provider)
 }
 
+/// Whether a converted Codex Responses request may send `prompt_cache_key` to
+/// its Chat Completions upstream. Unknown OpenAI-compatible gateways default to
+/// false because many reject unsupported request fields with HTTP 400.
+pub fn should_send_codex_chat_prompt_cache_key(provider: &Provider) -> bool {
+    match provider
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.prompt_cache_routing.as_deref())
+        .unwrap_or("auto")
+    {
+        "enabled" => return true,
+        "disabled" => return false,
+        _ => {}
+    }
+
+    let base_url = provider
+        .settings_config
+        .get("base_url")
+        .or_else(|| provider.settings_config.get("baseURL"))
+        .and_then(|value| value.as_str())
+        .map(ToString::to_string)
+        .or_else(|| {
+            provider
+                .settings_config
+                .get("config")
+                .and_then(|value| value.as_str())
+                .and_then(extract_codex_base_url_from_toml)
+        });
+
+    let Some(base_url) = base_url else {
+        return false;
+    };
+    let Ok(url) = url::Url::parse(&base_url) else {
+        return false;
+    };
+
+    match url.host_str() {
+        Some("api.openai.com") => true,
+        Some("api.kimi.com") => {
+            let path = url.path().trim_end_matches('/');
+            path == "/coding" || path.starts_with("/coding/")
+        }
+        _ => false,
+    }
+}
+
+/// Add a stable cache-routing key after Responses -> Chat conversion. An
+/// explicit client key wins; otherwise only a real client-provided session ID
+/// is eligible. Generated per-request UUIDs must never be used here.
+pub fn inject_codex_chat_prompt_cache_key(
+    provider: &Provider,
+    chat_body: &mut JsonValue,
+    explicit_key: Option<&str>,
+    client_session_id: Option<&str>,
+) -> bool {
+    if !should_send_codex_chat_prompt_cache_key(provider) {
+        return false;
+    }
+
+    let key = explicit_key
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .or_else(|| {
+            client_session_id
+                .map(str::trim)
+                .filter(|session_id| !session_id.is_empty())
+        });
+    let Some(key) = key else {
+        return false;
+    };
+
+    chat_body["prompt_cache_key"] = JsonValue::String(key.to_string());
+    true
+}
+
+/// Whether this Codex provider's real upstream speaks the native Anthropic
+/// Messages protocol (`/v1/messages`). The local Codex client always talks to CC
+/// Switch through the Responses API, so CC Switch bridges Responses ⇄ Anthropic.
+///
+/// Determined solely from explicit config (apiFormat / wire_api); no base_url
+/// guessing — Anthropic gateway addresses vary widely and guessing easily misfires.
+pub fn codex_provider_uses_anthropic(provider: &Provider) -> bool {
+    if let Some(api_format) = provider
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.api_format.as_deref())
+        .or_else(|| {
+            provider
+                .settings_config
+                .get("api_format")
+                .and_then(|v| v.as_str())
+        })
+        .or_else(|| {
+            provider
+                .settings_config
+                .get("apiFormat")
+                .and_then(|v| v.as_str())
+        })
+    {
+        return is_anthropic_wire_api(api_format);
+    }
+
+    provider
+        .settings_config
+        .get("config")
+        .and_then(|v| v.as_str())
+        .and_then(extract_codex_wire_api_from_toml)
+        .map(|wire_api| is_anthropic_wire_api(&wire_api))
+        .unwrap_or(false)
+}
+
+pub fn should_convert_codex_responses_to_anthropic(provider: &Provider, endpoint: &str) -> bool {
+    let path = endpoint
+        .split_once('?')
+        .map_or(endpoint, |(path, _query)| path);
+
+    matches!(
+        path,
+        "/responses" | "/v1/responses" | "/responses/compact" | "/v1/responses/compact"
+    ) && codex_provider_uses_anthropic(provider)
+}
+
+/// Whether a native-Responses Codex upstream needs Codex `namespace`/plugin
+/// tool declarations flattened before forwarding.
+///
+/// Codex 0.142+ emits ChatGPT-backend-private `{"type":"namespace",…}` tool
+/// shapes that strict third-party Responses gateways reject with
+/// `422 unknown variant "namespace"`. Only providers whose upstream is such a
+/// strict native gateway need the flatten+restore pass; the Chat/Anthropic
+/// transform paths already unwrap namespaces on their own. Currently that is the
+/// managed xAI (Grok) OAuth provider — the first strict gateway cc-switch hit.
+pub fn provider_needs_responses_namespace_flatten(provider: &Provider) -> bool {
+    provider.is_xai_oauth()
+}
+
+/// The single built-in official Codex provider.  Unlike managed Codex OAuth
+/// providers used by Claude, this route receives authentication from the
+/// calling Codex client (`requires_openai_auth = true`).
+pub fn is_codex_official_provider(provider: &Provider) -> bool {
+    provider.id == crate::database::CODEX_OFFICIAL_PROVIDER_ID
+        && provider.category.as_deref() == Some("official")
+}
+
+/// Resolve the model-catalog tool profile for a Codex provider using the SAME
+/// Anthropic detection as the proxy router ([`codex_provider_uses_anthropic`]), so the
+/// generated catalog never disagrees with the routed transform. A provider whose
+/// Anthropic upstream is declared only via settings `apiFormat` or TOML `wire_api`
+/// (not `meta.api_format`) would otherwise get a `ProxyChat` catalog and emit the
+/// freeform `apply_patch` tool that the Anthropic transform then silently drops.
+/// Non-Anthropic providers keep the existing `meta.api_format` classification.
+pub fn resolve_codex_catalog_tool_profile(
+    provider: &Provider,
+) -> crate::codex_config::CodexCatalogToolProfile {
+    use crate::codex_config::CodexCatalogToolProfile;
+    if is_codex_official_provider(provider) {
+        return CodexCatalogToolProfile::NativeResponses;
+    }
+    // xAI OAuth pins the native Responses profile regardless of editable
+    // api_format, mirroring the Claude-side managed-provider invariant.
+    if provider.is_xai_oauth() {
+        return CodexCatalogToolProfile::NativeResponses;
+    }
+    if codex_provider_uses_anthropic(provider) {
+        return CodexCatalogToolProfile::Anthropic;
+    }
+    CodexCatalogToolProfile::from_api_format(
+        provider.meta.as_ref().and_then(|m| m.api_format.as_deref()),
+    )
+}
+
 /// Extract the real upstream model configured for a Codex provider.
 pub fn codex_provider_upstream_model(provider: &Provider) -> Option<String> {
     provider
@@ -98,7 +268,11 @@ pub fn codex_provider_upstream_model(provider: &Provider) -> Option<String> {
                 .settings_config
                 .get("config")
                 .and_then(|v| v.as_str())
-                .and_then(extract_codex_model_from_toml)
+                .and_then(|config| {
+                    crate::grok_config::extract_model_config(config)
+                        .map(|model| model.model)
+                        .or_else(|| extract_codex_model_from_toml(config))
+                })
         })
 }
 
@@ -129,7 +303,13 @@ pub fn apply_codex_chat_upstream_model(
     if !codex_provider_uses_chat_completions(provider) {
         return None;
     }
+    apply_codex_upstream_model(provider, body)
+}
 
+/// Same model-substitution logic as `apply_codex_chat_upstream_model`, but without
+/// the chat gating check. Reused by the anthropic conversion path (the forwarder has
+/// already confirmed this provider uses anthropic).
+pub fn apply_codex_upstream_model(provider: &Provider, body: &mut JsonValue) -> Option<String> {
     let catalog_model_ids = codex_provider_catalog_model_ids(provider);
     if let Some(request_model) = body
         .get("model")
@@ -139,17 +319,6 @@ pub fn apply_codex_chat_upstream_model(
     {
         if catalog_model_ids.contains(request_model) {
             return Some(request_model.to_string());
-        }
-
-        // CC-Gateway-Pro: Vision routing 已设置 vision model，不要覆盖
-        if let Some(vision) = provider
-            .meta
-            .as_ref()
-            .and_then(|m| m.vision_model.as_deref())
-        {
-            if request_model.eq_ignore_ascii_case(vision) {
-                return Some(request_model.to_string());
-            }
         }
     }
 
@@ -356,6 +525,13 @@ fn is_chat_wire_api(value: &str) -> bool {
     )
 }
 
+fn is_anthropic_wire_api(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "anthropic" | "anthropic_messages" | "anthropic-messages" | "claude" | "messages"
+    )
+}
+
 fn is_chat_completions_url(value: &str) -> bool {
     value
         .trim_end_matches('/')
@@ -371,208 +547,6 @@ pub fn is_origin_only_url(value: &str) -> bool {
         Some((_scheme, rest)) => !rest.contains('/'),
         None => !trimmed.contains('/'),
     }
-}
-
-// ── Fork-unique: API format detection & model mapping ──
-
-/// Codex CLI 默认模型列表（用于 model availability check）
-const CODEX_DEFAULT_MODELS: &[&str] = &["gpt-5.4", "gpt-5.5", "gpt-4o", "gpt-4.1"];
-
-/// 获取 Codex provider 的 API 格式
-///
-/// 优先级：meta.apiFormat > settings_config.api_format > 默认 "openai_responses"
-pub fn get_codex_api_format(provider: &Provider) -> &'static str {
-    // 1) Preferred: meta.apiFormat
-    if let Some(meta) = provider.meta.as_ref() {
-        if let Some(api_format) = meta.api_format.as_deref() {
-            return match api_format {
-                "openai_chat" => "openai_chat",
-                "openai_responses" => "openai_responses",
-                _ => "openai_responses",
-            };
-        }
-    }
-
-    // 2) Backward compatibility: settings_config.api_format
-    if let Some(api_format) = provider
-        .settings_config
-        .get("api_format")
-        .and_then(|v| v.as_str())
-    {
-        return match api_format {
-            "openai_chat" => "openai_chat",
-            "openai_responses" => "openai_responses",
-            _ => "openai_responses",
-        };
-    }
-
-    // 3) 默认 Responses API
-    "openai_responses"
-}
-
-/// 检查 Codex API 格式是否需要转换
-pub fn codex_api_format_needs_transform(api_format: &str) -> bool {
-    api_format == "openai_chat"
-}
-
-/// Responses API → Chat Completions API 转换（简化版，用于 transform_request 路径）
-#[allow(dead_code)]
-pub fn responses_to_chat_completions(body: JsonValue) -> Result<JsonValue, ProxyError> {
-    let mut result = json!({});
-
-    if let Some(model) = body.get("model") {
-        result["model"] = model.clone();
-    }
-
-    let mut messages = Vec::new();
-    if let Some(instructions) = body.get("instructions") {
-        let system_text = if let Some(s) = instructions.as_str() {
-            s.to_string()
-        } else if let Some(arr) = instructions.as_array() {
-            arr.iter()
-                .filter_map(|item| {
-                    item.get("text")
-                        .and_then(|t| t.as_str())
-                        .map(|s| s.to_string())
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        } else {
-            String::new()
-        };
-        if !system_text.is_empty() {
-            messages.push(json!({
-                "role": "system",
-                "content": system_text
-            }));
-        }
-    }
-
-    if let Some(input) = body.get("input") {
-        if let Some(arr) = input.as_array() {
-            for item in arr {
-                if item.get("role").is_some() {
-                    messages.push(item.clone());
-                } else if let Some(type_val) = item.get("type") {
-                    match type_val.as_str() {
-                        Some("message") => {
-                            if let Some(content) = item.get("content") {
-                                let role =
-                                    item.get("role").and_then(|r| r.as_str()).unwrap_or("user");
-                                messages.push(json!({
-                                    "role": role,
-                                    "content": content
-                                }));
-                            }
-                        }
-                        _ => {
-                            messages.push(item.clone());
-                        }
-                    }
-                }
-            }
-        } else if let Some(s) = input.as_str() {
-            messages.push(json!({
-                "role": "user",
-                "content": s
-            }));
-        }
-    }
-
-    if !messages.is_empty() {
-        result["messages"] = json!(messages);
-    }
-
-    if let Some(v) = body.get("max_output_tokens") {
-        result["max_tokens"] = v.clone();
-    } else if let Some(v) = body.get("max_tokens") {
-        result["max_tokens"] = v.clone();
-    }
-
-    if let Some(tools) = body.get("tools").and_then(|t| t.as_array()) {
-        let converted_tools: Vec<JsonValue> = tools
-            .iter()
-            .map(|tool| {
-                if let Some(name) = tool.get("name").and_then(|n| n.as_str()) {
-                    json!({
-                        "type": "function",
-                        "function": {
-                            "name": name,
-                            "description": tool.get("description"),
-                            "parameters": tool.get("parameters")
-                        }
-                    })
-                } else {
-                    tool.clone()
-                }
-            })
-            .collect();
-        result["tools"] = json!(converted_tools);
-    }
-
-    for key in &[
-        "temperature",
-        "top_p",
-        "stream",
-        "tool_choice",
-        "response_format",
-        "seed",
-        "user",
-        "n",
-        "logprobs",
-        "top_logprobs",
-        "presence_penalty",
-        "frequency_penalty",
-        "logit_bias",
-        "stop",
-    ] {
-        if let Some(v) = body.get(*key) {
-            result[*key] = v.clone();
-        }
-    }
-
-    for (key, value) in body.as_object().unwrap_or(&serde_json::Map::new()) {
-        if key.starts_with('_') {
-            result[key] = value.clone();
-        }
-    }
-
-    Ok(result)
-}
-
-/// Codex 模型映射：把 Codex 默认模型映射到 provider 的实际模型
-///
-/// Codex CLI 会用默认模型（如 gpt-5.4）做 model availability check，
-/// 然后才切换到配置的模型。对于非 OpenAI 的 provider，需要把默认模型
-/// 映射到 provider 支持的模型。
-fn apply_codex_model_mapping(mut body: JsonValue, provider: &Provider) -> JsonValue {
-    let model = body.get("model").and_then(|m| m.as_str()).unwrap_or("");
-    let is_codex_default = CODEX_DEFAULT_MODELS.contains(&model);
-
-    if !is_codex_default {
-        return body;
-    }
-
-    // 从 provider 配置中获取实际模型名（使用 upstream 的 TOML 解析）
-    let actual_model = provider
-        .settings_config
-        .get("config")
-        .and_then(|v| v.as_str())
-        .and_then(extract_codex_model_from_toml);
-
-    if let Some(actual) = actual_model {
-        if actual != model {
-            log::debug!(
-                "[Codex] 模型映射: {} -> {} (provider: {})",
-                model,
-                actual,
-                provider.name
-            );
-            body["model"] = JsonValue::String(actual);
-        }
-    }
-
-    body
 }
 
 fn extract_codex_wire_api_from_toml(config_text: &str) -> Option<String> {
@@ -669,6 +643,9 @@ impl CodexAdapter {
             }
 
             if let Some(config_str) = config.as_str() {
+                if let Some((_, key)) = crate::grok_config::extract_credentials(config_str) {
+                    return Some(key);
+                }
                 if let Some(key) =
                     crate::codex_config::extract_codex_experimental_bearer_token(config_str)
                 {
@@ -693,6 +670,16 @@ impl ProviderAdapter for CodexAdapter {
     }
 
     fn extract_base_url(&self, provider: &Provider) -> Result<String, ProxyError> {
+        if is_codex_official_provider(provider) {
+            return Ok(super::CHATGPT_CODEX_BASE_URL.to_string());
+        }
+
+        // xAI OAuth: ignore editable provider base URLs and always use the xAI
+        // API origin associated with the managed token.
+        if provider.is_xai_oauth() {
+            return Ok(super::XAI_API_BASE_URL.to_string());
+        }
+
         // 1. 尝试直接获取 base_url 字段
         if let Some(url) = provider
             .settings_config
@@ -719,6 +706,9 @@ impl ProviderAdapter for CodexAdapter {
 
             // 尝试解析 TOML 字符串格式
             if let Some(config_str) = config.as_str() {
+                if let Some(url) = crate::grok_config::extract_base_url(config_str) {
+                    return Ok(url.trim_end_matches('/').to_string());
+                }
                 if let Some(start) = config_str.find("base_url = \"") {
                     let rest = &config_str[start + 12..];
                     if let Some(end) = rest.find('"') {
@@ -740,8 +730,37 @@ impl ProviderAdapter for CodexAdapter {
     }
 
     fn extract_auth(&self, provider: &Provider) -> Option<AuthInfo> {
+        // xAI OAuth (Grok subscription): placeholder credentials only; the real
+        // access_token is resolved per-request by the forwarder via XaiOAuthManager.
+        if provider.is_xai_oauth() {
+            return Some(AuthInfo::new(
+                "xai_oauth_placeholder".to_string(),
+                AuthStrategy::XaiOAuth,
+            ));
+        }
+
+        // Anthropic upstream: the auth field is chosen by the user in the UI (meta.apiKeyField).
+        //   ANTHROPIC_API_KEY    → x-api-key (AuthStrategy::Anthropic)
+        //   ANTHROPIC_AUTH_TOKEN → Authorization: Bearer (default, AuthStrategy::Bearer)
+        // The two are mutually exclusive to avoid a 401 from the gateway receiving
+        // both auth headers at once. All other Codex upstreams stay pure Bearer.
+        let strategy = if codex_provider_uses_anthropic(provider) {
+            let uses_x_api_key = provider
+                .meta
+                .as_ref()
+                .and_then(|meta| meta.api_key_field.as_deref())
+                .map(|field| field.eq_ignore_ascii_case("ANTHROPIC_API_KEY"))
+                .unwrap_or(false);
+            if uses_x_api_key {
+                AuthStrategy::Anthropic
+            } else {
+                AuthStrategy::Bearer
+            }
+        } else {
+            AuthStrategy::Bearer
+        };
         self.extract_key(provider)
-            .map(|key| AuthInfo::new(key, AuthStrategy::Bearer))
+            .map(|key| AuthInfo::new(key, strategy))
     }
 
     fn build_url(&self, base_url: &str, endpoint: &str) -> String {
@@ -782,32 +801,19 @@ impl ProviderAdapter for CodexAdapter {
     ) -> Result<Vec<(http::HeaderName, http::HeaderValue)>, ProxyError> {
         use super::adapter::auth_header_value;
         let bearer = format!("Bearer {}", auth.api_key);
+        // Anthropic gateway: send only x-api-key (anthropic-version is filled in by
+        // the forwarder). Mutually exclusive with Bearer to avoid a 401 from the
+        // gateway receiving both auth headers at once.
+        if auth.strategy == AuthStrategy::Anthropic {
+            return Ok(vec![(
+                http::HeaderName::from_static("x-api-key"),
+                auth_header_value(&auth.api_key)?,
+            )]);
+        }
         Ok(vec![(
             http::HeaderName::from_static("authorization"),
             auth_header_value(&bearer)?,
         )])
-    }
-
-    fn needs_transform(&self, provider: &Provider) -> bool {
-        let api_format = get_codex_api_format(provider);
-        codex_api_format_needs_transform(api_format)
-    }
-
-    fn transform_request(
-        &self,
-        body: JsonValue,
-        provider: &Provider,
-    ) -> Result<JsonValue, ProxyError> {
-        let api_format = get_codex_api_format(provider);
-        let body = match api_format {
-            "openai_chat" => super::transform_codex_chat::responses_to_chat_completions(body)?,
-            _ => body, // openai_responses 不需要转换
-        };
-
-        // Codex 模型映射：把 Codex 默认模型（如 gpt-5.4）映射到 provider 的实际模型
-        let mapped_body = apply_codex_model_mapping(body, provider);
-
-        Ok(mapped_body)
     }
 }
 
@@ -831,6 +837,155 @@ mod tests {
             icon_color: None,
             in_failover_queue: false,
         }
+    }
+
+    #[test]
+    fn grok_build_toml_exposes_upstream_credentials_and_model() {
+        let adapter = CodexAdapter::new();
+        let provider = create_provider(json!({
+            "config": r#"
+[models]
+default = "grok-4.5"
+
+[model."grok-4.5"]
+model = "upstream-grok-model"
+base_url = "https://relay.example.com/v1/"
+name = "Example Relay"
+api_key = "grok-secret"
+api_backend = "responses"
+context_window = 500000
+"#
+        }));
+
+        assert_eq!(
+            adapter.extract_base_url(&provider).unwrap(),
+            "https://relay.example.com/v1"
+        );
+        let auth = adapter.extract_auth(&provider).unwrap();
+        assert_eq!(auth.api_key, "grok-secret");
+        assert_eq!(auth.strategy, AuthStrategy::Bearer);
+        assert_eq!(
+            codex_provider_upstream_model(&provider).as_deref(),
+            Some("upstream-grok-model")
+        );
+    }
+
+    #[test]
+    fn official_provider_uses_fixed_chatgpt_backend_without_stored_key() {
+        let mut provider = create_provider(json!({ "auth": {}, "config": "" }));
+        provider.id = "codex-official".to_string();
+        provider.category = Some("official".to_string());
+        let adapter = CodexAdapter::new();
+
+        assert!(is_codex_official_provider(&provider));
+        assert_eq!(
+            adapter
+                .extract_base_url(&provider)
+                .expect("official base url"),
+            "https://chatgpt.com/backend-api/codex"
+        );
+        assert!(adapter.extract_auth(&provider).is_none());
+        assert_eq!(
+            adapter.build_url(
+                "https://chatgpt.com/backend-api/codex",
+                "/responses/compact"
+            ),
+            "https://chatgpt.com/backend-api/codex/responses/compact"
+        );
+    }
+
+    #[test]
+    fn prompt_cache_routing_auto_enables_known_upstreams_only() {
+        let kimi = create_provider(json!({
+            "config": r#"
+model_provider = "custom"
+[model_providers.custom]
+base_url = "https://api.kimi.com/coding/v1"
+wire_api = "responses"
+"#
+        }));
+        let openai = create_provider(json!({
+            "base_url": "https://api.openai.com/v1"
+        }));
+        let unknown = create_provider(json!({
+            "base_url": "https://strict.example.com/v1"
+        }));
+
+        assert!(should_send_codex_chat_prompt_cache_key(&kimi));
+        assert!(should_send_codex_chat_prompt_cache_key(&openai));
+        assert!(!should_send_codex_chat_prompt_cache_key(&unknown));
+    }
+
+    #[test]
+    fn prompt_cache_routing_user_override_wins_over_auto_detection() {
+        let mut kimi = create_provider(json!({
+            "base_url": "https://api.kimi.com/coding/v1"
+        }));
+        kimi.meta = Some(crate::provider::ProviderMeta {
+            prompt_cache_routing: Some("disabled".to_string()),
+            ..Default::default()
+        });
+        assert!(!should_send_codex_chat_prompt_cache_key(&kimi));
+
+        let mut unknown = create_provider(json!({
+            "base_url": "https://strict.example.com/v1"
+        }));
+        unknown.meta = Some(crate::provider::ProviderMeta {
+            prompt_cache_routing: Some("enabled".to_string()),
+            ..Default::default()
+        });
+        assert!(should_send_codex_chat_prompt_cache_key(&unknown));
+    }
+
+    #[test]
+    fn prompt_cache_key_prefers_explicit_key_then_real_session() {
+        let provider = create_provider(json!({
+            "base_url": "https://api.kimi.com/coding/v1"
+        }));
+        let mut explicit_body = json!({ "model": "kimi-for-coding" });
+        assert!(inject_codex_chat_prompt_cache_key(
+            &provider,
+            &mut explicit_body,
+            Some("request-key"),
+            Some("session-key"),
+        ));
+        assert_eq!(explicit_body["prompt_cache_key"], "request-key");
+
+        let mut session_body = json!({ "model": "kimi-for-coding" });
+        assert!(inject_codex_chat_prompt_cache_key(
+            &provider,
+            &mut session_body,
+            None,
+            Some("session-key"),
+        ));
+        assert_eq!(session_body["prompt_cache_key"], "session-key");
+    }
+
+    #[test]
+    fn prompt_cache_key_is_not_injected_without_real_session_or_support() {
+        let kimi = create_provider(json!({
+            "base_url": "https://api.kimi.com/coding/v1"
+        }));
+        let mut no_session_body = json!({ "model": "kimi-for-coding" });
+        assert!(!inject_codex_chat_prompt_cache_key(
+            &kimi,
+            &mut no_session_body,
+            None,
+            None,
+        ));
+        assert!(no_session_body.get("prompt_cache_key").is_none());
+
+        let unknown = create_provider(json!({
+            "base_url": "https://strict.example.com/v1"
+        }));
+        let mut unsupported_body = json!({ "model": "other" });
+        assert!(!inject_codex_chat_prompt_cache_key(
+            &unknown,
+            &mut unsupported_body,
+            Some("request-key"),
+            Some("session-key"),
+        ));
+        assert!(unsupported_body.get("prompt_cache_key").is_none());
     }
 
     #[test]
@@ -895,6 +1050,197 @@ experimental_bearer_token = "sk-config-key"
         let adapter = CodexAdapter::new();
         let url = adapter.build_url("https://api.openai.com/v1", "/responses");
         assert_eq!(url, "https://api.openai.com/v1/responses");
+    }
+
+    // ==================== anthropic upstream detection ====================
+
+    #[test]
+    fn test_uses_anthropic_from_settings_api_format() {
+        let provider = create_provider(json!({ "apiFormat": "anthropic" }));
+        assert!(codex_provider_uses_anthropic(&provider));
+
+        let provider = create_provider(json!({ "api_format": "anthropic_messages" }));
+        assert!(codex_provider_uses_anthropic(&provider));
+    }
+
+    #[test]
+    fn test_uses_anthropic_from_meta_api_format() {
+        let mut provider = create_provider(json!({}));
+        provider.meta = Some(crate::provider::ProviderMeta {
+            api_format: Some("anthropic".to_string()),
+            ..Default::default()
+        });
+        assert!(codex_provider_uses_anthropic(&provider));
+    }
+
+    #[test]
+    fn test_uses_anthropic_from_toml_wire_api() {
+        let provider = create_provider(json!({
+            "config": r#"model_provider = "custom"
+
+[model_providers.custom]
+wire_api = "anthropic"
+"#
+        }));
+        assert!(codex_provider_uses_anthropic(&provider));
+    }
+
+    #[test]
+    fn test_anthropic_false_for_chat_and_responses() {
+        let chat = create_provider(json!({ "apiFormat": "openai_chat" }));
+        assert!(!codex_provider_uses_anthropic(&chat));
+        let responses = create_provider(json!({ "apiFormat": "openai_responses" }));
+        assert!(!codex_provider_uses_anthropic(&responses));
+    }
+
+    #[test]
+    fn test_anthropic_and_chat_are_mutually_exclusive() {
+        let anth = create_provider(json!({ "apiFormat": "anthropic" }));
+        assert!(codex_provider_uses_anthropic(&anth));
+        assert!(!codex_provider_uses_chat_completions(&anth));
+
+        let chat = create_provider(json!({ "apiFormat": "openai_chat" }));
+        assert!(codex_provider_uses_chat_completions(&chat));
+        assert!(!codex_provider_uses_anthropic(&chat));
+    }
+
+    #[test]
+    fn test_should_convert_responses_to_anthropic_path_guard() {
+        let provider = create_provider(json!({ "apiFormat": "anthropic" }));
+        assert!(should_convert_codex_responses_to_anthropic(
+            &provider,
+            "/responses"
+        ));
+        assert!(should_convert_codex_responses_to_anthropic(
+            &provider,
+            "/v1/responses/compact"
+        ));
+        assert!(should_convert_codex_responses_to_anthropic(
+            &provider,
+            "/responses?x=1"
+        ));
+        assert!(!should_convert_codex_responses_to_anthropic(
+            &provider,
+            "/chat/completions"
+        ));
+    }
+
+    #[test]
+    fn test_resolve_catalog_profile_matches_router() {
+        use crate::codex_config::CodexCatalogToolProfile;
+
+        // Anthropic declared only via TOML wire_api (no meta.api_format) must still
+        // resolve to the Anthropic catalog profile — this is the routing/catalog
+        // divergence that let apply_patch leak through.
+        let toml_anthropic = create_provider(json!({
+            "config": r#"model_provider = "custom"
+
+[model_providers.custom]
+wire_api = "anthropic"
+"#
+        }));
+        assert_eq!(
+            resolve_codex_catalog_tool_profile(&toml_anthropic),
+            CodexCatalogToolProfile::Anthropic
+        );
+
+        // Anthropic via settings apiFormat.
+        let settings_anthropic = create_provider(json!({ "apiFormat": "anthropic" }));
+        assert_eq!(
+            resolve_codex_catalog_tool_profile(&settings_anthropic),
+            CodexCatalogToolProfile::Anthropic
+        );
+
+        // Native openai_responses (meta) → NativeResponses; chat → ProxyChat.
+        let mut native = create_provider(json!({}));
+        native.meta = Some(crate::provider::ProviderMeta {
+            api_format: Some("openai_responses".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            resolve_codex_catalog_tool_profile(&native),
+            CodexCatalogToolProfile::NativeResponses
+        );
+
+        let chat = create_provider(json!({ "apiFormat": "openai_chat" }));
+        assert_eq!(
+            resolve_codex_catalog_tool_profile(&chat),
+            CodexCatalogToolProfile::ProxyChat
+        );
+    }
+
+    #[test]
+    fn test_apply_codex_upstream_model_preserves_one_m_catalog_model() {
+        // Regression for the [1m] path: a request model carrying the [1m] marker must
+        // match its catalog entry and be preserved (not overridden by the provider
+        // default) so the transform can later strip [1m] and emit the context-1m beta.
+        // This only works because the forwarder no longer strips [1m] before this call
+        // on the Anthropic path.
+        let provider = create_provider(json!({
+            "config": r#"model_provider = "custom"
+model = "claude-opus-4-1"
+
+[model_providers.custom]
+wire_api = "anthropic"
+"#,
+            "modelCatalog": {
+                "models": [
+                    { "model": "claude-opus-4-1[1m]" }
+                ]
+            }
+        }));
+        let mut body = json!({ "model": "claude-opus-4-1[1m]", "input": "hi" });
+        let result = apply_codex_upstream_model(&provider, &mut body);
+        assert_eq!(result.as_deref(), Some("claude-opus-4-1[1m]"));
+        assert_eq!(
+            body.get("model").and_then(|v| v.as_str()),
+            Some("claude-opus-4-1[1m]")
+        );
+    }
+
+    #[test]
+    fn test_anthropic_auth_defaults_to_bearer() {
+        // No meta.apiKeyField (defaults to ANTHROPIC_AUTH_TOKEN) → Authorization: Bearer only
+        let adapter = CodexAdapter::new();
+        let provider = create_provider(json!({
+            "apiFormat": "anthropic",
+            "auth": { "OPENAI_API_KEY": "sk-anthropic-key-123" }
+        }));
+
+        let auth = adapter.extract_auth(&provider).unwrap();
+        assert_eq!(auth.strategy, AuthStrategy::Bearer);
+
+        let headers = adapter.get_auth_headers(&auth).unwrap();
+        let names: Vec<String> = headers
+            .iter()
+            .map(|(name, _)| name.as_str().to_string())
+            .collect();
+        assert_eq!(names, vec!["authorization".to_string()]);
+    }
+
+    #[test]
+    fn test_anthropic_auth_x_api_key_when_selected() {
+        // meta.apiKeyField = ANTHROPIC_API_KEY → x-api-key only
+        let adapter = CodexAdapter::new();
+        let mut provider = create_provider(json!({
+            "apiFormat": "anthropic",
+            "auth": { "OPENAI_API_KEY": "sk-anthropic-key-123" }
+        }));
+        provider.meta = Some(crate::provider::ProviderMeta {
+            api_format: Some("anthropic".to_string()),
+            api_key_field: Some("ANTHROPIC_API_KEY".to_string()),
+            ..Default::default()
+        });
+
+        let auth = adapter.extract_auth(&provider).unwrap();
+        assert_eq!(auth.strategy, AuthStrategy::Anthropic);
+
+        let headers = adapter.get_auth_headers(&auth).unwrap();
+        let names: Vec<String> = headers
+            .iter()
+            .map(|(name, _)| name.as_str().to_string())
+            .collect();
+        assert_eq!(names, vec!["x-api-key".to_string()]);
     }
 
     #[test]
@@ -1197,161 +1543,69 @@ wire_api = "chat"
         assert_eq!(config.output_format.as_deref(), Some("reasoning_content"));
     }
 
-    // ── Fork-unique: API format & model mapping tests ──
-
-    fn create_provider_with_meta(config: serde_json::Value, api_format: Option<&str>) -> Provider {
-        use crate::provider::ProviderMeta;
-        Provider {
-            id: "test".to_string(),
-            name: "Test Codex".to_string(),
-            settings_config: config,
-            website_url: None,
-            category: Some("codex".to_string()),
-            created_at: None,
-            sort_index: None,
-            notes: None,
-            meta: Some(ProviderMeta {
-                api_format: api_format.map(|s| s.to_string()),
-                ..Default::default()
-            }),
-            icon: None,
-            icon_color: None,
-            in_failover_queue: false,
-        }
-    }
-
     #[test]
-    fn test_get_codex_api_format_default() {
-        let provider = create_provider(json!({}));
-        assert_eq!(get_codex_api_format(&provider), "openai_responses");
-    }
-
-    #[test]
-    fn test_get_codex_api_format_from_config() {
-        let provider = create_provider(json!({
-            "api_format": "openai_chat"
-        }));
-        assert_eq!(get_codex_api_format(&provider), "openai_chat");
-    }
-
-    #[test]
-    fn test_get_codex_api_format_from_meta() {
-        let provider = create_provider_with_meta(json!({}), Some("openai_chat"));
-        assert_eq!(get_codex_api_format(&provider), "openai_chat");
-    }
-
-    #[test]
-    fn test_codex_api_format_needs_transform() {
-        assert!(codex_api_format_needs_transform("openai_chat"));
-        assert!(!codex_api_format_needs_transform("openai_responses"));
-    }
-
-    #[test]
-    fn test_needs_transform_default() {
+    fn xai_oauth_invariants_ignore_editable_base_url_and_auth() {
         let adapter = CodexAdapter::new();
-        let provider = create_provider(json!({}));
-        assert!(!adapter.needs_transform(&provider));
-    }
+        let mut provider = create_provider(json!({
+            "auth": { "OPENAI_API_KEY": "user-edited" },
+            "config": r#"
+model = "grok-4.5"
 
-    #[test]
-    fn test_needs_transform_openai_chat() {
-        let adapter = CodexAdapter::new();
-        let provider = create_provider(json!({
-            "api_format": "openai_chat"
+[model_providers.custom]
+name = "xai"
+base_url = "https://attacker.example/v1"
+wire_api = "responses"
+"#
         }));
-        assert!(adapter.needs_transform(&provider));
-    }
-
-    #[test]
-    fn test_responses_to_chat_completions_basic() {
-        let input = json!({
-            "model": "mimo-v2.5-pro",
-            "input": [{"role": "user", "content": "Hello"}],
-            "instructions": "You are a helpful assistant",
-            "max_output_tokens": 1000,
-            "stream": true
+        provider.meta = Some(crate::provider::ProviderMeta {
+            provider_type: Some("xai_oauth".to_string()),
+            ..Default::default()
         });
 
-        let result = responses_to_chat_completions(input).unwrap();
-
-        assert_eq!(result["model"], "mimo-v2.5-pro");
-        assert_eq!(result["stream"], true);
-        assert_eq!(result["max_tokens"], 1000);
-
-        let messages = result["messages"].as_array().unwrap();
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0]["role"], "system");
-        assert_eq!(messages[0]["content"], "You are a helpful assistant");
-        assert_eq!(messages[1]["role"], "user");
-        assert_eq!(messages[1]["content"], "Hello");
+        // 可编辑字段（base_url / auth key）不得影响托管路由：
+        // 端点硬定向 api.x.ai，凭据是占位符（真 token 由 forwarder 注入）。
+        assert_eq!(
+            adapter.extract_base_url(&provider).unwrap(),
+            super::super::XAI_API_BASE_URL
+        );
+        let auth = adapter
+            .extract_auth(&provider)
+            .expect("managed auth placeholder");
+        assert_eq!(auth.api_key, "xai_oauth_placeholder");
+        assert_eq!(auth.strategy, AuthStrategy::XaiOAuth);
     }
 
     #[test]
-    fn test_responses_to_chat_completions_no_instructions() {
-        let input = json!({
-            "model": "mimo-v2.5-pro",
-            "input": [{"role": "user", "content": "Hello"}],
-            "max_output_tokens": 500
+    fn xai_oauth_pins_native_responses_catalog_profile() {
+        let mut provider = create_provider(json!({ "auth": {}, "config": "" }));
+        provider.meta = Some(crate::provider::ProviderMeta {
+            provider_type: Some("xai_oauth".to_string()),
+            // 即使 api_format 被改成 anthropic，catalog 画像也必须钉死原生 Responses
+            api_format: Some("anthropic".to_string()),
+            ..Default::default()
         });
 
-        let result = responses_to_chat_completions(input).unwrap();
-
-        let messages = result["messages"].as_array().unwrap();
-        assert_eq!(messages.len(), 1);
-        assert_eq!(messages[0]["role"], "user");
-        assert_eq!(messages[0]["content"], "Hello");
-        assert_eq!(result["max_tokens"], 500);
+        assert!(matches!(
+            resolve_codex_catalog_tool_profile(&provider),
+            crate::codex_config::CodexCatalogToolProfile::NativeResponses
+        ));
     }
 
     #[test]
-    fn test_responses_to_chat_completions_string_input() {
-        let input = json!({
-            "model": "mimo-v2.5-pro",
-            "input": "Hello world"
+    fn namespace_flatten_gate_only_fires_for_xai_oauth() {
+        // xAI OAuth: strict native gateway → needs namespace flattening.
+        let mut xai = create_provider(json!({ "auth": {}, "config": "" }));
+        xai.meta = Some(crate::provider::ProviderMeta {
+            provider_type: Some("xai_oauth".to_string()),
+            ..Default::default()
         });
+        assert!(provider_needs_responses_namespace_flatten(&xai));
 
-        let result = responses_to_chat_completions(input).unwrap();
-
-        let messages = result["messages"].as_array().unwrap();
-        assert_eq!(messages.len(), 1);
-        assert_eq!(messages[0]["role"], "user");
-        assert_eq!(messages[0]["content"], "Hello world");
-    }
-
-    #[test]
-    fn test_responses_to_chat_completions_preserves_tools() {
-        let input = json!({
-            "model": "mimo-v2.5-pro",
-            "input": [{"role": "user", "content": "test"}],
-            "tools": [{"type": "function", "function": {"name": "test"}}],
-            "tool_choice": "auto"
-        });
-
-        let result = responses_to_chat_completions(input).unwrap();
-
-        assert!(result["tools"].is_array());
-        assert_eq!(result["tool_choice"], "auto");
-    }
-
-    #[test]
-    fn test_apply_codex_model_mapping() {
-        // gpt-5.4 is a Codex default → should be remapped
-        let provider = create_provider(json!({
-            "config": "model = \"deepseek-v4-flash\""
+        // A plain third-party API-key Codex provider must not be flattened.
+        let plain = create_provider(json!({
+            "auth": { "OPENAI_API_KEY": "sk-x" },
+            "config": "base_url = \"https://api.x.ai/v1\"\nwire_api = \"responses\""
         }));
-        let body = json!({"model": "gpt-5.4"});
-        let result = apply_codex_model_mapping(body, &provider);
-        assert_eq!(result["model"].as_str().unwrap(), "deepseek-v4-flash");
-    }
-
-    #[test]
-    fn test_apply_codex_model_mapping_non_default_passthrough() {
-        // deepseek-v4-flash is NOT a Codex default → passthrough
-        let provider = create_provider(json!({
-            "config": "model = \"some-model\""
-        }));
-        let body = json!({"model": "deepseek-v4-flash"});
-        let result = apply_codex_model_mapping(body, &provider);
-        assert_eq!(result["model"].as_str().unwrap(), "deepseek-v4-flash");
+        assert!(!provider_needs_responses_namespace_flatten(&plain));
     }
 }

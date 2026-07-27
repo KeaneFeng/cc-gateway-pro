@@ -71,6 +71,7 @@ const PREFERRED_AGENT_ORDER = [
   "claude",
   "claude-desktop",
   "codex",
+  "grokbuild",
   "hermes",
   "gemini",
   "opencode",

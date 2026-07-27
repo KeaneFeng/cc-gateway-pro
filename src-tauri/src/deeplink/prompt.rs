@@ -1,6 +1,6 @@
 //! Prompt import from deep link
 //!
-//! Handles importing prompt configurations via ccgatewaypro:// URLs.
+//! Handles importing prompt configurations via ccswitch:// URLs.
 
 use super::utils::decode_base64_param;
 use super::DeepLinkImportRequest;

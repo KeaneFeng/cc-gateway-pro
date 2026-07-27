@@ -1,3 +1,4 @@
+use http::header::{HeaderValue, InvalidHeaderValue};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -70,6 +71,10 @@ impl Provider {
         self.provider_type() == Some("codex_oauth")
     }
 
+    pub fn is_xai_oauth(&self) -> bool {
+        self.provider_type() == Some("xai_oauth")
+    }
+
     pub fn is_github_copilot(&self) -> bool {
         self.provider_type() == Some("github_copilot")
             || self.claude_base_url_contains("githubcopilot.com")
@@ -78,6 +83,7 @@ impl Provider {
     pub fn uses_managed_account_auth(&self) -> bool {
         self.is_github_copilot()
             || self.is_codex_oauth()
+            || self.is_xai_oauth()
             || self.claude_base_url_contains("chatgpt.com/backend-api/codex")
     }
 
@@ -108,8 +114,9 @@ impl Provider {
             .unwrap_or(false)
     }
 
-    /// Resolve `(base_url, api_key)` for native usage queries (balance /
-    /// coding-plan) from the stored provider config.
+    /// Resolve `(base_url, api_key)` for usage queries (native balance /
+    /// coding-plan and the JS-script `{{apiKey}}`/`{{baseUrl}}` fallback)
+    /// from the stored provider config.
     ///
     /// Each app persists credentials in a different shape, so callers must pass
     /// the owning app type. This mirrors the frontend `getProviderCredentials`
@@ -146,19 +153,11 @@ impl Provider {
             // Codex keeps its key in `auth.OPENAI_API_KEY` and its base URL
             // inside a TOML `config` string, not in an `env` map.
             AppType::Codex => {
-                let api_key = settings
-                    .get("auth")
-                    .and_then(crate::codex_config::extract_codex_auth_api_key)
-                    .or_else(|| {
-                        settings
-                            .get("config")
-                            .and_then(|v| v.as_str())
-                            .and_then(crate::codex_config::extract_codex_experimental_bearer_token)
-                    })
+                let auth = settings.get("auth");
+                let config_text = settings.get("config").and_then(|v| v.as_str());
+                let api_key = crate::codex_config::extract_codex_api_key(auth, config_text)
                     .unwrap_or_default();
-                let base_url = settings
-                    .get("config")
-                    .and_then(|v| v.as_str())
+                let base_url = config_text
                     .and_then(crate::codex_config::extract_codex_base_url)
                     .unwrap_or_default();
                 (base_url, api_key)
@@ -170,6 +169,11 @@ impl Provider {
                 let api_key = first_non_empty(env, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
                 (base_url, api_key)
             }
+            AppType::GrokBuild => settings
+                .get("config")
+                .and_then(Value::as_str)
+                .and_then(crate::grok_config::extract_credentials)
+                .unwrap_or_default(),
             // Hermes (config.yaml) flattens credentials at the top level, snake_case.
             AppType::Hermes => (
                 str_at(settings.get("base_url")),
@@ -207,7 +211,9 @@ impl Provider {
             }
         };
 
-        // Normalize so `{{baseUrl}}/path` concatenation never produces a double slash.
+        // Normalize like the JS-script path (extract_base_url_from_provider) so a
+        // future delegation from services/provider/usage.rs is behavior-preserving
+        // and `{{baseUrl}}/path` concatenation never produces a double slash.
         (base_url.trim_end_matches('/').to_string(), api_key)
     }
 }
@@ -255,6 +261,22 @@ pub struct UsageScript {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "codingPlanProvider")]
     pub coding_plan_provider: Option<String>,
+    /// 火山方舟控制面 OpenAPI 的 AccessKey ID（用量查询签名用，与推理 Key 是两套凭据）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "accessKeyId")]
+    pub access_key_id: Option<String>,
+    /// 火山方舟控制面 OpenAPI 的 SecretAccessKey（同上）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "secretAccessKey")]
+    pub secret_access_key: Option<String>,
+    /// 智谱团队套餐（Team Plan）的组织 ID（用量查询请求头 bigmodel-organization）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "teamOrganizationId")]
+    pub team_organization_id: Option<String>,
+    /// 智谱团队套餐（Team Plan）的项目 ID（用量查询请求头 bigmodel-project）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "teamProjectId")]
+    pub team_project_id: Option<String>,
 }
 
 /// 用量数据
@@ -289,32 +311,6 @@ pub struct UsageResult {
     pub data: Option<Vec<UsageData>>, // 支持返回多个套餐
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-}
-
-/// 供应商单独的模型测试配置
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ProviderTestConfig {
-    /// 是否启用单独配置（false 时使用全局配置）
-    #[serde(default)]
-    pub enabled: bool,
-    /// 测试用的模型名称（覆盖全局配置）
-    #[serde(rename = "testModel", skip_serializing_if = "Option::is_none")]
-    pub test_model: Option<String>,
-    /// 超时时间（秒）
-    #[serde(rename = "timeoutSecs", skip_serializing_if = "Option::is_none")]
-    pub timeout_secs: Option<u64>,
-    /// 测试提示词
-    #[serde(rename = "testPrompt", skip_serializing_if = "Option::is_none")]
-    pub test_prompt: Option<String>,
-    /// 降级阈值（毫秒）
-    #[serde(
-        rename = "degradedThresholdMs",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub degraded_threshold_ms: Option<u64>,
-    /// 最大重试次数
-    #[serde(rename = "maxRetries", skip_serializing_if = "Option::is_none")]
-    pub max_retries: Option<u32>,
 }
 
 /// 认证绑定来源
@@ -354,7 +350,7 @@ pub enum ClaudeDesktopMode {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClaudeDesktopModelRoute {
-    /// 真实上游模型名，只保存在 CC-Gateway-Pro 内部，不写入 Claude Desktop profile。
+    /// 真实上游模型名，只保存在 CC Switch 内部，不写入 Claude Desktop profile。
     pub model: String,
     /// Claude Desktop 模型菜单显示名；写入 profile 的 `labelOverride`。
     #[serde(rename = "labelOverride", skip_serializing_if = "Option::is_none")]
@@ -382,6 +378,21 @@ pub struct CodexChatReasoningConfig {
     /// 靠穷举字段提取、并不读取本字段；保留作文档说明与未来按格式分发（如 think_tags）的预留。
     #[serde(rename = "outputFormat", skip_serializing_if = "Option::is_none")]
     pub output_format: Option<String>,
+}
+
+/// Local proxy request overrides applied after route/protocol transforms.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LocalProxyRequestOverrides {
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub headers: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<serde_json::Value>,
+}
+
+impl LocalProxyRequestOverrides {
+    pub fn is_empty(&self) -> bool {
+        self.headers.is_empty() && self.body.is_none()
+    }
 }
 
 /// 供应商元数据
@@ -433,9 +444,6 @@ pub struct ProviderMeta {
     /// 每月消费限额（USD）
     #[serde(rename = "limitMonthlyUsd", skip_serializing_if = "Option::is_none")]
     pub limit_monthly_usd: Option<String>,
-    /// 供应商单独的模型测试配置
-    #[serde(rename = "testConfig", skip_serializing_if = "Option::is_none")]
-    pub test_config: Option<ProviderTestConfig>,
     /// Claude API 格式（仅 Claude 供应商使用）
     /// - "anthropic": 原生 Anthropic Messages API，直接透传
     /// - "openai_chat": OpenAI Chat Completions 格式，需要转换
@@ -459,12 +467,45 @@ pub struct ProviderMeta {
     /// identity when available; generated session IDs are not sent upstream.
     #[serde(rename = "promptCacheKey", skip_serializing_if = "Option::is_none")]
     pub prompt_cache_key: Option<String>,
+    /// Session-based prompt-cache routing for Codex Responses -> Chat conversions.
+    /// "auto" enables known-compatible upstreams; "enabled" / "disabled" are overrides.
+    #[serde(rename = "promptCacheRouting", skip_serializing_if = "Option::is_none")]
+    pub prompt_cache_routing: Option<String>,
     /// Codex OAuth FAST mode: inject `service_tier = "priority"` for ChatGPT Codex requests.
     #[serde(rename = "codexFastMode", skip_serializing_if = "Option::is_none")]
     pub codex_fast_mode: Option<bool>,
     /// Codex Responses -> Chat Completions reasoning capability metadata.
     #[serde(rename = "codexChatReasoning", skip_serializing_if = "Option::is_none")]
     pub codex_chat_reasoning: Option<CodexChatReasoningConfig>,
+    /// Codex → Anthropic path: whether to emulate the Claude Code client
+    /// (User-Agent / anthropic-beta / x-app + injecting the Claude Code system
+    /// prompt first line). Disabled by default; only an explicit `true` enables it.
+    #[serde(
+        rename = "impersonateClaudeCode",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub impersonate_claude_code: Option<bool>,
+    /// Codex → Anthropic path: override the Anthropic `max_tokens` (output ceiling).
+    ///
+    /// Codex does not forward its `model_max_output_tokens` in the Responses
+    /// request body, so without this the path falls back to a conservative
+    /// default (8192), which truncates long or thinking-heavy responses
+    /// (`stop_reason=max_tokens`). When set (>0), this value is injected as the
+    /// request's `max_output_tokens` before conversion, taking precedence over
+    /// both any request-supplied value and the default. Kept per-provider on
+    /// purpose: a global large default would hard-400 on low-output-ceiling
+    /// models/gateways (and that error is non-retryable).
+    #[serde(rename = "maxOutputTokens", skip_serializing_if = "Option::is_none")]
+    pub max_output_tokens: Option<u64>,
+    /// Custom User-Agent for local proxy routing.
+    #[serde(rename = "customUserAgent", skip_serializing_if = "Option::is_none")]
+    pub custom_user_agent: Option<String>,
+    /// Local proxy request overrides applied to the transformed upstream request.
+    #[serde(
+        rename = "localProxyRequestOverrides",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub local_proxy_request_overrides: Option<LocalProxyRequestOverrides>,
     /// 累加模式应用中，该 provider 是否已写入 live config。
     /// `None` 表示旧数据/未知状态，`Some(false)` 表示明确仅存在于数据库中。
     #[serde(rename = "liveConfigManaged", skip_serializing_if = "Option::is_none")]
@@ -477,21 +518,33 @@ pub struct ProviderMeta {
     /// 用于多账号支持，关联到特定的 GitHub 账号
     #[serde(rename = "githubAccountId", skip_serializing_if = "Option::is_none")]
     pub github_account_id: Option<String>,
-    /// Vision Model：当请求包含图片内容时，自动切换到此模型。
-    /// 留空则使用默认 model 处理所有请求（含图片）。
+    /// Optional model selected automatically when request content contains an image.
     #[serde(rename = "visionModel", skip_serializing_if = "Option::is_none")]
     pub vision_model: Option<String>,
-    /// Project-to-Provider 映射：项目路径 -> provider_id
-    /// 当 Claude Code 从特定项目发送请求时，自动使用绑定的 provider
-    #[serde(
-        default,
-        rename = "projectProviders",
-        skip_serializing_if = "HashMap::is_empty"
-    )]
-    pub project_providers: HashMap<String, String>,
-    /// 要扫描的项目目录列表（用于自动发现 Claude Code 项目）
-    #[serde(default, rename = "projectDirs", skip_serializing_if = "Vec::is_empty")]
-    pub project_dirs: Vec<String>,
+}
+
+/// 解析 Provider 级自定义 User-Agent 字符串（单一真理来源）。
+///
+/// 转发（forwarder）、流式检测（stream_check）、获取模型列表（model_fetch）三条路径
+/// 共用同一口径，避免出现"某条路径用了 UA、另一条没用 / 报错"的不一致。
+///
+/// 合法性由 `http::HeaderValue::from_str` 按**字节**判定（`b >= 32 && b != 127 || b == '\t'`），
+/// 与前端 `src/lib/userAgent.ts::isValidUserAgentHeader` 严格一致：
+/// - `Ok(None)`：未设置或纯空白（trim 后为空）。
+/// - `Ok(Some(hv))`：合法。制表符、可见 ASCII（0x20–0x7E）、以及任意非 ASCII 字符
+///   （UTF-8 字节均 ≥ 0x80）都合法。
+/// - `Err(_)`：仅含控制字符时——除 `\t` 外的 0x00–0x1F（含换行）与 0x7F（DEL）。
+///
+/// 非法值的处理：三条运行时路径**均静默忽略**（`.ok().flatten()`，绝不让某条路径报错而
+/// 另一条放行）；前端在输入框处给出非阻断提示。当前**不在保存时阻断**——deeplink 导入等
+/// 非表单路径应宽容，运行时静默忽略即为安全网。
+pub fn parse_custom_user_agent(
+    raw: Option<&str>,
+) -> Result<Option<HeaderValue>, InvalidHeaderValue> {
+    match raw.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(ua) => HeaderValue::from_str(ua).map(Some),
+        None => Ok(None),
+    }
 }
 
 impl ProviderMeta {
@@ -499,6 +552,11 @@ impl ProviderMeta {
     /// 会按更高速率消耗 ChatGPT 订阅配额，用户需显式开启以换取更低延迟。
     pub fn codex_fast_mode_enabled(&self) -> bool {
         self.codex_fast_mode.unwrap_or(false)
+    }
+
+    /// 经校验的 Provider 级自定义 User-Agent。见 [`parse_custom_user_agent`]。
+    pub fn custom_user_agent_header(&self) -> Result<Option<HeaderValue>, InvalidHeaderValue> {
+        parse_custom_user_agent(self.custom_user_agent.as_deref())
     }
 
     /// 解析指定托管认证供应商绑定的账号 ID。
@@ -746,12 +804,12 @@ impl UniversalProvider {
 
         // 生成 Codex 的 config.toml 内容
         let config_toml = format!(
-            r#"model_provider = "newapi"
+            r#"model_provider = "custom"
 model = "{model}"
 model_reasoning_effort = "{reasoning_effort}"
 disable_response_storage = true
 
-[model_providers.newapi]
+[model_providers.custom]
 name = "NewAPI"
 base_url = "{codex_base_url}"
 wire_api = "responses"
@@ -917,10 +975,11 @@ pub struct OpenCodeModelLimit {
 #[cfg(test)]
 mod tests {
     use super::{
-        ClaudeModelConfig, CodexModelConfig, GeminiModelConfig, OpenCodeProviderConfig, Provider,
-        ProviderManager, ProviderMeta, UniversalProvider,
+        ClaudeModelConfig, CodexModelConfig, GeminiModelConfig, LocalProxyRequestOverrides,
+        OpenCodeProviderConfig, Provider, ProviderManager, ProviderMeta, UniversalProvider,
     };
     use serde_json::json;
+    use std::collections::HashMap;
 
     #[test]
     fn provider_meta_serializes_pricing_model_source() {
@@ -949,6 +1008,57 @@ mod tests {
     }
 
     #[test]
+    fn provider_meta_roundtrips_max_output_tokens() {
+        let meta = ProviderMeta {
+            max_output_tokens: Some(64000),
+            ..ProviderMeta::default()
+        };
+
+        let value = serde_json::to_value(&meta).expect("serialize ProviderMeta");
+        assert_eq!(
+            value.get("maxOutputTokens").and_then(|v| v.as_u64()),
+            Some(64000)
+        );
+        assert!(value.get("max_output_tokens").is_none());
+
+        let parsed: ProviderMeta = serde_json::from_value(value).expect("deserialize ProviderMeta");
+        assert_eq!(parsed.max_output_tokens, Some(64000));
+    }
+
+    #[test]
+    fn provider_meta_omits_max_output_tokens_when_none() {
+        let value = serde_json::to_value(ProviderMeta::default()).expect("serialize ProviderMeta");
+        assert!(value.get("maxOutputTokens").is_none());
+    }
+
+    #[test]
+    fn provider_meta_roundtrips_local_proxy_request_overrides() {
+        let meta = ProviderMeta {
+            local_proxy_request_overrides: Some(LocalProxyRequestOverrides {
+                headers: HashMap::from([("X-Test".to_string(), "yes".to_string())]),
+                body: Some(json!({ "temperature": 0.2 })),
+            }),
+            ..ProviderMeta::default()
+        };
+
+        let value = serde_json::to_value(&meta).expect("serialize ProviderMeta");
+        assert_eq!(
+            value["localProxyRequestOverrides"]["headers"]["X-Test"],
+            "yes"
+        );
+        assert_eq!(
+            value["localProxyRequestOverrides"]["body"]["temperature"],
+            0.2
+        );
+
+        let decoded: ProviderMeta =
+            serde_json::from_value(value).expect("deserialize ProviderMeta");
+        let overrides = decoded.local_proxy_request_overrides.unwrap();
+        assert_eq!(overrides.headers.get("X-Test"), Some(&"yes".to_string()));
+        assert_eq!(overrides.body.unwrap()["temperature"], 0.2);
+    }
+
+    #[test]
     fn provider_with_id_populates_defaults() {
         let settings_config = json!({
             "env": { "API_KEY": "test" }
@@ -972,6 +1082,53 @@ mod tests {
         assert!(provider.icon.is_none());
         assert!(provider.icon_color.is_none());
         assert!(!provider.in_failover_queue);
+    }
+
+    #[test]
+    fn provider_managed_account_auth_detection_uses_type_or_known_endpoint() {
+        let mut copilot = Provider::with_id(
+            "copilot".to_string(),
+            "Copilot".to_string(),
+            json!({
+                "env": {
+                    "ANTHROPIC_BASE_URL": "https://api.githubcopilot.com"
+                }
+            }),
+            None,
+        );
+        assert!(copilot.is_github_copilot());
+        assert!(copilot.uses_managed_account_auth());
+
+        let mut codex = Provider::with_id(
+            "codex".to_string(),
+            "Codex".to_string(),
+            json!({ "env": {} }),
+            None,
+        );
+        codex.meta = Some(ProviderMeta {
+            provider_type: Some("codex_oauth".to_string()),
+            ..Default::default()
+        });
+        assert!(codex.is_codex_oauth());
+        assert!(codex.uses_managed_account_auth());
+
+        let codex_endpoint = Provider::with_id(
+            "codex-endpoint".to_string(),
+            "Codex Endpoint".to_string(),
+            json!({
+                "env": {
+                    "ANTHROPIC_BASE_URL": "https://chatgpt.com/backend-api/codex"
+                }
+            }),
+            None,
+        );
+        assert!(codex_endpoint.uses_managed_account_auth());
+
+        copilot.meta = Some(ProviderMeta {
+            provider_type: Some("github_copilot".to_string()),
+            ..Default::default()
+        });
+        assert!(copilot.is_github_copilot());
     }
 
     #[test]
@@ -1249,6 +1406,8 @@ mod tests {
 
     #[test]
     fn resolve_credentials_claude_openrouter_fallback() {
+        // OpenRouter-on-Claude keeps its key in OPENROUTER_API_KEY; the superset
+        // fallback must still find it (regression guard for the per-app refactor).
         let p = provider_with(json!({
             "env": {
                 "ANTHROPIC_BASE_URL": "https://openrouter.ai/api/v1",
@@ -1292,6 +1451,9 @@ mod tests {
 
     #[test]
     fn resolve_credentials_claude_skips_empty_primary_key() {
+        // Presets seed ANTHROPIC_AUTH_TOKEN as a present-but-empty placeholder.
+        // The fallback chain must skip empty values (matching the frontend's
+        // `a || b` semantics), not just absent keys.
         let p = provider_with(json!({
             "env": {
                 "ANTHROPIC_BASE_URL": "https://openrouter.ai/api/v1",
@@ -1349,6 +1511,8 @@ mod tests {
 
     #[test]
     fn resolve_credentials_opencode_options() {
+        // OpenCode (OMO) nests creds under options.{baseURL,apiKey}; useOpencodeFormState
+        // writes config.options.apiKey, so the stored provider keeps them there.
         let p = provider_with(json!({
             "npm": "@ai-sdk/openai-compatible",
             "options": {
@@ -1368,6 +1532,9 @@ mod tests {
 
     #[test]
     fn resolve_credentials_claude_desktop_uses_env() {
+        // ClaudeDesktop persists the Anthropic env shape (ClaudeDesktopProviderForm
+        // reads env.ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN), so it resolves via
+        // the default env branch — it is NOT unsupported.
         let p = provider_with(json!({
             "env": {
                 "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",

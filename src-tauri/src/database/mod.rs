@@ -32,13 +32,17 @@ mod schema;
 mod tests;
 
 // DAO 类型导出供外部使用
-pub(crate) use dao::providers_seed::CLAUDE_DESKTOP_OFFICIAL_PROVIDER_ID;
+pub(crate) use dao::providers_seed::{
+    is_official_seed_id, CLAUDE_DESKTOP_OFFICIAL_PROVIDER_ID, CODEX_OFFICIAL_PROVIDER_ID,
+    GROKBUILD_OFFICIAL_PROVIDER_ID,
+};
 pub(crate) use dao::proxy::{
     validate_cost_multiplier, validate_pricing_source, PRICING_SOURCE_REQUEST,
     PRICING_SOURCE_RESPONSE,
 };
 pub(crate) use dao::session_traces::SessionTraceInsert;
 pub use dao::FailoverQueueItem;
+pub use dao::Profile;
 
 use crate::config::get_app_config_dir;
 use crate::error::AppError;
@@ -50,7 +54,7 @@ use std::sync::Mutex;
 
 /// 当前 Schema 版本号
 /// 每次修改表结构时递增，并在 schema.rs 中添加相应的迁移逻辑
-pub(crate) const SCHEMA_VERSION: i32 = 11;
+pub(crate) const SCHEMA_VERSION: i32 = 17;
 
 /// 安全地序列化 JSON，避免 unwrap panic
 pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {
@@ -83,6 +87,7 @@ fn register_db_change_hook(conn: &Connection) {
         |action: Action, _database: &str, table: &str, _row_id: i64| match action {
             Action::SQLITE_INSERT | Action::SQLITE_UPDATE | Action::SQLITE_DELETE => {
                 crate::services::webdav_auto_sync::notify_db_changed(table);
+                crate::services::s3_auto_sync::notify_db_changed(table);
             }
             _ => {}
         },
@@ -100,9 +105,11 @@ impl Database {
         // 确保父目录存在
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| AppError::io(parent, e))?;
+            crate::panic_hook::ensure_private_dir(parent).map_err(|e| AppError::io(parent, e))?;
         }
 
         let conn = Connection::open(&db_path).map_err(|e| AppError::Database(e.to_string()))?;
+        crate::panic_hook::ensure_private_file(&db_path).map_err(|e| AppError::io(&db_path, e))?;
 
         // 启用外键约束
         conn.execute("PRAGMA foreign_keys = ON;", [])
@@ -129,8 +136,25 @@ impl Database {
                 log::info!(
                     "Creating pre-migration database backup (v{version} → v{SCHEMA_VERSION})"
                 );
-                if let Err(e) = db.backup_database_file() {
-                    log::warn!("Pre-migration backup failed, continuing migration: {e}");
+                match db.backup_database_file() {
+                    Ok(Some(_)) => {}
+                    Ok(None) if version <= 15 => {
+                        return Err(AppError::Config(
+                            "Pre-migration backup was not created; refusing destructive usage-data migration"
+                                .to_string(),
+                        ));
+                    }
+                    Ok(None) => {
+                        log::warn!("Pre-migration backup was not created, continuing migration");
+                    }
+                    Err(e) if version <= 15 => {
+                        return Err(AppError::Config(format!(
+                            "Pre-migration backup failed; refusing destructive usage-data migration: {e}"
+                        )));
+                    }
+                    Err(e) => {
+                        log::warn!("Pre-migration backup failed, continuing migration: {e}");
+                    }
                 }
             }
         }
@@ -157,6 +181,18 @@ impl Database {
         }
 
         Ok(db)
+    }
+
+    /// Return the on-disk schema version only when it is newer than this build.
+    pub fn stored_user_version_exceeds_supported(
+        db_path: &std::path::Path,
+    ) -> Result<Option<i32>, AppError> {
+        if !db_path.exists() {
+            return Ok(None);
+        }
+        let conn = Connection::open(db_path).map_err(|e| AppError::Database(e.to_string()))?;
+        let version = Self::get_user_version(&conn)?;
+        Ok((version > SCHEMA_VERSION).then_some(version))
     }
 
     /// 创建内存数据库（用于测试）

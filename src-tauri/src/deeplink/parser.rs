@@ -1,6 +1,6 @@
 //! Deep link URL parser
 //!
-//! Parses ccgatewaypro:// URLs into DeepLinkImportRequest structures.
+//! Parses ccswitch:// URLs into DeepLinkImportRequest structures.
 
 use super::utils::validate_url;
 use super::DeepLinkImportRequest;
@@ -8,10 +8,10 @@ use crate::error::AppError;
 use std::collections::HashMap;
 use url::Url;
 
-/// Parse a ccgatewaypro:// URL into a DeepLinkImportRequest
+/// Parse a ccswitch:// URL into a DeepLinkImportRequest
 ///
 /// Expected format:
-/// ccgatewaypro://v1/import?resource={type}&...
+/// ccswitch://v1/import?resource={type}&...
 pub fn parse_deeplink_url(url_str: &str) -> Result<DeepLinkImportRequest, AppError> {
     // Parse URL
     let url = Url::parse(url_str)
@@ -19,9 +19,9 @@ pub fn parse_deeplink_url(url_str: &str) -> Result<DeepLinkImportRequest, AppErr
 
     // Validate scheme
     let scheme = url.scheme();
-    if scheme != "ccgatewaypro" {
+    if scheme != "ccswitch" {
         return Err(AppError::InvalidInput(format!(
-            "Invalid scheme: expected 'ccgatewaypro', got '{scheme}'"
+            "Invalid scheme: expected 'ccswitch', got '{scheme}'"
         )));
     }
 
@@ -81,10 +81,10 @@ fn parse_provider_deeplink(
     // Validate app type
     if !matches!(
         app.as_str(),
-        "claude" | "codex" | "gemini" | "opencode" | "openclaw" | "hermes"
+        "claude" | "codex" | "gemini" | "grokbuild" | "opencode" | "openclaw" | "hermes"
     ) {
         return Err(AppError::InvalidInput(format!(
-            "Invalid app type: must be 'claude', 'codex', 'gemini', 'opencode', 'openclaw', or 'hermes', got '{app}'"
+            "Invalid app type: must be 'claude', 'codex', 'gemini', 'grokbuild', 'opencode', 'openclaw', or 'hermes', got '{app}'"
         )));
     }
 
@@ -190,10 +190,10 @@ fn parse_prompt_deeplink(
     // Validate app type
     if !matches!(
         app.as_str(),
-        "claude" | "codex" | "gemini" | "opencode" | "openclaw" | "hermes"
+        "claude" | "codex" | "gemini" | "grokbuild" | "opencode" | "openclaw" | "hermes"
     ) {
         return Err(AppError::InvalidInput(format!(
-            "Invalid app type: must be 'claude', 'codex', 'gemini', 'opencode', 'openclaw', or 'hermes', got '{app}'"
+            "Invalid app type: must be 'claude', 'codex', 'gemini', 'grokbuild', 'opencode', 'openclaw', or 'hermes', got '{app}'"
         )));
     }
 
@@ -262,10 +262,17 @@ fn parse_mcp_deeplink(
         let trimmed = app.trim();
         if !matches!(
             trimmed,
-            "claude" | "codex" | "gemini" | "opencode" | "openclaw" | "hermes"
+            "claude"
+                | "codex"
+                | "gemini"
+                | "grokbuild"
+                | "grok"
+                | "opencode"
+                | "openclaw"
+                | "hermes"
         ) {
             return Err(AppError::InvalidInput(format!(
-                "Invalid app in 'apps': must be 'claude', 'codex', 'gemini', 'opencode', 'openclaw', or 'hermes', got '{trimmed}'"
+                "Invalid app in 'apps': must be 'claude', 'codex', 'gemini', 'grokbuild', 'opencode', 'openclaw', or 'hermes', got '{trimmed}'"
             )));
         }
     }

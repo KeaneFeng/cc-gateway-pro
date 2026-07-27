@@ -37,13 +37,12 @@ pub enum SyncMethod {
 
 /// Skill 存储位置（SSOT 目录选择）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum SkillStorageLocation {
-    /// CC-Gateway-Pro 管理目录 (~/.cc-gateway-pro/skills/)
+    /// CC Gateway Pro 管理目录 (~/.cc-gateway-pro/skills/)
     #[default]
-    #[serde(rename = "cc_gateway_pro", alias = "cc_gateway_pro")]
-    CcGatewayPro,
+    CcSwitch,
     /// Agent Skills 统一标准目录 (~/.agents/skills/)
-    #[serde(rename = "unified")]
     Unified,
 }
 
@@ -375,20 +374,15 @@ fn parse_branch_from_source_url(source_url: Option<&str>) -> Option<String> {
 
 /// 获取 `~/.agents/skills/` 目录（存在时返回）
 fn get_agents_skills_dir() -> Option<PathBuf> {
-    dirs::home_dir()
-        .map(|h| h.join(".agents").join("skills"))
-        .filter(|p| p.exists())
+    let dir = crate::config::get_home_dir().join(".agents").join("skills");
+    dir.exists().then_some(dir)
 }
 
 /// 解析 `~/.agents/.skill-lock.json`，返回 skill_name -> 仓库信息
 fn parse_agents_lock() -> HashMap<String, LockRepoInfo> {
-    let path = match dirs::home_dir() {
-        Some(h) => h.join(".agents").join(".skill-lock.json"),
-        None => {
-            log::warn!("无法获取 HOME 目录，跳过解析 agents lock 文件");
-            return HashMap::new();
-        }
-    };
+    let path = crate::config::get_home_dir()
+        .join(".agents")
+        .join(".skill-lock.json");
     let content = match fs::read_to_string(&path) {
         Ok(c) => c,
         Err(e) => {
@@ -481,14 +475,9 @@ impl SkillService {
     pub fn get_ssot_dir() -> Result<PathBuf> {
         let location = crate::settings::get_skill_storage_location();
         let dir = match location {
-            SkillStorageLocation::CcGatewayPro => get_app_config_dir().join("skills"),
+            SkillStorageLocation::CcSwitch => get_app_config_dir().join("skills"),
             SkillStorageLocation::Unified => {
-                let home = dirs::home_dir().context(format_skill_error(
-                    "GET_HOME_DIR_FAILED",
-                    &[],
-                    Some("checkPermission"),
-                ))?;
-                home.join(".agents").join("skills")
+                crate::config::get_home_dir().join(".agents").join("skills")
             }
         };
         fs::create_dir_all(&dir)?;
@@ -522,6 +511,11 @@ impl SkillService {
                     return Ok(custom.join("skills"));
                 }
             }
+            AppType::GrokBuild => {
+                if let Some(custom) = crate::settings::get_grok_override_dir() {
+                    return Ok(custom.join("skills"));
+                }
+            }
             AppType::OpenCode => {
                 if let Some(custom) = crate::settings::get_opencode_override_dir() {
                     return Ok(custom.join("skills"));
@@ -539,18 +533,17 @@ impl SkillService {
             }
         }
 
-        // 默认路径：回退到用户主目录下的标准位置
-        let home = dirs::home_dir().context(format_skill_error(
-            "GET_HOME_DIR_FAILED",
-            &[],
-            Some("checkPermission"),
-        ))?;
+        // 默认路径：回退到用户主目录下的标准位置。
+        // 必须走 get_home_dir()（可被 CC_GATEWAY_PRO_TEST_HOME 覆盖）：Windows 上 dirs::home_dir()
+        // 走 Known Folder API，测试无法隔离真实用户目录。
+        let home = crate::config::get_home_dir();
 
         Ok(match app {
             AppType::Claude => home.join(".claude").join("skills"),
             AppType::ClaudeDesktop => home.join(".claude-desktop").join("skills"),
             AppType::Codex => home.join(".codex").join("skills"),
             AppType::Gemini => home.join(".gemini").join("skills"),
+            AppType::GrokBuild => home.join(".grok").join("skills"),
             AppType::OpenCode => home.join(".config").join("opencode").join("skills"),
             AppType::OpenClaw => home.join(".openclaw").join("skills"),
             AppType::Hermes => crate::hermes_config::get_hermes_dir().join("skills"),
@@ -1166,10 +1159,9 @@ impl SkillService {
         // 1. 解析旧目录和新目录（不改设置）
         let old_dir = Self::get_ssot_dir()?;
         let new_dir = match target {
-            SkillStorageLocation::CcGatewayPro => get_app_config_dir().join("skills"),
+            SkillStorageLocation::CcSwitch => get_app_config_dir().join("skills"),
             SkillStorageLocation::Unified => {
-                let home = dirs::home_dir().context("Cannot determine home directory")?;
-                home.join(".agents").join("skills")
+                crate::config::get_home_dir().join(".agents").join("skills")
             }
         };
         fs::create_dir_all(&new_dir)?;
@@ -1381,7 +1373,7 @@ impl SkillService {
 
     /// 扫描未管理的 Skills
     ///
-    /// 扫描各应用目录，找出未被 CC-Gateway-Pro 管理的 Skills
+    /// 扫描各应用目录，找出未被 CC Gateway Pro 管理的 Skills
     pub fn scan_unmanaged(db: &Arc<Database>) -> Result<Vec<UnmanagedSkill>> {
         let managed_skills = db.get_all_installed_skills()?;
         let managed_dirs: HashSet<String> = managed_skills
@@ -1444,7 +1436,7 @@ impl SkillService {
 
     /// 从应用目录导入 Skills
     ///
-    /// 将未管理的 Skills 导入到 CC-Gateway-Pro 统一管理
+    /// 将未管理的 Skills 导入到 CC Gateway Pro 统一管理
     pub fn import_from_apps(
         db: &Arc<Database>,
         imports: Vec<ImportSkillSelection>,
@@ -1647,6 +1639,30 @@ impl SkillService {
         Ok(())
     }
 
+    /// 复制 Skill 到应用目录（保留用于向后兼容）
+    #[deprecated(note = "请使用 sync_to_app_dir() 代替")]
+    pub fn copy_to_app(directory: &str, app: &AppType) -> Result<()> {
+        Self::sync_to_app_dir(directory, app)
+    }
+
+    /// 删除路径（支持 symlink 和真实目录）
+    fn remove_path(path: &Path) -> Result<()> {
+        if Self::is_symlink(path) {
+            // 符号链接：仅删除链接本身，不影响源文件
+            #[cfg(unix)]
+            fs::remove_file(path)?;
+            #[cfg(windows)]
+            fs::remove_dir(path)?; // Windows 的目录 symlink 需要用 remove_dir
+        } else if path.is_dir() {
+            // 真实目录：递归删除
+            fs::remove_dir_all(path)?;
+        } else if path.exists() {
+            // 普通文件
+            fs::remove_file(path)?;
+        }
+        Ok(())
+    }
+
     fn validate_sync_source_dir(source: &Path, directory: &str) -> Result<()> {
         if !source.is_dir() {
             return Err(anyhow!("Skill 不存在于 SSOT: {directory}"));
@@ -1701,30 +1717,6 @@ impl SkillService {
             )
         })?;
 
-        Ok(())
-    }
-
-    /// 复制 Skill 到应用目录（保留用于向后兼容）
-    #[deprecated(note = "请使用 sync_to_app_dir() 代替")]
-    pub fn copy_to_app(directory: &str, app: &AppType) -> Result<()> {
-        Self::sync_to_app_dir(directory, app)
-    }
-
-    /// 删除路径（支持 symlink 和真实目录）
-    fn remove_path(path: &Path) -> Result<()> {
-        if Self::is_symlink(path) {
-            // 符号链接：仅删除链接本身，不影响源文件
-            #[cfg(unix)]
-            fs::remove_file(path)?;
-            #[cfg(windows)]
-            fs::remove_dir(path)?; // Windows 的目录 symlink 需要用 remove_dir
-        } else if path.is_dir() {
-            // 真实目录：递归删除
-            fs::remove_dir_all(path)?;
-        } else if path.exists() {
-            // 普通文件
-            fs::remove_file(path)?;
-        }
         Ok(())
     }
 
@@ -3071,6 +3063,36 @@ mod tests {
     }
 
     #[test]
+    // serial：与 backup/s3_sync/deeplink 等同样读写进程级 CC_GATEWAY_PRO_TEST_HOME 的测试互斥，
+    // EnvGuard 只负责恢复不提供互斥。
+    #[serial_test::serial]
+    fn get_app_skills_dir_honors_test_home_override() {
+        // 回归：曾直呼 dirs::home_dir() 绕过 CC_GATEWAY_PRO_TEST_HOME——Unix 上碰巧跟 $HOME
+        // 一致所以测试能过，Windows 上 dirs 走 Known Folder API，测试隔离整体失效
+        // （tests/skill_sync.rs 扫到 runner 真实用户目录）。
+        struct EnvGuard(Option<std::ffi::OsString>);
+        impl Drop for EnvGuard {
+            fn drop(&mut self) {
+                match self.0.take() {
+                    Some(value) => std::env::set_var("CC_GATEWAY_PRO_TEST_HOME", value),
+                    None => std::env::remove_var("CC_GATEWAY_PRO_TEST_HOME"),
+                }
+            }
+        }
+        let temp = tempdir().expect("tempdir");
+        let _guard = EnvGuard(std::env::var_os("CC_GATEWAY_PRO_TEST_HOME"));
+        std::env::set_var("CC_GATEWAY_PRO_TEST_HOME", temp.path());
+
+        let dir =
+            SkillService::get_app_skills_dir(&AppType::Claude).expect("resolve claude skills dir");
+        assert!(
+            dir.starts_with(temp.path()),
+            "skills dir must live under the overridden test home, got {}",
+            dir.display()
+        );
+    }
+
+    #[test]
     fn resolve_skill_source_dir_returns_repo_root_for_root_level_skill() {
         let temp = tempdir().expect("tempdir");
         write_skill(temp.path(), "Root Skill");
@@ -3103,5 +3125,26 @@ mod tests {
             .expect("install name should fall back to the matching discovered skill directory");
 
         assert_eq!(resolved, nested);
+    }
+
+    #[test]
+    fn replace_dest_with_copy_rejects_empty_source_without_touching_existing_dest() {
+        let temp = tempdir().expect("tempdir");
+        let source = temp.path().join("source-skill");
+        let dest = temp.path().join("app-skills").join("source-skill");
+        fs::create_dir_all(&source).expect("create empty source");
+        write_skill(&dest, "Existing Skill");
+
+        let err = SkillService::replace_dest_with_copy(&source, &dest, "source-skill")
+            .expect_err("empty source should not replace existing app skill");
+
+        assert!(
+            err.to_string().contains("SKILL.md"),
+            "unexpected error: {err:#}"
+        );
+        assert!(
+            dest.join("SKILL.md").is_file(),
+            "existing destination skill should be preserved"
+        );
     }
 }

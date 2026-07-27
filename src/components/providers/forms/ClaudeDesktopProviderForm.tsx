@@ -39,9 +39,12 @@ import { Switch } from "@/components/ui/switch";
 import { BasicFormFields } from "./BasicFormFields";
 import { CodexOAuthSection } from "./CodexOAuthSection";
 import { CopilotAuthSection } from "./CopilotAuthSection";
+import { XaiOAuthSection } from "./XaiOAuthSection";
+import { ApiKeySection } from "./shared/ApiKeySection";
 import { EndpointField } from "./shared/EndpointField";
 import { ModelDropdown } from "./shared/ModelDropdown";
 import { ProviderPresetSelector } from "./ProviderPresetSelector";
+import { useApiKeyLink } from "./hooks/useApiKeyLink";
 import { providerSchema, type ProviderFormData } from "@/lib/schemas/provider";
 import type {
   ClaudeApiFormat,
@@ -66,6 +69,8 @@ import {
   type ClaudeDesktopDefaultRoute,
 } from "@/lib/api/providers";
 import { resolveManagedAccountId } from "@/lib/authBinding";
+import { useCopilotAuth, useCodexOauth, useXaiOauth } from "./hooks";
+import { isOAuthProviderType } from "@/config/constants";
 
 export type ClaudeDesktopProviderFormValues = ProviderFormData & {
   presetId?: string;
@@ -117,7 +122,7 @@ const CLAUDE_ROUTE_PREFIX = "claude-";
 const ANTHROPIC_CLAUDE_ROUTE_PREFIX = "anthropic/claude-";
 const LEGACY_ONE_M_MARKER = "[1m]";
 const ROLE_ROUTE_IDS = CLAUDE_DESKTOP_ROLE_ROUTE_IDS;
-const ROLE_ORDER: RouteRole[] = ["sonnet", "opus", "haiku"];
+const ROLE_ORDER: RouteRole[] = ["sonnet", "opus", "fable", "haiku"];
 
 function envString(
   settingsConfig: Record<string, unknown> | undefined,
@@ -138,8 +143,10 @@ function clonePlainRecord(value: unknown): Record<string, unknown> {
 
 function routeRoleFromId(route: string): RouteRole {
   const normalized = route.trim().toLowerCase();
+  // 与后端 claude_role_keyword 同序（opus → haiku → fable → sonnet）。
   if (normalized.includes("opus")) return "opus";
   if (normalized.includes("haiku")) return "haiku";
+  if (normalized.includes("fable")) return "fable";
   return "sonnet";
 }
 
@@ -193,9 +200,10 @@ function initialRouteRows(
   });
 }
 
-// Proxy 模式对齐 Claude Code：固定 Sonnet / Opus / Haiku 三档。
-// 把任意来源的 route 行按角色归类到固定三槽（缺档留空），保证 UI 永远三行、
-// 用户不会漏配 Haiku 导致子 agent 找不到模型。
+// Proxy 模式对齐 Claude Code：固定 Sonnet / Opus / Fable / Haiku 四档。
+// 把任意来源的 route 行按角色归类到固定四槽（缺档留空），保证 UI 永远四行、
+// 用户不会漏配某档导致子 agent 找不到模型。
+// （fable 自 Desktop 1.12603.1+ 起被 fail-all 校验放行，可作为独立档位。）
 function normalizeProxyRows(rows: RouteRow[]): RouteRow[] {
   return ROLE_ORDER.map((role) => {
     const match = rows.find(
@@ -221,7 +229,8 @@ function isClaudeSafeRoute(route: string) {
 
   // 角色前缀后必须还有实际模型标识，拒绝 claude-sonnet- 这类退化值
   // （否则会写入 profile 并触发 Claude Desktop fail-all 拒收整组）。
-  return ["sonnet-", "opus-", "haiku-"].some(
+  // 与后端 is_claude_safe_model_id 镜像；fable 自 Desktop 1.12603.1+ 起被校验放行。
+  return ["sonnet-", "opus-", "haiku-", "fable-"].some(
     (prefix) =>
       routeTail.startsWith(prefix) && routeTail.length > prefix.length,
   );
@@ -250,9 +259,10 @@ export function ClaudeDesktopProviderForm({
   showButtons = true,
 }: ClaudeDesktopProviderFormProps) {
   const { t } = useTranslation();
-  const initialMode = initialData?.meta?.claudeDesktopMode ?? "direct";
+  const initialMode = isOAuthProviderType(initialData?.meta?.providerType)
+    ? "proxy"
+    : (initialData?.meta?.claudeDesktopMode ?? "direct");
   const [mode, setMode] = useState<"direct" | "proxy">(initialMode);
-  const needsModelMapping = mode === "proxy";
   const [apiFormat, setApiFormat] = useState<ClaudeApiFormat>(
     initialData?.meta?.apiFormat ?? "anthropic",
   );
@@ -274,6 +284,9 @@ export function ClaudeDesktopProviderForm({
   const [selectedCodexAccountId, setSelectedCodexAccountId] = useState<
     string | null
   >(() => resolveManagedAccountId(initialData?.meta, "codex_oauth"));
+  const [selectedXaiAccountId, setSelectedXaiAccountId] = useState<
+    string | null
+  >(() => resolveManagedAccountId(initialData?.meta, "xai_oauth"));
   const [codexFastMode, setCodexFastMode] = useState<boolean>(
     () => initialData?.meta?.codexFastMode ?? false,
   );
@@ -371,13 +384,39 @@ export function ClaudeDesktopProviderForm({
   );
   const activeProviderType =
     activePreset?.providerType ?? initialData?.meta?.providerType;
+  const { isAuthenticated: isCopilotAuthenticated, accounts: copilotAccounts } =
+    useCopilotAuth();
+  const {
+    isAuthenticated: isCodexOauthAuthenticated,
+    accounts: codexOauthAccounts,
+  } = useCodexOauth();
+  const {
+    isAuthenticated: isXaiOauthAuthenticated,
+    accounts: xaiOauthAccounts,
+  } = useXaiOauth();
   const isOfficial =
     initialData?.category === "official" ||
     activePreset?.category === "official";
   const usesManagedOAuth =
     activePreset?.requiresOAuth === true ||
-    activeProviderType === "github_copilot" ||
-    activeProviderType === "codex_oauth";
+    isOAuthProviderType(activeProviderType);
+  const effectiveMode: "direct" | "proxy" = usesManagedOAuth ? "proxy" : mode;
+  const needsModelMapping = effectiveMode === "proxy";
+
+  // API Key 获取/邀请链接（与 Claude Code 表单同款，见 ClaudeFormFields）
+  const apiKeyLinkCategory = activePreset?.category ?? initialData?.category;
+  const {
+    shouldShowApiKeyLink,
+    websiteUrl: apiKeyLinkWebsiteUrl,
+    isPartner: apiKeyLinkIsPartner,
+    partnerPromotionKey: apiKeyLinkPromotionKey,
+  } = useApiKeyLink({
+    appId: "claude-desktop",
+    category: apiKeyLinkCategory,
+    selectedPresetId,
+    presetEntries,
+    formWebsiteUrl: form.watch("websiteUrl") || "",
+  });
 
   const applyDesktopPreset = (preset: ClaudeDesktopProviderPreset) => {
     form.setValue("name", preset.nameKey ? t(preset.nameKey) : preset.name);
@@ -391,9 +430,13 @@ export function ClaudeDesktopProviderForm({
     setApiKeyField(preset.apiKeyField ?? "ANTHROPIC_AUTH_TOKEN");
     setApiFormat(preset.apiFormat ?? "anthropic");
 
+    const presetMode =
+      preset.requiresOAuth === true || isOAuthProviderType(preset.providerType)
+        ? "proxy"
+        : preset.mode;
     didSeedDefaultRoutes.current = true;
-    setMode(preset.mode);
-    if (preset.mode === "proxy" && preset.modelRoutes) {
+    setMode(presetMode);
+    if (presetMode === "proxy" && preset.modelRoutes) {
       setRoutes(
         normalizeProxyRows(
           preset.modelRoutes.map((r) =>
@@ -448,6 +491,7 @@ export function ClaudeDesktopProviderForm({
   };
 
   const handleModelMappingChange = (checked: boolean) => {
+    if (usesManagedOAuth) return;
     setMode(checked ? "proxy" : "direct");
     if (checked) {
       // 切到 proxy：归一化成固定 Sonnet / Opus / Haiku 三档；
@@ -474,7 +518,7 @@ export function ClaudeDesktopProviderForm({
   useEffect(() => {
     if (
       didSeedDefaultRoutes.current ||
-      mode !== "proxy" ||
+      effectiveMode !== "proxy" ||
       routes.length > 0 ||
       defaultProxyRouteRows.length === 0
     ) {
@@ -483,7 +527,7 @@ export function ClaudeDesktopProviderForm({
 
     didSeedDefaultRoutes.current = true;
     setRoutes(normalizeProxyRows(defaultProxyRouteRows));
-  }, [defaultProxyRouteRows, mode, routes.length]);
+  }, [defaultProxyRouteRows, effectiveMode, routes.length]);
 
   const handleFetchModels = async () => {
     if (!baseUrl.trim() || !apiKey.trim()) {
@@ -547,10 +591,65 @@ export function ClaudeDesktopProviderForm({
       });
       return;
     }
-    if (!baseUrl.trim()) {
+    if (!baseUrl.trim() && !usesManagedOAuth) {
       toast.error(
         t("providerForm.fetchModelsNeedEndpoint", {
           defaultValue: "请先填写接口地址",
+        }),
+      );
+      return;
+    }
+    const selectedAccountIsUsable = (
+      accountId: string | null,
+      accounts: Array<{ id: string; requires_reauth: boolean }>,
+    ) =>
+      accountId === null ||
+      accounts.some(
+        (account) => account.id === accountId && !account.requires_reauth,
+      );
+    const managedAuthState =
+      activeProviderType === "github_copilot"
+        ? {
+            authenticated: isCopilotAuthenticated,
+            accountId: selectedGitHubAccountId,
+            accounts: copilotAccounts,
+            loginMessage: t("copilot.loginRequired", {
+              defaultValue: "请先登录 GitHub Copilot",
+            }),
+          }
+        : activeProviderType === "codex_oauth"
+          ? {
+              authenticated: isCodexOauthAuthenticated,
+              accountId: selectedCodexAccountId,
+              accounts: codexOauthAccounts,
+              loginMessage: t("codexOauth.loginRequired", {
+                defaultValue: "请先登录 ChatGPT 账号",
+              }),
+            }
+          : activeProviderType === "xai_oauth"
+            ? {
+                authenticated: isXaiOauthAuthenticated,
+                accountId: selectedXaiAccountId,
+                accounts: xaiOauthAccounts,
+                loginMessage: t("xaiOauth.loginRequired", {
+                  defaultValue: "请先登录 xAI 账号",
+                }),
+              }
+            : null;
+    if (managedAuthState && !managedAuthState.authenticated) {
+      toast.error(managedAuthState.loginMessage);
+      return;
+    }
+    if (
+      managedAuthState &&
+      !selectedAccountIsUsable(
+        managedAuthState.accountId,
+        managedAuthState.accounts,
+      )
+    ) {
+      toast.error(
+        t("managedAuth.selectedAccountUnavailable", {
+          defaultValue: "已绑定账号不存在或需要重新登录，请重新选择账号",
         }),
       );
       return;
@@ -573,10 +672,10 @@ export function ClaudeDesktopProviderForm({
       }))
       .filter((route) => route.route || route.model);
 
-    if (mode === "proxy") {
-      // 固定三档（Sonnet / Opus / Haiku），route_id 由 UI 生成、恒合法，
+    if (effectiveMode === "proxy") {
+      // 固定四档（Sonnet / Opus / Fable / Haiku），route_id 由 UI 生成、恒合法，
       // 因此只要求至少填一个实际请求模型；留空档继承第一个已填档（Sonnet 优先），
-      // 对齐 Claude Code 的兜底，保证落库三档齐全、子 agent 不会找不到 Haiku。
+      // 对齐 Claude Code 的兜底，保证落库四档齐全、子 agent 不会找不到模型。
       const primary = routeEntries.find((route) => route.model);
       if (!primary) {
         toast.error(
@@ -633,9 +732,11 @@ export function ClaudeDesktopProviderForm({
       Record<string, ClaudeDesktopModelRoute>
     >((acc, route) => {
       acc[route.route] = {
-        model: mode === "direct" ? route.route : route.model || route.route,
+        model:
+          effectiveMode === "direct" ? route.route : route.model || route.route,
         labelOverride:
-          route.labelOverride || (mode === "proxy" ? route.model : undefined),
+          route.labelOverride ||
+          (effectiveMode === "proxy" ? route.model : undefined),
         supports1m: route.supports1m || undefined,
       };
       return acc;
@@ -643,8 +744,13 @@ export function ClaudeDesktopProviderForm({
 
     const meta: ProviderMeta = {
       ...(initialData?.meta ?? {}),
-      claudeDesktopMode: mode,
-      apiFormat: mode === "proxy" ? apiFormat : "anthropic",
+      claudeDesktopMode: effectiveMode,
+      apiFormat:
+        activeProviderType === "xai_oauth"
+          ? "openai_responses"
+          : effectiveMode === "proxy"
+            ? apiFormat
+            : "anthropic",
     };
 
     meta.claudeDesktopModelRoutes = routeMap;
@@ -662,7 +768,13 @@ export function ClaudeDesktopProviderForm({
               authProvider: "codex_oauth",
               accountId: selectedCodexAccountId ?? undefined,
             }
-          : undefined;
+          : activeProviderType === "xai_oauth"
+            ? {
+                source: "managed_account",
+                authProvider: "xai_oauth",
+                accountId: selectedXaiAccountId ?? undefined,
+              }
+            : undefined;
     meta.codexFastMode =
       activeProviderType === "codex_oauth" ? codexFastMode : undefined;
 
@@ -752,25 +864,30 @@ export function ClaudeDesktopProviderForm({
                     selectedAccountId={selectedGitHubAccountId}
                     onAccountSelect={setSelectedGitHubAccountId}
                   />
-                ) : (
+                ) : activeProviderType === "codex_oauth" ? (
                   <CodexOAuthSection
                     selectedAccountId={selectedCodexAccountId}
                     onAccountSelect={setSelectedCodexAccountId}
                     fastModeEnabled={codexFastMode}
                     onFastModeChange={setCodexFastMode}
                   />
+                ) : (
+                  <XaiOAuthSection
+                    selectedAccountId={selectedXaiAccountId}
+                    onAccountSelect={setSelectedXaiAccountId}
+                  />
                 )}
               </div>
             ) : (
-              <div className="space-y-1">
-                <Label>{"API Key"}</Label>
-                <Input
-                  value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  type="password"
-                  placeholder="sk-..."
-                />
-              </div>
+              <ApiKeySection
+                value={apiKey}
+                onChange={setApiKey}
+                category={apiKeyLinkCategory}
+                shouldShowLink={shouldShowApiKeyLink}
+                websiteUrl={apiKeyLinkWebsiteUrl}
+                isPartner={apiKeyLinkIsPartner}
+                partnerPromotionKey={apiKeyLinkPromotionKey}
+              />
             )}
 
             <EndpointField
@@ -814,6 +931,7 @@ export function ClaudeDesktopProviderForm({
                 <Switch
                   checked={needsModelMapping}
                   onCheckedChange={handleModelMappingChange}
+                  disabled={usesManagedOAuth}
                   aria-label={t("claudeDesktop.modelMappingToggle", {
                     defaultValue: "需要模型映射",
                   })}
@@ -823,44 +941,49 @@ export function ClaudeDesktopProviderForm({
 
             {needsModelMapping && (
               <div className="space-y-4 rounded-lg border border-border-default p-4">
-                <div className="space-y-2">
-                  <Label>
-                    {t("providerForm.apiFormat", { defaultValue: "API 格式" })}
-                  </Label>
-                  <Select
-                    value={apiFormat}
-                    onValueChange={(value) =>
-                      setApiFormat(value as ClaudeApiFormat)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="anthropic">
-                        {t("providerForm.apiFormatAnthropic", {
-                          defaultValue: "Anthropic Messages (原生)",
-                        })}
-                      </SelectItem>
-                      <SelectItem value="openai_chat">
-                        {t("providerForm.apiFormatOpenAIChat", {
-                          defaultValue: "OpenAI Chat Completions (需开启路由)",
-                        })}
-                      </SelectItem>
-                      <SelectItem value="openai_responses">
-                        {t("providerForm.apiFormatOpenAIResponses", {
-                          defaultValue: "OpenAI Responses API (需开启路由)",
-                        })}
-                      </SelectItem>
-                      <SelectItem value="gemini_native">
-                        {t("providerForm.apiFormatGeminiNative", {
-                          defaultValue:
-                            "Gemini Native generateContent (需开启路由)",
-                        })}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {activeProviderType !== "xai_oauth" && (
+                  <div className="space-y-2">
+                    <Label>
+                      {t("providerForm.apiFormat", {
+                        defaultValue: "API 格式",
+                      })}
+                    </Label>
+                    <Select
+                      value={apiFormat}
+                      onValueChange={(value) =>
+                        setApiFormat(value as ClaudeApiFormat)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="anthropic">
+                          {t("providerForm.apiFormatAnthropic", {
+                            defaultValue: "Anthropic Messages (原生)",
+                          })}
+                        </SelectItem>
+                        <SelectItem value="openai_chat">
+                          {t("providerForm.apiFormatOpenAIChat", {
+                            defaultValue:
+                              "OpenAI Chat Completions (需开启路由)",
+                          })}
+                        </SelectItem>
+                        <SelectItem value="openai_responses">
+                          {t("providerForm.apiFormatOpenAIResponses", {
+                            defaultValue: "OpenAI Responses API (需开启路由)",
+                          })}
+                        </SelectItem>
+                        <SelectItem value="gemini_native">
+                          {t("providerForm.apiFormatGeminiNative", {
+                            defaultValue:
+                              "Gemini Native generateContent (需开启路由)",
+                          })}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="space-y-1 border-t border-border-default pt-4">
@@ -931,9 +1054,22 @@ export function ClaudeDesktopProviderForm({
                           ? t("claudeDesktop.routeRoleHaiku", {
                               defaultValue: "Haiku",
                             })
-                          : t("claudeDesktop.routeRoleSonnet", {
-                              defaultValue: "Sonnet",
-                            });
+                          : role === "fable"
+                            ? t("claudeDesktop.routeRoleFable", {
+                                defaultValue: "Fable",
+                              })
+                            : t("claudeDesktop.routeRoleSonnet", {
+                                defaultValue: "Sonnet",
+                              });
+                    // Haiku 档示范映射到轻量模型（flash），其余档映射到 pro；
+                    // 两列占位联动，保持每行「菜单显示名 ↔ 实际请求模型」品牌一致。
+                    const isHaikuRole = role === "haiku";
+                    const labelPlaceholder = isHaikuRole
+                      ? "DeepSeek V4 Flash"
+                      : "DeepSeek V4 Pro";
+                    const modelPlaceholder = isHaikuRole
+                      ? "deepseek-v4-flash"
+                      : "deepseek-v4-pro";
                     return (
                       <div
                         key={route.rowId}
@@ -949,7 +1085,7 @@ export function ClaudeDesktopProviderForm({
                               labelOverride: event.target.value,
                             })
                           }
-                          placeholder="DeepSeek V4 Pro"
+                          placeholder={labelPlaceholder}
                         />
                         <div className="flex gap-1">
                           <Input
@@ -957,7 +1093,7 @@ export function ClaudeDesktopProviderForm({
                             onChange={(event) =>
                               updateRoute(index, { model: event.target.value })
                             }
-                            placeholder="kimi-k2 / deepseek-chat"
+                            placeholder={modelPlaceholder}
                             className="flex-1"
                           />
                           {fetchedModels.length > 0 && (

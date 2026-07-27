@@ -172,12 +172,21 @@ brew_release() {
     log "获取线上最新版本..."
     LATEST_TAG=$(gh release view --json tagName --jq '.tagName' 2>/dev/null || echo "v0.0.0")
     CURRENT_VERSION=${LATEST_TAG#v}  # 移除 v 前缀
+    LOCAL_VERSION=$(get_version)
     log "线上最新版本: $CURRENT_VERSION"
+    log "本地当前版本: $LOCAL_VERSION"
 
     # 计算新版本号
     if [[ "$version_mode" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         NEW_VERSION="$version_mode"
         info "设置版本为: $NEW_VERSION"
+    elif [ "$version_mode" = "patch" ] \
+        && [ "$LOCAL_VERSION" != "$CURRENT_VERSION" ] \
+        && [ "$(printf '%s\n%s\n' "$CURRENT_VERSION" "$LOCAL_VERSION" | sort -V | tail -1)" = "$LOCAL_VERSION" ]; then
+        # 上游同步等场景可能已经把本地版本提升到线上版本之后。
+        # 此时默认发布本地版本，避免按线上 patch 计算后发生版本倒退。
+        NEW_VERSION="$LOCAL_VERSION"
+        info "本地版本高于线上版本，发布本地版本: ${GREEN}${NEW_VERSION}${NC}"
     else
         IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
         case "$version_mode" in
@@ -234,11 +243,7 @@ brew_release() {
             exit 1
         }
         log "CI 构建成功！"
-        
-        # 自动更新 Homebrew SHA256
-        echo ""
-        log "自动更新 Homebrew Cask..."
-        update_sha "$NEW_VERSION"
+        log "Homebrew Cask 已由 Release workflow 自动更新"
     else
         warn "无法获取 CI Run ID，请手动更新: ./build.sh --update-sha $NEW_VERSION"
     fi

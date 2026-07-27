@@ -9,7 +9,51 @@ use super::DeepLinkImportRequest;
 use crate::AppType;
 use crate::{store::AppState, Database};
 use base64::prelude::*;
-use std::sync::Arc;
+use std::{env, ffi::OsString, sync::Arc};
+
+struct TestHomeGuard {
+    _dir: tempfile::TempDir,
+    original_home: Option<OsString>,
+    original_userprofile: Option<OsString>,
+    original_test_home: Option<OsString>,
+}
+
+impl TestHomeGuard {
+    fn new() -> Self {
+        let dir = tempfile::tempdir().expect("create isolated test home");
+        let original_home = env::var_os("HOME");
+        let original_userprofile = env::var_os("USERPROFILE");
+        let original_test_home = env::var_os("CC_GATEWAY_PRO_TEST_HOME");
+
+        env::set_var("HOME", dir.path());
+        env::set_var("USERPROFILE", dir.path());
+        env::set_var("CC_GATEWAY_PRO_TEST_HOME", dir.path());
+
+        Self {
+            _dir: dir,
+            original_home,
+            original_userprofile,
+            original_test_home,
+        }
+    }
+}
+
+impl Drop for TestHomeGuard {
+    fn drop(&mut self) {
+        match &self.original_test_home {
+            Some(value) => env::set_var("CC_GATEWAY_PRO_TEST_HOME", value),
+            None => env::remove_var("CC_GATEWAY_PRO_TEST_HOME"),
+        }
+        match &self.original_userprofile {
+            Some(value) => env::set_var("USERPROFILE", value),
+            None => env::remove_var("USERPROFILE"),
+        }
+        match &self.original_home {
+            Some(value) => env::set_var("HOME", value),
+            None => env::remove_var("HOME"),
+        }
+    }
+}
 
 // =============================================================================
 // Parser Tests
@@ -17,7 +61,7 @@ use std::sync::Arc;
 
 #[test]
 fn test_parse_valid_claude_deeplink() {
-    let url = "ccgatewaypro://v1/import?resource=provider&app=claude&name=Test%20Provider&homepage=https%3A%2F%2Fexample.com&endpoint=https%3A%2F%2Fapi.example.com&apiKey=sk-test-123&icon=claude";
+    let url = "ccswitch://v1/import?resource=provider&app=claude&name=Test%20Provider&homepage=https%3A%2F%2Fexample.com&endpoint=https%3A%2F%2Fapi.example.com&apiKey=sk-test-123&icon=claude";
 
     let request = parse_deeplink_url(url).unwrap();
 
@@ -36,11 +80,44 @@ fn test_parse_valid_claude_deeplink() {
 
 #[test]
 fn test_parse_deeplink_with_notes() {
-    let url = "ccgatewaypro://v1/import?resource=provider&app=codex&name=Codex&homepage=https%3A%2F%2Fcodex.com&endpoint=https%3A%2F%2Fapi.codex.com&apiKey=key123&notes=Test%20notes";
+    let url = "ccswitch://v1/import?resource=provider&app=codex&name=Codex&homepage=https%3A%2F%2Fcodex.com&endpoint=https%3A%2F%2Fapi.codex.com&apiKey=key123&notes=Test%20notes";
 
     let request = parse_deeplink_url(url).unwrap();
 
     assert_eq!(request.notes, Some("Test notes".to_string()));
+}
+
+#[test]
+fn test_parse_grokbuild_provider() {
+    use super::provider::build_provider_from_request;
+
+    let url = "ccswitch://v1/import?resource=provider&app=grokbuild&name=Grok%20Relay&endpoint=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=secret&model=grok-4.5";
+
+    let request = parse_deeplink_url(url).unwrap();
+
+    assert_eq!(request.app.as_deref(), Some("grokbuild"));
+    assert_eq!(request.name.as_deref(), Some("Grok Relay"));
+    assert_eq!(
+        request.endpoint.as_deref(),
+        Some("https://api.example.com/v1")
+    );
+    assert_eq!(request.api_key.as_deref(), Some("secret"));
+    assert_eq!(request.model.as_deref(), Some("grok-4.5"));
+
+    let provider = build_provider_from_request(&AppType::GrokBuild, &request).unwrap();
+    let config = provider.settings_config["config"].as_str().unwrap();
+    let document = config.parse::<toml::Value>().unwrap();
+    let model = &document["model"]["grok-4.5"];
+
+    assert_eq!(document["models"]["default"].as_str(), Some("grok-4.5"));
+    assert_eq!(
+        model["base_url"].as_str(),
+        Some("https://api.example.com/v1")
+    );
+    assert_eq!(model["name"].as_str(), Some("Grok Relay"));
+    assert_eq!(model["api_key"].as_str(), Some("secret"));
+    assert_eq!(model["api_backend"].as_str(), Some("responses"));
+    assert_eq!(model["context_window"].as_integer(), Some(500_000));
 }
 
 #[test]
@@ -54,7 +131,7 @@ fn test_parse_invalid_scheme() {
 
 #[test]
 fn test_parse_unsupported_version() {
-    let url = "ccgatewaypro://v2/import?resource=provider&app=claude&name=Test";
+    let url = "ccswitch://v2/import?resource=provider&app=claude&name=Test";
 
     let result = parse_deeplink_url(url);
     assert!(result.is_err());
@@ -67,7 +144,7 @@ fn test_parse_unsupported_version() {
 #[test]
 fn test_parse_missing_required_field() {
     // Name is still required even in v3.8+ (only homepage/endpoint/apiKey are optional)
-    let url = "ccgatewaypro://v1/import?resource=provider&app=claude";
+    let url = "ccswitch://v1/import?resource=provider&app=claude";
 
     let result = parse_deeplink_url(url);
     assert!(result.is_err());
@@ -416,6 +493,79 @@ fn test_parse_and_merge_config_claude() {
 }
 
 #[test]
+fn test_parse_and_merge_config_codex_uses_bearer_token() {
+    let config_toml = r#"model_provider = "rightcode"
+model = "gpt-5-codex"
+
+[model_providers.rightcode]
+base_url = "https://rightcode.example/v1"
+wire_api = "responses"
+experimental_bearer_token = "sk-rightcode"
+"#;
+    let config_json = serde_json::json!({
+        "auth": {},
+        "config": config_toml,
+    })
+    .to_string();
+    let config_b64 = BASE64_STANDARD.encode(config_json.as_bytes());
+
+    let request = DeepLinkImportRequest {
+        version: "v1".to_string(),
+        resource: "provider".to_string(),
+        app: Some("codex".to_string()),
+        name: Some("RightCode".to_string()),
+        config: Some(config_b64),
+        config_format: Some("json".to_string()),
+        ..Default::default()
+    };
+
+    let merged = parse_and_merge_config(&request).unwrap();
+
+    assert_eq!(merged.api_key, Some("sk-rightcode".to_string()));
+    assert_eq!(
+        merged.endpoint,
+        Some("https://rightcode.example/v1".to_string())
+    );
+    assert_eq!(
+        merged.homepage,
+        Some("https://rightcode.example".to_string())
+    );
+    assert_eq!(merged.model, Some("gpt-5-codex".to_string()));
+}
+
+#[test]
+fn test_parse_and_merge_config_grokbuild() {
+    let config_toml = r#"[models]
+default = "grok-profile"
+
+[model."grok-profile"]
+model = "grok-upstream"
+base_url = "https://grok.example/v1"
+name = "Grok Relay"
+api_key = "sk-grok"
+api_backend = "responses"
+context_window = 500000
+"#;
+    let config_json = serde_json::json!({ "config": config_toml }).to_string();
+    let request = DeepLinkImportRequest {
+        version: "v1".to_string(),
+        resource: "provider".to_string(),
+        app: Some("grokbuild".to_string()),
+        name: Some("Grok Relay".to_string()),
+        config: Some(BASE64_STANDARD.encode(config_json.as_bytes())),
+        config_format: Some("json".to_string()),
+        ..Default::default()
+    };
+
+    let merged = parse_and_merge_config(&request).expect("merge Grok Build config");
+
+    assert_eq!(merged.api_key.as_deref(), Some("sk-grok"));
+    assert_eq!(merged.endpoint.as_deref(), Some("https://grok.example/v1"));
+    assert_eq!(merged.model.as_deref(), Some("grok-upstream"));
+    assert_eq!(merged.homepage.as_deref(), Some("https://grok.example"));
+}
+
+#[test]
 fn test_parse_and_merge_config_url_override() {
     let config_json = r#"{"env":{"ANTHROPIC_AUTH_TOKEN":"sk-old","ANTHROPIC_BASE_URL":"https://api.anthropic.com/v1"}}"#;
     let config_b64 = BASE64_STANDARD.encode(config_json.as_bytes());
@@ -461,149 +611,6 @@ fn test_parse_and_merge_config_url_override() {
     assert_eq!(
         merged.endpoint,
         Some("https://api.anthropic.com/v1".to_string())
-    );
-}
-
-// =============================================================================
-// Prompt Tests
-// =============================================================================
-
-#[test]
-fn test_import_prompt_allows_space_in_base64_content() {
-    let url = "ccgatewaypro://v1/import?resource=prompt&app=codex&name=PromptPlus&content=Pj4+";
-    let request = parse_deeplink_url(url).unwrap();
-
-    // URL decoded content may have "+" become space
-    assert_eq!(request.content.as_deref(), Some("Pj4 "));
-
-    let db = Arc::new(Database::memory().expect("create memory db"));
-    let state = AppState::new(db.clone());
-
-    let prompt_id = import_prompt_from_deeplink(&state, request.clone()).expect("import prompt");
-
-    let prompts = state.db.get_prompts("codex").expect("get prompts");
-    let prompt = prompts.get(&prompt_id).expect("prompt saved");
-
-    assert_eq!(prompt.content, ">>>");
-    assert_eq!(prompt.name, request.name.unwrap());
-}
-
-// =============================================================================
-// MCP Tests
-// =============================================================================
-
-#[test]
-fn test_parse_mcp_apps() {
-    let apps = parse_mcp_apps("claude,codex").unwrap();
-    assert!(apps.claude);
-    assert!(apps.codex);
-    assert!(!apps.gemini);
-
-    let apps = parse_mcp_apps("gemini").unwrap();
-    assert!(!apps.claude);
-    assert!(!apps.codex);
-    assert!(apps.gemini);
-
-    let err = parse_mcp_apps("invalid").unwrap_err();
-    assert!(err.to_string().contains("Invalid app"));
-}
-
-#[test]
-fn test_parse_prompt_deeplink() {
-    let content = "Hello World";
-    let content_b64 = BASE64_STANDARD.encode(content);
-    let url = format!(
-        "ccgatewaypro://v1/import?resource=prompt&app=claude&name=test&content={}&description=desc&enabled=true",
-        content_b64
-    );
-
-    let request = parse_deeplink_url(&url).unwrap();
-    assert_eq!(request.resource, "prompt");
-    assert_eq!(request.app.unwrap(), "claude");
-    assert_eq!(request.name.unwrap(), "test");
-    assert_eq!(request.content.unwrap(), content_b64);
-    assert_eq!(request.description.unwrap(), "desc");
-    assert!(request.enabled.unwrap());
-}
-
-#[test]
-fn test_parse_mcp_deeplink() {
-    let config = r#"{"mcpServers":{"test":{"command":"echo"}}}"#;
-    let config_b64 = BASE64_STANDARD.encode(config);
-    let url = format!(
-        "ccgatewaypro://v1/import?resource=mcp&apps=claude,codex&config={}&enabled=true",
-        config_b64
-    );
-
-    let request = parse_deeplink_url(&url).unwrap();
-    assert_eq!(request.resource, "mcp");
-    assert_eq!(request.apps.unwrap(), "claude,codex");
-    assert_eq!(request.config.unwrap(), config_b64);
-    assert!(request.enabled.unwrap());
-}
-
-#[test]
-fn test_parse_skill_deeplink() {
-    let url = "ccgatewaypro://v1/import?resource=skill&repo=owner/repo&directory=skills&branch=dev";
-    let request = parse_deeplink_url(url).unwrap();
-
-    assert_eq!(request.resource, "skill");
-    assert_eq!(request.repo.unwrap(), "owner/repo");
-    assert_eq!(request.directory.unwrap(), "skills");
-    assert_eq!(request.branch.unwrap(), "dev");
-}
-
-// =============================================================================
-// Multiple Endpoints Tests
-// =============================================================================
-
-#[test]
-fn test_parse_multiple_endpoints_comma_separated() {
-    let url = "ccgatewaypro://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi1.example.com,https%3A%2F%2Fapi2.example.com,https%3A%2F%2Fapi3.example.com&apiKey=sk-test";
-
-    let request = parse_deeplink_url(url).unwrap();
-
-    assert!(request.endpoint.is_some());
-    let endpoint = request.endpoint.unwrap();
-    // Should contain all endpoints comma-separated
-    assert!(endpoint.contains("https://api1.example.com"));
-    assert!(endpoint.contains("https://api2.example.com"));
-    assert!(endpoint.contains("https://api3.example.com"));
-}
-
-#[test]
-fn test_parse_single_endpoint_backward_compatible() {
-    // Old format with single endpoint should still work
-    let url = "ccgatewaypro://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi.example.com&apiKey=sk-test";
-
-    let request = parse_deeplink_url(url).unwrap();
-
-    assert_eq!(
-        request.endpoint,
-        Some("https://api.example.com".to_string())
-    );
-}
-
-#[test]
-fn test_parse_endpoints_with_spaces_trimmed() {
-    let url = "ccgatewaypro://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi1.example.com%20,%20https%3A%2F%2Fapi2.example.com&apiKey=sk-test";
-
-    let request = parse_deeplink_url(url).unwrap();
-
-    // Validation should pass (spaces are trimmed during validation)
-    assert!(request.endpoint.is_some());
-}
-
-#[test]
-fn test_infer_homepage_from_endpoint_without_homepage() {
-    // Test that homepage is auto-inferred from endpoint when not provided
-    assert_eq!(
-        infer_homepage_from_endpoint("https://api.cubence.com/v1"),
-        Some("https://cubence.com".to_string())
-    );
-    assert_eq!(
-        infer_homepage_from_endpoint("https://cubence.com"),
-        Some("https://cubence.com".to_string())
     );
 }
 
@@ -721,4 +728,181 @@ fn test_build_claude_provider_without_config_unchanged() {
     assert_eq!(env["ANTHROPIC_BASE_URL"], "https://api.example.com");
     // No extras leaked in
     assert_eq!(env.len(), 2);
+}
+
+// =============================================================================
+// Prompt Tests
+// =============================================================================
+
+// Integration-style unit test: prompt import reaches PromptService and resolves
+// live config file paths, so HOME must be isolated before it runs.
+#[test]
+#[serial_test::serial]
+fn test_import_prompt_allows_space_in_base64_content() {
+    let _test_home = TestHomeGuard::new();
+    let url = "ccswitch://v1/import?resource=prompt&app=codex&name=PromptPlus&content=Pj4+";
+    let request = parse_deeplink_url(url).unwrap();
+
+    // URL decoded content may have "+" become space
+    assert_eq!(request.content.as_deref(), Some("Pj4 "));
+
+    let db = Arc::new(Database::memory().expect("create memory db"));
+    let state = AppState::new(db.clone());
+
+    let prompt_id = import_prompt_from_deeplink(&state, request.clone()).expect("import prompt");
+
+    let prompts = state.db.get_prompts("codex").expect("get prompts");
+    let prompt = prompts.get(&prompt_id).expect("prompt saved");
+
+    assert_eq!(prompt.content, ">>>");
+    assert_eq!(prompt.name, request.name.unwrap());
+}
+
+// =============================================================================
+// MCP Tests
+// =============================================================================
+
+#[test]
+fn test_parse_mcp_apps() {
+    let apps = parse_mcp_apps("claude,codex").unwrap();
+    assert!(apps.claude);
+    assert!(apps.codex);
+    assert!(!apps.gemini);
+
+    let apps = parse_mcp_apps("gemini").unwrap();
+    assert!(!apps.claude);
+    assert!(!apps.codex);
+    assert!(apps.gemini);
+
+    let apps = parse_mcp_apps("grokbuild,opencode,hermes").unwrap();
+    assert!(apps.grokbuild);
+    assert!(apps.opencode);
+    assert!(apps.hermes);
+
+    let err = parse_mcp_apps("invalid").unwrap_err();
+    assert!(err.to_string().contains("Invalid app"));
+}
+
+#[test]
+fn test_parse_prompt_deeplink() {
+    let content = "Hello World";
+    let content_b64 = BASE64_STANDARD.encode(content);
+    let url = format!(
+        "ccswitch://v1/import?resource=prompt&app=claude&name=test&content={}&description=desc&enabled=true",
+        content_b64
+    );
+
+    let request = parse_deeplink_url(&url).unwrap();
+    assert_eq!(request.resource, "prompt");
+    assert_eq!(request.app.unwrap(), "claude");
+    assert_eq!(request.name.unwrap(), "test");
+    assert_eq!(request.content.unwrap(), content_b64);
+    assert_eq!(request.description.unwrap(), "desc");
+    assert!(request.enabled.unwrap());
+}
+
+#[test]
+fn test_parse_grokbuild_prompt_deeplink() {
+    let content_b64 = BASE64_STANDARD.encode("Grok instructions");
+    let url = format!(
+        "ccswitch://v1/import?resource=prompt&app=grokbuild&name=test&content={content_b64}"
+    );
+
+    let request = parse_deeplink_url(&url).expect("parse Grok Build prompt deeplink");
+
+    assert_eq!(request.app.as_deref(), Some("grokbuild"));
+}
+
+#[test]
+fn test_parse_mcp_deeplink() {
+    let config = r#"{"mcpServers":{"test":{"command":"echo"}}}"#;
+    let config_b64 = BASE64_STANDARD.encode(config);
+    let url = format!(
+        "ccswitch://v1/import?resource=mcp&apps=claude,codex&config={}&enabled=true",
+        config_b64
+    );
+
+    let request = parse_deeplink_url(&url).unwrap();
+    assert_eq!(request.resource, "mcp");
+    assert_eq!(request.apps.unwrap(), "claude,codex");
+    assert_eq!(request.config.unwrap(), config_b64);
+    assert!(request.enabled.unwrap());
+}
+
+#[test]
+fn test_parse_grokbuild_mcp_deeplink() {
+    let config = r#"{"mcpServers":{"test":{"command":"echo"}}}"#;
+    let config_b64 = BASE64_STANDARD.encode(config);
+    let url = format!(
+        "ccswitch://v1/import?resource=mcp&apps=grokbuild&config={config_b64}&enabled=true"
+    );
+
+    let request = parse_deeplink_url(&url).expect("parse Grok Build MCP deeplink");
+
+    assert_eq!(request.apps.as_deref(), Some("grokbuild"));
+}
+
+#[test]
+fn test_parse_skill_deeplink() {
+    let url = "ccswitch://v1/import?resource=skill&repo=owner/repo&directory=skills&branch=dev";
+    let request = parse_deeplink_url(url).unwrap();
+
+    assert_eq!(request.resource, "skill");
+    assert_eq!(request.repo.unwrap(), "owner/repo");
+    assert_eq!(request.directory.unwrap(), "skills");
+    assert_eq!(request.branch.unwrap(), "dev");
+}
+
+// =============================================================================
+// Multiple Endpoints Tests
+// =============================================================================
+
+#[test]
+fn test_parse_multiple_endpoints_comma_separated() {
+    let url = "ccswitch://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi1.example.com,https%3A%2F%2Fapi2.example.com,https%3A%2F%2Fapi3.example.com&apiKey=sk-test";
+
+    let request = parse_deeplink_url(url).unwrap();
+
+    assert!(request.endpoint.is_some());
+    let endpoint = request.endpoint.unwrap();
+    // Should contain all endpoints comma-separated
+    assert!(endpoint.contains("https://api1.example.com"));
+    assert!(endpoint.contains("https://api2.example.com"));
+    assert!(endpoint.contains("https://api3.example.com"));
+}
+
+#[test]
+fn test_parse_single_endpoint_backward_compatible() {
+    // Old format with single endpoint should still work
+    let url = "ccswitch://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi.example.com&apiKey=sk-test";
+
+    let request = parse_deeplink_url(url).unwrap();
+
+    assert_eq!(
+        request.endpoint,
+        Some("https://api.example.com".to_string())
+    );
+}
+
+#[test]
+fn test_parse_endpoints_with_spaces_trimmed() {
+    let url = "ccswitch://v1/import?resource=provider&app=claude&name=Test&endpoint=https%3A%2F%2Fapi1.example.com%20,%20https%3A%2F%2Fapi2.example.com&apiKey=sk-test";
+
+    let request = parse_deeplink_url(url).unwrap();
+
+    // Validation should pass (spaces are trimmed during validation)
+    assert!(request.endpoint.is_some());
+}
+
+#[test]
+fn test_infer_homepage_from_endpoint_without_homepage() {
+    // Test that homepage is auto-inferred from endpoint when not provided
+    assert_eq!(
+        infer_homepage_from_endpoint("https://api.cubence.com/v1"),
+        Some("https://cubence.com".to_string())
+    );
+    assert_eq!(
+        infer_homepage_from_endpoint("https://cubence.com"),
+        Some("https://cubence.com".to_string())
+    );
 }

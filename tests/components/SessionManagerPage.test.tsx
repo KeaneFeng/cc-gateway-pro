@@ -87,8 +87,8 @@ const openSearch = () => {
 };
 
 const closeSearch = () => {
-  const closeButton = Array.from(screen.getAllByRole("button")).find(
-    (button) => button.querySelector(".lucide-x"),
+  const closeButton = Array.from(screen.getAllByRole("button")).find((button) =>
+    button.querySelector(".lucide-x"),
   );
 
   if (!closeButton) {

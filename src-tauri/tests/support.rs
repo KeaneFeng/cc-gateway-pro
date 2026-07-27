@@ -31,8 +31,10 @@ pub fn reset_test_fs() {
         ".codex",
         ".cc-gateway-pro",
         ".gemini",
+        ".grok",
         ".config",
         ".openclaw",
+        "profiles",
     ] {
         let path = home.join(sub);
         if path.exists() {

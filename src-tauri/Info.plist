@@ -11,10 +11,10 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>CC Switch Deep Link</string>
+      <string>CC Gateway Pro Deep Link</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>ccswitch</string>
+        <string>ccgatewaypro</string>
       </array>
     </dict>
   </array>

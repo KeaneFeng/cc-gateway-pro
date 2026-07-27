@@ -55,9 +55,14 @@ pub(crate) fn build_request_snapshot(
     }
 
     let system_prompt = extract_system_prompt(body);
-    let system_prompt_preview = system_prompt
-        .as_deref()
-        .map(|text| truncate_chars(text, 1_000));
+    let system_prompt_preview = system_prompt.as_deref().map(|text| {
+        let preview = truncate_chars(text, 1_000);
+        if settings.redact_sensitive_values {
+            crate::redact_sensitive_text_for_storage(&preview)
+        } else {
+            preview
+        }
+    });
     let system_prompt_hash = system_prompt.as_deref().map(sha256_hex);
 
     let messages = body.get("messages").or_else(|| body.get("input"));
@@ -126,9 +131,14 @@ pub(crate) fn spawn_record_non_streaming_trace(
         })
         .unwrap_or_else(|| ctx.request_model.clone());
     let response_text = response_json.as_ref().and_then(extract_response_text);
-    let response_text_preview = response_text
-        .as_deref()
-        .map(|text| truncate_chars(text, snapshot.settings.max_response_text_chars as usize));
+    let response_text_preview = response_text.as_deref().map(|text| {
+        let preview = truncate_chars(text, snapshot.settings.max_response_text_chars as usize);
+        if snapshot.settings.redact_sensitive_values {
+            crate::redact_sensitive_text_for_storage(&preview)
+        } else {
+            preview
+        }
+    });
     let response_json_string = if snapshot.settings.mode == SessionTraceMode::Full
         && snapshot.settings.capture_response_json
     {
@@ -142,6 +152,13 @@ pub(crate) fn spawn_record_non_streaming_trace(
     let tool_calls_json = response_json
         .as_ref()
         .map(extract_tool_calls)
+        .map(|value| {
+            if snapshot.settings.redact_sensitive_values {
+                redact_value(&value)
+            } else {
+                value
+            }
+        })
         .map(json_string)
         .unwrap_or_else(|| "[]".to_string());
     let stop_reason = response_json.as_ref().and_then(extract_stop_reason);
@@ -190,7 +207,13 @@ pub(crate) fn create_stream_trace_collector(
             let model = model_extractor(&events, &request_model);
             let response_text = extract_stream_response_text(&events);
             let response_text_preview = response_text.as_deref().map(|text| {
-                truncate_chars(text, snapshot.settings.max_response_text_chars as usize)
+                let preview =
+                    truncate_chars(text, snapshot.settings.max_response_text_chars as usize);
+                if snapshot.settings.redact_sensitive_values {
+                    crate::redact_sensitive_text_for_storage(&preview)
+                } else {
+                    preview
+                }
             });
             let response_json = if snapshot.settings.mode == SessionTraceMode::Full
                 && snapshot.settings.capture_response_json
@@ -199,7 +222,12 @@ pub(crate) fn create_stream_trace_collector(
             } else {
                 None
             };
-            let tool_calls_json = json_string(extract_stream_tool_calls(&events));
+            let stream_tool_calls = extract_stream_tool_calls(&events);
+            let tool_calls_json = if snapshot.settings.redact_sensitive_values {
+                json_string(redact_value(&stream_tool_calls))
+            } else {
+                json_string(stream_tool_calls)
+            };
             let stop_reason = extract_stream_stop_reason(&events);
 
             let state = state.clone();
@@ -372,11 +400,17 @@ fn insert_trace(
         .filter(|window| *window > 0)
         .map(|window| context_used_tokens as f64 / window as f64)
         .or(snapshot.context_usage_ratio);
-    let proxy_request_id = completion
-        .usage
-        .message_id
-        .as_ref()
-        .map(|id| format!("{SESSION_REQUEST_ID_PREFIX}{id}"));
+    let proxy_request_id = completion.usage.message_id.as_ref().map(|id| {
+        if insert_ctx.app_type == "claude" {
+            format!("{SESSION_REQUEST_ID_PREFIX}{id}")
+        } else {
+            format!(
+                "{SESSION_REQUEST_ID_PREFIX}{}:{}:{id}",
+                insert_ctx.app_type,
+                insert_ctx.provider_id.as_deref().unwrap_or_default()
+            )
+        }
+    });
 
     let record = SessionTraceInsert {
         trace_id: snapshot.trace_id,
@@ -540,6 +574,7 @@ fn redact_value(value: &Value) -> Value {
             Value::Object(next)
         }
         Value::Array(items) => Value::Array(items.iter().map(redact_value).collect()),
+        Value::String(text) => Value::String(crate::redact_sensitive_text_for_storage(text)),
         _ => value.clone(),
     }
 }
@@ -1662,13 +1697,21 @@ mod tests {
     fn redact_value_masks_nested_secrets() {
         let value = json!({
             "api_key": "abc",
-            "nested": {"authorization": "Bearer token", "ok": true}
+            "nested": {
+                "authorization": "Bearer token",
+                "message": "upstream rejected Bearer sk-secret-12345678",
+                "ok": true
+            }
         });
 
         let redacted = redact_value(&value);
 
         assert_eq!(redacted["api_key"], REDACTED);
         assert_eq!(redacted["nested"]["authorization"], REDACTED);
+        assert_eq!(
+            redacted["nested"]["message"],
+            "upstream rejected Bearer [REDACTED]"
+        );
         assert_eq!(redacted["nested"]["ok"], true);
     }
 

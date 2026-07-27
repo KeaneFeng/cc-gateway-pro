@@ -4,7 +4,7 @@ pub mod terminal;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-use providers::{claude, codex, gemini, hermes, openclaw, opencode};
+use providers::{claude, codex, gemini, grokbuild, hermes, openclaw, opencode};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,13 +56,14 @@ pub struct DeleteSessionOutcome {
 }
 
 pub fn scan_sessions() -> Vec<SessionMeta> {
-    let (r1, r2, r3, r4, r5, r6) = std::thread::scope(|s| {
+    let (r1, r2, r3, r4, r5, r6, r7) = std::thread::scope(|s| {
         let h1 = s.spawn(codex::scan_sessions);
         let h2 = s.spawn(claude::scan_sessions);
         let h3 = s.spawn(opencode::scan_sessions);
         let h4 = s.spawn(openclaw::scan_sessions);
         let h5 = s.spawn(gemini::scan_sessions);
         let h6 = s.spawn(hermes::scan_sessions);
+        let h7 = s.spawn(grokbuild::scan_sessions);
         (
             h1.join().unwrap_or_default(),
             h2.join().unwrap_or_default(),
@@ -70,6 +71,7 @@ pub fn scan_sessions() -> Vec<SessionMeta> {
             h4.join().unwrap_or_default(),
             h5.join().unwrap_or_default(),
             h6.join().unwrap_or_default(),
+            h7.join().unwrap_or_default(),
         )
     });
 
@@ -80,6 +82,7 @@ pub fn scan_sessions() -> Vec<SessionMeta> {
     sessions.extend(r4);
     sessions.extend(r5);
     sessions.extend(r6);
+    sessions.extend(r7);
 
     sessions.sort_by(|a, b| {
         let a_ts = a.last_active_at.or(a.created_at).unwrap_or(0);
@@ -90,24 +93,16 @@ pub fn scan_sessions() -> Vec<SessionMeta> {
     sessions
 }
 
+/// Return sessions belonging to one managed app and one exact project path.
 pub fn scan_sessions_for_project(app: &str, project_path: &str) -> Vec<SessionMeta> {
-    let sessions = scan_sessions();
-    sessions
+    scan_sessions()
         .into_iter()
-        .filter(|s| {
-            // 按 app 类型过滤
-            let app_match = match app {
-                "claude" => s.provider_id == "claude",
-                "codex" => s.provider_id == "codex",
-                _ => true,
-            };
-            // 按 project 路径严格匹配
-            let project_match = s
-                .project_dir
-                .as_ref()
-                .map(|dir| dir == project_path)
-                .unwrap_or(false);
-            app_match && project_match
+        .filter(|session| {
+            session.provider_id == app
+                && session
+                    .project_dir
+                    .as_deref()
+                    .is_some_and(|dir| dir == project_path)
         })
         .collect()
 }
@@ -128,6 +123,7 @@ pub fn load_messages(provider_id: &str, source_path: &str) -> Result<Vec<Session
         "opencode" => opencode::load_messages(path),
         "openclaw" => openclaw::load_messages(path),
         "gemini" => gemini::load_messages(path),
+        "grokbuild" => grokbuild::load_messages(path),
         "hermes" => hermes::load_messages(path),
         _ => Err(format!("Unsupported provider: {provider_id}")),
     }
@@ -187,6 +183,9 @@ fn delete_session_with_roots(
                     openclaw::delete_session(&validated_root, &validated_source, session_id)
                 }
                 "gemini" => gemini::delete_session(&validated_root, &validated_source, session_id),
+                "grokbuild" => {
+                    grokbuild::delete_session(&validated_root, &validated_source, session_id)
+                }
                 "hermes" => hermes::delete_session(&validated_root, &validated_source, session_id),
                 _ => Err(format!("Unsupported provider: {provider_id}")),
             };
@@ -216,6 +215,7 @@ fn provider_roots(provider_id: &str) -> Result<Vec<PathBuf>, String> {
         "opencode" => vec![opencode::get_opencode_data_dir()],
         "openclaw" => vec![crate::openclaw_config::get_openclaw_dir().join("agents")],
         "gemini" => vec![crate::gemini_config::get_gemini_dir().join("tmp")],
+        "grokbuild" => grokbuild::session_roots(),
         "hermes" => vec![crate::hermes_config::get_hermes_dir().join("sessions")],
         _ => return Err(format!("Unsupported provider: {provider_id}")),
     };
@@ -272,6 +272,39 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
 
+    fn write_codex_session(path: &Path, session_id: &str) {
+        std::fs::write(
+            path,
+            format!(
+                "{{\"timestamp\":\"2026-03-06T21:50:12Z\",\"type\":\"session_meta\",\"payload\":{{\"id\":\"{session_id}\",\"cwd\":\"/tmp/project\"}}}}\n\
+                 {{\"timestamp\":\"2026-03-06T21:50:13Z\",\"type\":\"response_item\",\"payload\":{{\"type\":\"message\",\"role\":\"user\",\"content\":\"hello\"}}}}\n",
+            ),
+        )
+        .expect("write source");
+    }
+
+    #[test]
+    fn accepts_source_path_under_any_allowed_provider_root() {
+        let active_root = tempdir().expect("active root");
+        let archived_root = tempdir().expect("archived root");
+        let source = archived_root.path().join("session.jsonl");
+        write_codex_session(&source, "archived-session");
+
+        let deleted = delete_session_with_roots(
+            "codex",
+            "archived-session",
+            &source,
+            &[
+                active_root.path().to_path_buf(),
+                archived_root.path().to_path_buf(),
+            ],
+        )
+        .expect("delete archived session");
+
+        assert!(deleted);
+        assert!(!source.exists());
+    }
+
     #[test]
     fn rejects_source_path_outside_provider_root() {
         let root = tempdir().expect("tempdir");
@@ -283,7 +316,7 @@ mod tests {
             delete_session_with_roots("codex", "session-1", &source, &[root.path().to_path_buf()])
                 .expect_err("expected outside-root path to be rejected");
 
-        assert!(err.contains("outside provider root"));
+        assert!(err.contains("outside provider roots"));
     }
 
     #[test]

@@ -344,9 +344,7 @@ describe("SettingsPage Component", () => {
     fireEvent.click(screen.getByText("settings.advanced.data.title"));
 
     // 有文件时，点击导入按钮执行 importConfig
-    fireEvent.click(
-      screen.getByRole("button", { name: /settings\.import/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /settings\.import/ }));
     expect(importExportMock.importConfig).toHaveBeenCalled();
 
     fireEvent.click(

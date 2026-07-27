@@ -1,6 +1,6 @@
 //! Skill import from deep link
 //!
-//! Handles importing skill repository configurations via ccgatewaypro:// URLs.
+//! Handles importing skill repository configurations via ccswitch:// URLs.
 
 use super::DeepLinkImportRequest;
 use crate::error::AppError;

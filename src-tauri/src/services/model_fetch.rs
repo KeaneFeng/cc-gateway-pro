@@ -4,6 +4,7 @@
 //! 主要面向第三方聚合站（硅基流动、OpenRouter 等），以及把 Anthropic
 //! 协议挂在兼容子路径上的官方供应商（DeepSeek、Kimi、智谱 GLM 等）。
 
+use reqwest::header::{HeaderValue, USER_AGENT};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -55,6 +56,7 @@ pub async fn fetch_models(
     api_key: &str,
     is_full_url: bool,
     models_url_override: Option<&str>,
+    user_agent: Option<HeaderValue>,
 ) -> Result<Vec<FetchedModel>, String> {
     if api_key.is_empty() {
         return Err("API Key is required to fetch models".to_string());
@@ -63,16 +65,23 @@ pub async fn fetch_models(
     let candidates = build_models_url_candidates(base_url, is_full_url, models_url_override)?;
     let client = crate::proxy::http_client::get();
     let mut last_err: Option<String> = None;
+    let log_secrets = vec![api_key.to_string()];
 
     for url in &candidates {
-        log::debug!("[ModelFetch] Trying endpoint: {url}");
-        let response = match client
+        log::debug!(
+            "[ModelFetch] Trying endpoint: {}",
+            crate::url_for_log_with_secrets(url, &log_secrets)
+        );
+        let mut request = client
             .get(url)
             .header("Authorization", format!("Bearer {api_key}"))
-            .timeout(Duration::from_secs(FETCH_TIMEOUT_SECS))
-            .send()
-            .await
-        {
+            .timeout(Duration::from_secs(FETCH_TIMEOUT_SECS));
+        // 自定义 User-Agent：部分 /models 端点同样有 UA 白名单（如 Kimi Coding Plan），
+        // 与转发 / 检测路径共用同一 UA，避免"代理可用但取模型失败"。
+        if let Some(ua) = &user_agent {
+            request = request.header(USER_AGENT, ua.clone());
+        }
+        let response = match request.send().await {
             Ok(r) => r,
             Err(e) => {
                 return Err(format!("Request failed: {e}"));
@@ -204,15 +213,6 @@ fn truncate_body(body: String) -> String {
     }
 }
 
-/// 判断 baseURL 是否以 OpenAI 风格的版本段 `/v{N}` 结尾（`N` 为一个或多个数字），
-/// 例如 `/v1`、`.../paas/v4`。这类 URL 版本号已在路径中，模型端点应为
-/// `{base}/models`，不能再补 `/v1`（智谱 Coding Plan 即 `.../coding/paas/v4`）。
-fn ends_with_version_segment(url: &str) -> bool {
-    let last = url.rsplit('/').next().unwrap_or("");
-    last.strip_prefix('v')
-        .is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
-}
-
 /// 若 baseURL 以任一已知兼容子路径结尾，返回剥离后的剩余部分；否则 `None`。
 ///
 /// 依赖 [`KNOWN_COMPAT_SUFFIXES`] 按长度降序排列，确保最长前缀优先命中
@@ -224,6 +224,15 @@ fn strip_compat_suffix(base_url: &str) -> Option<&str> {
         }
     }
     None
+}
+
+/// 判断 baseURL 是否以 OpenAI 风格的版本段 `/v{N}` 结尾（`N` 为一个或多个数字），
+/// 例如 `/v1`、`.../paas/v4`。这类 URL 版本号已在路径中，模型端点应为
+/// `{base}/models`，不能再补 `/v1`（智谱 Coding Plan 即 `.../coding/paas/v4`）。
+fn ends_with_version_segment(url: &str) -> bool {
+    let last = url.rsplit('/').next().unwrap_or("");
+    last.strip_prefix('v')
+        .is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
 }
 
 #[cfg(test)]
@@ -246,6 +255,48 @@ mod tests {
     fn test_candidates_with_v1() {
         let c = build_models_url_candidates("https://api.example.com/v1", false, None).unwrap();
         assert_eq!(c, vec!["https://api.example.com/v1/models"]);
+    }
+
+    #[test]
+    fn test_candidates_zhipu_coding_paas_v4() {
+        // 智谱 Coding Plan 端点以 /v4 版本段结尾：模型端点是 {base}/models，
+        // 正确路径必须排在 .../v4/v1/models（404）之前。
+        let c =
+            build_models_url_candidates("https://open.bigmodel.cn/api/coding/paas/v4", false, None)
+                .unwrap();
+        assert_eq!(
+            c,
+            vec![
+                "https://open.bigmodel.cn/api/coding/paas/v4/models",
+                "https://open.bigmodel.cn/api/coding/paas/v4/v1/models",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_candidates_zai_coding_paas_v4() {
+        let c = build_models_url_candidates("https://api.z.ai/api/coding/paas/v4", false, None)
+            .unwrap();
+        assert_eq!(
+            c,
+            vec![
+                "https://api.z.ai/api/coding/paas/v4/models",
+                "https://api.z.ai/api/coding/paas/v4/v1/models",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ends_with_version_segment() {
+        assert!(ends_with_version_segment("https://x.com/v1"));
+        assert!(ends_with_version_segment(
+            "https://open.bigmodel.cn/api/coding/paas/v4"
+        ));
+        assert!(ends_with_version_segment("https://x.com/v10"));
+        assert!(!ends_with_version_segment("https://x.com/api"));
+        assert!(!ends_with_version_segment("https://x.com/vX"));
+        assert!(!ends_with_version_segment("https://x.com/models"));
+        assert!(!ends_with_version_segment("https://api.siliconflow.cn"));
     }
 
     #[test]
@@ -426,47 +477,5 @@ mod tests {
         let json = r#"{"object":"list","data":[]}"#;
         let resp: ModelsResponse = serde_json::from_str(json).unwrap();
         assert!(resp.data.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_candidates_zhipu_coding_paas_v4() {
-        // 智谱 Coding Plan 端点以 /v4 版本段结尾：模型端点是 {base}/models，
-        // 正确路径必须排在 .../v4/v1/models（404）之前。
-        let c =
-            build_models_url_candidates("https://open.bigmodel.cn/api/coding/paas/v4", false, None)
-                .unwrap();
-        assert_eq!(
-            c,
-            vec![
-                "https://open.bigmodel.cn/api/coding/paas/v4/models",
-                "https://open.bigmodel.cn/api/coding/paas/v4/v1/models",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_candidates_zai_coding_paas_v4() {
-        let c = build_models_url_candidates("https://api.z.ai/api/coding/paas/v4", false, None)
-            .unwrap();
-        assert_eq!(
-            c,
-            vec![
-                "https://api.z.ai/api/coding/paas/v4/models",
-                "https://api.z.ai/api/coding/paas/v4/v1/models",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_ends_with_version_segment() {
-        assert!(ends_with_version_segment("https://x.com/v1"));
-        assert!(ends_with_version_segment(
-            "https://open.bigmodel.cn/api/coding/paas/v4"
-        ));
-        assert!(ends_with_version_segment("https://x.com/v10"));
-        assert!(!ends_with_version_segment("https://x.com/api"));
-        assert!(!ends_with_version_segment("https://x.com/vX"));
-        assert!(!ends_with_version_segment("https://x.com/models"));
-        assert!(!ends_with_version_segment("https://api.siliconflow.cn"));
     }
 }

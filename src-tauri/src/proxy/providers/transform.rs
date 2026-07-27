@@ -54,18 +54,23 @@ pub fn is_openai_o_series(model: &str) -> bool {
         && model.as_bytes().get(1).is_some_and(|b| b.is_ascii_digit())
 }
 
-/// Detect OpenAI models that support reasoning_effort.
+/// Detect Responses-compatible models that support reasoning effort.
 ///
 /// Supported families:
 /// - o-series: o1, o3, o4-mini, etc.
 /// - GPT-5+: gpt-5, gpt-5.1, gpt-5.4, gpt-5-codex, etc.
+/// - xAI Grok Build models. `grok-4.5` is the current documented Grok Build
+///   model; retain the previous `grok-build-*` family for saved providers.
 pub fn supports_reasoning_effort(model: &str) -> bool {
-    is_openai_o_series(model)
-        || model
-            .to_lowercase()
+    let normalized = model.to_lowercase();
+    is_openai_o_series(&normalized)
+        || normalized
             .strip_prefix("gpt-")
             .and_then(|rest| rest.chars().next())
             .is_some_and(|c| c.is_ascii_digit() && c >= '5')
+        || normalized == "grok-4.5"
+        || normalized.starts_with("grok-4.5-")
+        || normalized.starts_with("grok-build-")
 }
 
 /// Resolve the appropriate OpenAI `reasoning_effort` from an Anthropic request body.
@@ -112,6 +117,10 @@ pub fn resolve_reasoning_effort(body: &Value) -> Option<&'static str> {
 }
 
 /// Anthropic 请求 → OpenAI Chat Completions 请求
+///
+/// 转换工具库 API：当前无生产调用方（连通性检查不再发真实请求，曾是其唯一 crate 内
+/// 消费者），但保留其转换逻辑与下方测试套件，供代理转换路径复用 / 未来接线。
+#[allow(dead_code)]
 pub fn anthropic_to_openai(body: Value) -> Result<Value, ProxyError> {
     anthropic_to_openai_with_reasoning_content(body, false)
 }
@@ -223,6 +232,33 @@ pub fn anthropic_to_openai_with_reasoning_content(
     }
 
     Ok(result)
+}
+
+/// 为 OpenAI Chat Completions 流式请求注入 `stream_options.include_usage`。
+///
+/// OpenAI 兼容上游在流式下默认不在 SSE 里返回 usage，必须显式声明 include_usage
+/// 才会在末尾吐 usage chunk。缺这一注入会导致流式请求的 token/成本/缓存全部漏记
+/// （input/output/cache 全为 0）。保留客户端可能透传的其它 stream_options 字段，
+/// 仅补 include_usage；非流式请求不动。
+///
+/// 由 Claude→openai_chat（claude.rs）与 Codex Responses→Chat（transform_codex_chat.rs）
+/// 两条转换路径共用，确保两个客户端方向行为一致。
+pub(crate) fn inject_openai_stream_include_usage(result: &mut Value) {
+    let is_stream = result
+        .get("stream")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !is_stream {
+        return;
+    }
+    match result.get_mut("stream_options") {
+        Some(Value::Object(opts)) => {
+            opts.insert("include_usage".to_string(), json!(true));
+        }
+        _ => {
+            result["stream_options"] = json!({ "include_usage": true });
+        }
+    }
 }
 
 /// Translate an Anthropic `tool_choice` into the OpenAI Chat Completions form.
@@ -459,9 +495,21 @@ fn convert_message_to_openai(
     Ok(result)
 }
 
-/// 清理 JSON schema（移除不支持的 format）
-pub fn clean_schema(mut schema: Value) -> Value {
+/// 清理工具参数的 JSON schema，并为根 schema 补齐 OpenAI 要求的 object 类型。
+pub fn clean_schema(schema: Value) -> Value {
+    clean_schema_inner(schema, true)
+}
+
+fn clean_schema_inner(mut schema: Value, is_root: bool) -> Value {
     if let Some(obj) = schema.as_object_mut() {
+        let missing_type = is_root && !obj.contains_key("type");
+        if missing_type {
+            obj.insert("type".to_string(), json!("object"));
+        }
+        if missing_type && !obj.contains_key("properties") {
+            obj.insert("properties".to_string(), json!({}));
+        }
+
         // 移除 "format": "uri"
         if obj.get("format").and_then(|v| v.as_str()) == Some("uri") {
             obj.remove("format");
@@ -470,12 +518,12 @@ pub fn clean_schema(mut schema: Value) -> Value {
         // 递归清理嵌套 schema
         if let Some(properties) = obj.get_mut("properties").and_then(|v| v.as_object_mut()) {
             for (_, value) in properties.iter_mut() {
-                *value = clean_schema(value.clone());
+                *value = clean_schema_inner(value.clone(), false);
             }
         }
 
         if let Some(items) = obj.get_mut("items") {
-            *items = clean_schema(items.clone());
+            *items = clean_schema_inner(items.clone(), false);
         }
     }
     schema
@@ -622,7 +670,7 @@ pub fn openai_to_anthropic(body: Value) -> Result<Value, ProxyError> {
     // 不再扣减），若不减则缓存会被计入 input 与各 cache 桶两次。三桶互斥，恒等：
     // input + cache_read + cache_creation == prompt_tokens（inclusive 上游）。
     // 与流式 build_anthropic_usage_json (#2774) 及 transform_gemini 的 saturating_sub 对称。
-    // 最终 cache_read：直传字段优先于 nested；cache_creation 仅来自直传字段（OpenAI 无此概念）。
+    // 最终 cache_read/cache_creation：直传字段优先于 OpenAI nested details。
     let cached = usage
         .get("cache_read_input_tokens")
         .and_then(|v| v.as_u64())
@@ -635,6 +683,12 @@ pub fn openai_to_anthropic(body: Value) -> Result<Value, ProxyError> {
     let cache_creation = usage
         .get("cache_creation_input_tokens")
         .and_then(|v| v.as_u64())
+        .or_else(|| {
+            usage
+                .pointer("/prompt_tokens_details/cache_write_tokens")
+                .or_else(|| usage.pointer("/input_tokens_details/cache_write_tokens"))
+                .and_then(|v| v.as_u64())
+        })
         .unwrap_or(0);
     let input_tokens = usage
         .get("prompt_tokens")
@@ -800,6 +854,75 @@ mod tests {
         let result = anthropic_to_openai(input).unwrap();
         assert_eq!(result["tools"][0]["type"], "function");
         assert_eq!(result["tools"][0]["function"]["name"], "get_weather");
+        assert_eq!(
+            result["tools"][0]["function"]["parameters"]["type"],
+            json!("object")
+        );
+        assert_eq!(
+            result["tools"][0]["function"]["parameters"]["properties"]["location"]["type"],
+            json!("string")
+        );
+    }
+
+    #[test]
+    fn test_anthropic_to_openai_defaults_missing_tool_schema_type() {
+        let input = json!({
+            "model": "claude-3-opus",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "What's the weather?"}],
+            "tools": [{
+                "name": "get_weather",
+                "description": "Get weather info",
+                "input_schema": {"properties": {"location": {"type": "string"}}}
+            }]
+        });
+
+        let result = anthropic_to_openai(input).unwrap();
+        let parameters = &result["tools"][0]["function"]["parameters"];
+        assert_eq!(parameters["type"], json!("object"));
+        assert_eq!(
+            parameters["properties"]["location"]["type"],
+            json!("string")
+        );
+    }
+
+    #[test]
+    fn test_anthropic_to_openai_defaults_empty_tool_schema() {
+        let input = json!({
+            "model": "claude-3-opus",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "Do work"}],
+            "tools": [{"name": "do_work", "input_schema": {}}]
+        });
+
+        let result = anthropic_to_openai(input).unwrap();
+        let parameters = &result["tools"][0]["function"]["parameters"];
+        assert_eq!(parameters, &json!({"type": "object", "properties": {}}));
+    }
+
+    #[test]
+    fn test_clean_schema_only_defaults_root_to_object() {
+        let schema = json!({
+            "properties": {
+                "nullable_value": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}]
+                },
+                "list": {
+                    "items": {"type": "string"}
+                }
+            }
+        });
+
+        let result = clean_schema(schema);
+        assert_eq!(result["type"], json!("object"));
+        assert_eq!(
+            result["properties"]["nullable_value"],
+            json!({"anyOf": [{"type": "string"}, {"type": "null"}]})
+        );
+        assert_eq!(
+            result["properties"]["list"],
+            json!({"items": {"type": "string"}})
+        );
     }
 
     #[test]
@@ -1058,7 +1181,7 @@ mod tests {
             Some("chatcmpl-claude-compatible")
         );
         assert_eq!(
-            usage.dedup_request_id(),
+            usage.dedup_request_id(None),
             "session:chatcmpl-claude-compatible"
         );
     }
@@ -1333,6 +1456,31 @@ mod tests {
     }
 
     #[test]
+    fn test_openai_to_anthropic_clamps_input_when_cache_exceeds_prompt() {
+        // prompt(100) < cache_read(60)+cache_creation(50)=110：saturating 钳到 0，防下溢。
+        // 钉桩：阻止未来把 saturating_sub 误改成普通减法(debug panic / release wrap)。
+        let input = json!({
+            "id": "chatcmpl-uf",
+            "model": "gpt-4",
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": "x"},
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 100,
+                "completion_tokens": 10,
+                "cache_read_input_tokens": 60,
+                "cache_creation_input_tokens": 50
+            }
+        });
+        let result = openai_to_anthropic(input).unwrap();
+        assert_eq!(result["usage"]["input_tokens"], 0);
+        assert_eq!(result["usage"]["cache_read_input_tokens"], 60);
+        assert_eq!(result["usage"]["cache_creation_input_tokens"], 50);
+    }
+
+    #[test]
     fn test_openai_to_anthropic_finish_reason_content_filter_maps_end_turn() {
         let input = json!({
             "id": "chatcmpl-123",
@@ -1423,6 +1571,8 @@ mod tests {
         assert!(supports_reasoning_effort("gpt-5"));
         assert!(supports_reasoning_effort("gpt-5.4"));
         assert!(supports_reasoning_effort("gpt-5-codex"));
+        assert!(supports_reasoning_effort("grok-4.5"));
+        assert!(supports_reasoning_effort("grok-build-0.1"));
         assert!(!supports_reasoning_effort("gpt-4o"));
         assert!(!supports_reasoning_effort("claude-sonnet-4-6"));
     }

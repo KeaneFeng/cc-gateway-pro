@@ -46,10 +46,15 @@ pub struct RequestContext {
     /// 这里使用本地 settings 的设备级 current provider。
     /// 代理模式下如果实际使用的 provider 与此不一致，会触发切换以确保 UI 始终准确。
     pub current_provider_id: String,
-    /// 请求中的模型名称（可能被 vision routing 修改）
+    /// 请求中的模型名称
     pub request_model: String,
-    /// 原始请求模型名称（vision routing 修改前的值，用于 usage 日志显示）
+    /// Client model before fork-only vision routing.
     pub original_model: String,
+    /// 实际发往上游的模型名（路由接管/模型映射后的真值，forward 成功后回填）。
+    ///
+    /// usage 归因的兜底顺序：上游响应回显 → outbound_model → request_model。
+    /// 不能直接用 request_model 兜底：接管场景下它是映射前的客户端别名。
+    pub outbound_model: Option<String>,
     /// 日志标签（如 "Claude"、"Codex"、"Gemini"）
     pub tag: &'static str,
     /// 应用类型字符串（如 "claude"、"codex"、"gemini"）
@@ -144,19 +149,8 @@ impl RequestContext {
             .first()
             .cloned()
             .ok_or(ProxyError::NoAvailableProvider)?;
-
-        // CC-Gateway-Pro: Project-Level Provider Binding
-        // 按 app_type 选 router：claude 走原 router，codex 走新 router
-        log::info!(
-            "[{}] Checking session '{}' for project routing (app={})",
-            tag,
-            session_id,
-            app_type_str
-        );
         let mut effective_provider = provider;
-        let mut project_routed = false;
-
-        let project_router_result: Option<String> = match app_type_str {
+        let project_provider_id = match app_type_str {
             "claude" => state
                 .session_project_router
                 .get_provider_for_session(&session_id),
@@ -165,46 +159,14 @@ impl RequestContext {
                 .get_provider_for_session(&session_id),
             _ => None,
         };
-
-        if let Some(target_id) = project_router_result {
-            // 直接从 DB 查目标 provider（不在 providers 列表里找，因为可能不在当前/故障转移链中）
-            if let Ok(Some(target_provider)) = state.db.get_provider_by_id(&target_id, app_type_str)
+        if let Some(provider_id) = project_provider_id {
+            if let Ok(Some(project_provider)) =
+                state.db.get_provider_by_id(&provider_id, app_type_str)
             {
-                let proj = match app_type_str {
-                    "claude" => state
-                        .session_project_router
-                        .get_project_for_session(&session_id),
-                    "codex" => state
-                        .codex_session_project_router
-                        .get_project_for_session(&session_id),
-                    _ => None,
-                }
-                .unwrap_or_default();
-                log::info!(
-                    "[{}] Project routing: session {} (project {}) -> provider {} ({})",
-                    tag,
-                    session_id,
-                    proj,
-                    target_id,
-                    target_provider.name
-                );
-                effective_provider = target_provider;
-                project_routed = true;
-            } else {
-                log::warn!(
-                    "[{}] Project routing: target provider {} not found in DB",
-                    tag,
-                    target_id
-                );
+                effective_provider = project_provider;
+                current_provider_id = effective_provider.id.clone();
             }
         }
-
-        // Project routing: 同步 current_provider_id，防止 forwarder 误判为 failover 切换
-        if project_routed && current_provider_id != effective_provider.id {
-            current_provider_id = effective_provider.id.clone();
-        }
-
-        // CC-Gateway-Pro: Vision Model Auto-Routing (独立模块，避免上游覆盖)
         let effective_model =
             super::vision_router::route(&request_model, body, &effective_provider, tag);
 
@@ -225,6 +187,7 @@ impl RequestContext {
             current_provider_id,
             request_model: effective_model,
             original_model: request_model,
+            outbound_model: None,
             tag,
             app_type_str,
             app_type,
@@ -309,16 +272,11 @@ impl RequestContext {
     /// 返回在创建上下文时已选择的 providers，避免重复调用 select_providers()
     pub fn get_providers(&self) -> Vec<Provider> {
         let mut providers = self.providers.clone();
-        // CC-Gateway-Pro: 确保 project-routed provider 在列表最前面
-        // 如果 self.provider（可能是 project-routed）不在列表中，插入到首位
-        if !providers.iter().any(|p| p.id == self.provider.id) {
-            providers.insert(0, self.provider.clone());
+        if let Some(position) = providers.iter().position(|p| p.id == self.provider.id) {
+            let selected = providers.remove(position);
+            providers.insert(0, selected);
         } else {
-            // 如果已在列表中，移到最前面
-            if let Some(pos) = providers.iter().position(|p| p.id == self.provider.id) {
-                let p = providers.remove(pos);
-                providers.insert(0, p);
-            }
+            providers.insert(0, self.provider.clone());
         }
         providers
     }

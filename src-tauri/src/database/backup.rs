@@ -13,7 +13,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
-const CC_GATEWAY_PRO_SQL_EXPORT_HEADER: &str = "-- CC-Gateway-Pro SQLite 导出";
+const CC_GATEWAY_PRO_SQL_EXPORT_HEADER: &str = "-- CC Gateway Pro SQLite 导出";
+const CC_SWITCH_SQL_EXPORT_HEADER: &str = "-- CC Switch SQLite 导出";
 
 /// Tables whose data rows are skipped when exporting for WebDAV sync.
 const SYNC_SKIP_TABLES: &[&str] = &[
@@ -97,7 +98,7 @@ impl Database {
         preserve_tables: &[&str],
     ) -> Result<String, AppError> {
         let sql_content = sql_raw.trim_start_matches('\u{feff}');
-        Self::validate_cc_gateway_pro_sql_export(sql_content)?;
+        Self::validate_cc_switch_sql_export(sql_content)?;
 
         // 导入前备份现有数据库
         let backup_path = self.backup_database_file()?;
@@ -163,16 +164,18 @@ impl Database {
         Ok(snapshot)
     }
 
-    fn validate_cc_gateway_pro_sql_export(sql: &str) -> Result<(), AppError> {
+    fn validate_cc_switch_sql_export(sql: &str) -> Result<(), AppError> {
         let trimmed = sql.trim_start();
-        if trimmed.starts_with(CC_GATEWAY_PRO_SQL_EXPORT_HEADER) {
+        if trimmed.starts_with(CC_GATEWAY_PRO_SQL_EXPORT_HEADER)
+            || trimmed.starts_with(CC_SWITCH_SQL_EXPORT_HEADER)
+        {
             return Ok(());
         }
 
         Err(AppError::localized(
             "backup.sql.invalid_format",
-            "仅支持导入由 CC-Gateway-Pro 导出的 SQL 备份文件。",
-            "Only SQL backups exported by CC-Gateway-Pro are supported.",
+            "仅支持导入由 CC Gateway Pro 或 CC Switch 导出的 SQL 备份文件。",
+            "Only SQL backups exported by CC Gateway Pro or CC Switch are supported.",
         ))
     }
 
@@ -307,6 +310,8 @@ impl Database {
             .join("backups");
 
         fs::create_dir_all(&backup_dir).map_err(|e| AppError::io(&backup_dir, e))?;
+        crate::panic_hook::ensure_private_dir(&backup_dir)
+            .map_err(|e| AppError::io(&backup_dir, e))?;
 
         let base_id = format!("db_backup_{}", Local::now().format("%Y%m%d_%H%M%S"));
         let mut backup_id = base_id.clone();
@@ -322,6 +327,8 @@ impl Database {
             let conn = lock_conn!(self.conn);
             let mut dest_conn =
                 Connection::open(&backup_path).map_err(|e| AppError::Database(e.to_string()))?;
+            crate::panic_hook::ensure_private_file(&backup_path)
+                .map_err(|e| AppError::io(&backup_path, e))?;
             let backup = Backup::new(&conn, &mut dest_conn)
                 .map_err(|e| AppError::Database(e.to_string()))?;
             backup
@@ -392,7 +399,7 @@ impl Database {
             .unwrap_or(0);
 
         output.push_str(&format!(
-            "-- CC-Gateway-Pro SQLite 导出\n-- 生成时间: {timestamp}\n-- user_version: {user_version}\n"
+            "{CC_GATEWAY_PRO_SQL_EXPORT_HEADER}\n-- 生成时间: {timestamp}\n-- user_version: {user_version}\n"
         ));
         output.push_str("PRAGMA foreign_keys=OFF;\n");
         output.push_str(&format!("PRAGMA user_version={user_version};\n"));
@@ -786,7 +793,7 @@ mod tests {
     fn periodic_maintenance_runs_even_when_auto_backup_disabled() -> Result<(), AppError> {
         let old_test_home = std::env::var_os("CC_GATEWAY_PRO_TEST_HOME");
         let test_home =
-            std::env::temp_dir().join("cc-gateway-pro-periodic-maintenance-backup-disabled-test");
+            std::env::temp_dir().join("cc-switch-periodic-maintenance-backup-disabled-test");
         let _ = std::fs::remove_dir_all(&test_home);
         std::fs::create_dir_all(&test_home).expect("create test home");
         std::env::set_var("CC_GATEWAY_PRO_TEST_HOME", &test_home);

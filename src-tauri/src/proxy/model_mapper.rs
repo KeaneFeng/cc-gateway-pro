@@ -11,8 +11,9 @@ pub struct ModelMapping {
     pub haiku_model: Option<String>,
     pub sonnet_model: Option<String>,
     pub opus_model: Option<String>,
+    pub fable_model: Option<String>,
+    pub subagent_model: Option<String>,
     pub default_model: Option<String>,
-    /// Vision Model：当请求包含图片内容时自动切换到此模型
     pub vision_model: Option<String>,
 }
 
@@ -21,15 +22,12 @@ impl ModelMapping {
     pub fn from_provider(provider: &Provider) -> Self {
         let env = provider.settings_config.get("env");
 
-        // 从 meta 中读取 vision_model（CC-Gateway-Pro 扩展字段）
-        let vision_model = provider
-            .meta
-            .as_ref()
-            .and_then(|m| m.vision_model.clone())
-            .filter(|s| !s.is_empty());
-
         Self {
-            vision_model,
+            vision_model: provider
+                .meta
+                .as_ref()
+                .and_then(|meta| meta.vision_model.clone())
+                .filter(|model| !model.is_empty()),
             haiku_model: env
                 .and_then(|e| e.get("ANTHROPIC_DEFAULT_HAIKU_MODEL"))
                 .and_then(|v| v.as_str())
@@ -42,6 +40,16 @@ impl ModelMapping {
                 .map(String::from),
             opus_model: env
                 .and_then(|e| e.get("ANTHROPIC_DEFAULT_OPUS_MODEL"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from),
+            fable_model: env
+                .and_then(|e| e.get("ANTHROPIC_DEFAULT_FABLE_MODEL"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from),
+            subagent_model: env
+                .and_then(|e| e.get("CLAUDE_CODE_SUBAGENT_MODEL"))
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
                 .map(String::from),
@@ -58,30 +66,20 @@ impl ModelMapping {
         self.haiku_model.is_some()
             || self.sonnet_model.is_some()
             || self.opus_model.is_some()
+            || self.fable_model.is_some()
+            || self.subagent_model.is_some()
             || self.default_model.is_some()
             || self.vision_model.is_some()
     }
 
-    /// 检查请求是否包含图片内容（CC-Gateway-Pro vision routing）
-    /// 递归检查，支持 tool_result 中嵌套的 image block
+    /// Detect image blocks in Anthropic, Chat Completions and Responses inputs.
     pub fn has_image_content(body: &Value) -> bool {
-        // Check "messages" (Chat Completions / Anthropic format)
-        if let Some(messages) = body.get("messages").and_then(|m| m.as_array()) {
-            for msg in messages {
-                if Self::has_image_in_content(msg.get("content")) {
-                    return true;
-                }
-            }
-        }
-        // Check "input" (Responses API format)
-        if let Some(input) = body.get("input").and_then(|m| m.as_array()) {
-            for item in input {
-                // Responses API: {"role": "user", "content": [{"type": "input_image", ...}]}
-                if Self::has_image_in_content(item.get("content")) {
-                    return true;
-                }
-                // Also check the item itself (flat structure)
-                if Self::has_image_in_content(Some(item)) {
+        for key in ["messages", "input"] {
+            if let Some(items) = body.get(key).and_then(Value::as_array) {
+                if items.iter().any(|item| {
+                    Self::has_image_in_content(item.get("content"))
+                        || Self::has_image_in_content(Some(item))
+                }) {
                     return true;
                 }
             }
@@ -89,24 +87,14 @@ impl ModelMapping {
         false
     }
 
-    /// 递归检查 content 是否包含图片（处理嵌套 tool_result）
     fn has_image_in_content(content: Option<&Value>) -> bool {
         match content {
-            Some(Value::Array(arr)) => {
-                for item in arr {
-                    if let Some(t) = item.get("type").and_then(|t| t.as_str()) {
-                        // Anthropic: "image", Chat Completions: "image_url", Responses API: "input_image"
-                        if t == "image" || t == "image_url" || t == "input_image" {
-                            return true;
-                        }
-                    }
-                    // 递归检查嵌套 content（tool_result 中的 image）
-                    if Self::has_image_in_content(item.get("content")) {
-                        return true;
-                    }
-                }
-                false
-            }
+            Some(Value::Array(items)) => items.iter().any(|item| {
+                matches!(
+                    item.get("type").and_then(Value::as_str),
+                    Some("image" | "image_url" | "input_image")
+                ) || Self::has_image_in_content(item.get("content"))
+            }),
             _ => false,
         }
     }
@@ -115,14 +103,25 @@ impl ModelMapping {
     pub fn map_model(&self, original_model: &str) -> String {
         let model_lower = original_model.to_lowercase();
 
-        // 0. Vision Model 已被 vision routing 设置 → 不覆盖
-        if let Some(ref vm) = self.vision_model {
-            if model_lower == vm.to_lowercase() {
-                return original_model.to_string();
-            }
+        if self
+            .vision_model
+            .as_ref()
+            .is_some_and(|model| model_lower == model.to_lowercase())
+        {
+            return original_model.to_string();
         }
 
         // 1. 按模型类型匹配
+        if model_lower.contains("fable") {
+            if let Some(ref m) = self.fable_model {
+                return m.clone();
+            }
+            // 未单独配置 fable 档时归入 opus 档，与 Claude Code 官方
+            // 分类器降级方向一致（fable→opus），避免落到 default 失去层级。
+            if let Some(ref m) = self.opus_model {
+                return m.clone();
+            }
+        }
         if model_lower.contains("haiku") {
             if let Some(ref m) = self.haiku_model {
                 return m.clone();
@@ -136,6 +135,13 @@ impl ModelMapping {
         if model_lower.contains("sonnet") {
             if let Some(ref m) = self.sonnet_model {
                 return m.clone();
+            }
+        }
+
+        if let Some(ref m) = self.subagent_model {
+            if strip_one_m_suffix_for_upstream(original_model) == strip_one_m_suffix_for_upstream(m)
+            {
+                return original_model.to_string();
             }
         }
 
@@ -168,17 +174,6 @@ pub fn apply_model_mapping(
     let original_model = body.get("model").and_then(|m| m.as_str()).map(String::from);
 
     if let Some(ref original) = original_model {
-        // Vision Model 已被 vision routing 设置 → 跳过映射
-        if let Some(ref vm) = mapping.vision_model {
-            if original.to_lowercase() == vm.to_lowercase() {
-                log::info!(
-                    "[ModelMapper] Vision model preserved: {} (skipping mapping)",
-                    original
-                );
-                return (body, Some(original.clone()), None);
-            }
-        }
-
         let mapped = mapping.map_model(original);
 
         if mapped != *original {
@@ -232,7 +227,8 @@ mod tests {
                     "ANTHROPIC_MODEL": "default-model",
                     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "haiku-mapped",
                     "ANTHROPIC_DEFAULT_SONNET_MODEL": "sonnet-mapped",
-                    "ANTHROPIC_DEFAULT_OPUS_MODEL": "opus-mapped"
+                    "ANTHROPIC_DEFAULT_OPUS_MODEL": "opus-mapped",
+                    "ANTHROPIC_DEFAULT_FABLE_MODEL": "fable-mapped"
                 }
             }),
             website_url: None,
@@ -293,6 +289,54 @@ mod tests {
     }
 
     #[test]
+    fn test_fable_mapping() {
+        let provider = create_provider_with_mapping();
+        let body = json!({"model": "claude-fable-5"});
+        let (result, _, mapped) = apply_model_mapping(body, &provider);
+        assert_eq!(result["model"], "fable-mapped");
+        assert_eq!(mapped, Some("fable-mapped".to_string()));
+    }
+
+    #[test]
+    fn test_fable_with_one_m_suffix_mapping() {
+        // Claude Code 实际会发 claude-fable-5[1m] 形态（issue #3980）
+        let provider = create_provider_with_mapping();
+        let body = json!({"model": "claude-fable-5[1m]"});
+        let (result, _, mapped) = apply_model_mapping(body, &provider);
+        assert_eq!(result["model"], "fable-mapped");
+        assert_eq!(mapped, Some("fable-mapped".to_string()));
+    }
+
+    #[test]
+    fn test_fable_falls_back_to_opus_when_unset() {
+        let mut provider = create_provider_with_mapping();
+        provider.settings_config = json!({
+            "env": {
+                "ANTHROPIC_MODEL": "default-model",
+                "ANTHROPIC_DEFAULT_OPUS_MODEL": "opus-mapped"
+            }
+        });
+        let body = json!({"model": "claude-fable-5"});
+        let (result, _, mapped) = apply_model_mapping(body, &provider);
+        assert_eq!(result["model"], "opus-mapped");
+        assert_eq!(mapped, Some("opus-mapped".to_string()));
+    }
+
+    #[test]
+    fn test_fable_falls_back_to_default_without_opus() {
+        let mut provider = create_provider_with_mapping();
+        provider.settings_config = json!({
+            "env": {
+                "ANTHROPIC_MODEL": "default-model"
+            }
+        });
+        let body = json!({"model": "claude-fable-5"});
+        let (result, _, mapped) = apply_model_mapping(body, &provider);
+        assert_eq!(result["model"], "default-model");
+        assert_eq!(mapped, Some("default-model".to_string()));
+    }
+
+    #[test]
     fn test_thinking_does_not_affect_model_mapping() {
         // Issue #2081: thinking 参数不应影响模型映射
         let provider = create_provider_with_mapping();
@@ -337,6 +381,42 @@ mod tests {
         let (result, _, mapped) = apply_model_mapping(body, &provider);
         assert_eq!(result["model"], "default-model");
         assert_eq!(mapped, Some("default-model".to_string()));
+    }
+
+    #[test]
+    fn test_subagent_model_preserved_before_default_fallback() {
+        let mut provider = create_provider_with_mapping();
+        provider.settings_config = json!({
+            "env": {
+                "ANTHROPIC_MODEL": "default-model",
+                "CLAUDE_CODE_SUBAGENT_MODEL": "gpt-5.4-mini"
+            }
+        });
+
+        let body = json!({"model": "gpt-5.4-mini"});
+        let (result, original, mapped) = apply_model_mapping(body, &provider);
+
+        assert_eq!(result["model"], "gpt-5.4-mini");
+        assert_eq!(original, Some("gpt-5.4-mini".to_string()));
+        assert!(mapped.is_none());
+    }
+
+    #[test]
+    fn test_subagent_model_preserved_with_one_m_suffix_before_default_fallback() {
+        let mut provider = create_provider_with_mapping();
+        provider.settings_config = json!({
+            "env": {
+                "ANTHROPIC_MODEL": "default-model",
+                "CLAUDE_CODE_SUBAGENT_MODEL": "gpt-5.4-mini"
+            }
+        });
+
+        let body = json!({"model": "gpt-5.4-mini[1M]"});
+        let (result, original, mapped) = apply_model_mapping(body, &provider);
+
+        assert_eq!(result["model"], "gpt-5.4-mini[1M]");
+        assert_eq!(original, Some("gpt-5.4-mini[1M]".to_string()));
+        assert!(mapped.is_none());
     }
 
     #[test]

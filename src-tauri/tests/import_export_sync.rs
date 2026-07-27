@@ -10,7 +10,8 @@ use cc_gateway_pro_lib::{
 #[path = "support.rs"]
 mod support;
 use support::{
-    create_test_state, create_test_state_with_config, ensure_test_home, reset_test_fs, test_mutex,
+    create_test_state, create_test_state_with_config, enable_codex_official_auth_preservation,
+    ensure_test_home, reset_test_fs, test_mutex,
 };
 
 #[test]
@@ -70,14 +71,15 @@ fn sync_claude_provider_writes_live_settings() {
 }
 
 #[test]
-fn sync_codex_provider_writes_auth_and_config() {
+fn sync_codex_provider_writes_config_without_touching_auth() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
+    enable_codex_official_auth_preservation();
 
     let mut config = MultiAppConfig::default();
 
     // 注意：v3.7.0 后 MCP 同步由 McpService 独立处理，不再通过 provider 切换触发
-    // 此测试仅验证 auth.json 和 config.toml 基础配置的写入
+    // Codex provider 切换只写 config.toml；auth.json 保留用户登录态。
 
     let provider_config = json!({
         "auth": {
@@ -105,8 +107,8 @@ fn sync_codex_provider_writes_auth_and_config() {
     let config_path = cc_gateway_pro_lib::get_codex_config_path();
 
     assert!(
-        auth_path.exists(),
-        "auth.json should exist at {}",
+        !auth_path.exists(),
+        "auth.json should not be created by provider switching at {}",
         auth_path.display()
     );
     assert!(
@@ -115,20 +117,16 @@ fn sync_codex_provider_writes_auth_and_config() {
         config_path.display()
     );
 
-    let auth_value: serde_json::Value = read_json_file(&auth_path).expect("read auth");
-    assert_eq!(
-        auth_value,
-        provider_config.get("auth").cloned().expect("auth object")
-    );
-
     let toml_text = fs::read_to_string(&config_path).expect("read config.toml");
-    // 验证基础配置正确写入
     assert!(
         toml_text.contains("base_url"),
         "config.toml should contain base_url from provider config"
     );
+    assert!(
+        toml_text.contains("experimental_bearer_token"),
+        "config.toml should contain provider-scoped bearer token"
+    );
 
-    // 当前供应商应同步最新 config 文本
     let manager = config.get_manager(&AppType::Codex).expect("codex manager");
     let synced = manager.providers.get("codex-1").expect("codex provider");
     let synced_cfg = synced
@@ -136,11 +134,85 @@ fn sync_codex_provider_writes_auth_and_config() {
         .get("config")
         .and_then(|v| v.as_str())
         .expect("config string");
-    assert_eq!(synced_cfg, toml_text);
+    assert!(
+        !synced_cfg.contains("experimental_bearer_token"),
+        "provider storage should not persist generated live bearer token"
+    );
+    assert!(
+        toml_text.contains("experimental_bearer_token"),
+        "live config should include generated bearer token"
+    );
 }
 
 #[test]
-fn sync_codex_provider_preserves_live_model_provider_id_for_history() {
+fn sync_codex_provider_with_config_only_token_backfills_auth() {
+    // P2-2 回归: stored provider 的 token 只藏在 config.toml 的 experimental_bearer_token 时,
+    // sync 路径必须把 token 从 live config 提取并写回 stored auth.OPENAI_API_KEY,
+    // 否则下一轮 sync 会在 cleaned config + 空 auth 之间丢失 token。
+    let _guard = test_mutex().lock().expect("acquire test mutex");
+    reset_test_fs();
+
+    let mut config = MultiAppConfig::default();
+
+    let stored_config = r#"model_provider = "thirdparty"
+model = "gpt-5.4"
+
+[model_providers.thirdparty]
+name = "Thirdparty"
+base_url = "https://thirdparty.example/v1"
+wire_api = "responses"
+requires_openai_auth = true
+experimental_bearer_token = "stored-bearer-key"
+"#;
+
+    let provider = Provider::with_id(
+        "thirdparty-1".to_string(),
+        "Thirdparty".to_string(),
+        json!({
+            "auth": {},
+            "config": stored_config,
+        }),
+        None,
+    );
+
+    let manager = config
+        .get_manager_mut(&AppType::Codex)
+        .expect("codex manager");
+    manager
+        .providers
+        .insert("thirdparty-1".to_string(), provider);
+    manager.current = "thirdparty-1".to_string();
+
+    ConfigService::sync_current_providers_to_live(&mut config).expect("sync codex live");
+
+    let manager = config.get_manager(&AppType::Codex).expect("codex manager");
+    let synced = manager
+        .providers
+        .get("thirdparty-1")
+        .expect("provider survives sync");
+
+    assert_eq!(
+        synced
+            .settings_config
+            .pointer("/auth/OPENAI_API_KEY")
+            .and_then(|v| v.as_str()),
+        Some("stored-bearer-key"),
+        "config-only bearer token must be backfilled into stored auth.OPENAI_API_KEY"
+    );
+
+    let synced_cfg = synced
+        .settings_config
+        .get("config")
+        .and_then(|v| v.as_str())
+        .expect("config string");
+    assert!(
+        !synced_cfg.contains("experimental_bearer_token"),
+        "live-only bearer token should not be persisted in stored provider config"
+    );
+}
+
+#[test]
+fn sync_codex_provider_preserves_user_model_provider_id_after_migration() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
 
@@ -195,7 +267,7 @@ requires_openai_auth = true
     assert_eq!(
         parsed.get("model_provider").and_then(|v| v.as_str()),
         Some("aihubmix"),
-        "ConfigService sync writes provider config to live"
+        "ConfigService sync should preserve user-editable model_provider after the one-time migration"
     );
 
     let model_providers = parsed
@@ -203,12 +275,8 @@ requires_openai_auth = true
         .and_then(|v| v.as_table())
         .expect("model_providers should exist");
     assert!(
-        model_providers.get("aihubmix").is_some(),
-        "sync writes provider model_providers to live config"
-    );
-    assert!(
-        model_providers.get("rightcode").is_none(),
-        "existing live model_providers are replaced by provider config"
+        model_providers.get("custom").is_none(),
+        "provider sync should not force user-edited provider ids back to custom"
     );
     assert_eq!(
         model_providers
@@ -226,7 +294,7 @@ requires_openai_auth = true
         .expect("synced config string");
     assert!(
         synced_cfg.contains("[model_providers.aihubmix]"),
-        "ConfigService syncs provider config from live after write"
+        "ConfigService should restore the provider-specific id before writing stored config"
     );
 }
 
@@ -427,6 +495,42 @@ fn sync_enabled_to_codex_returns_error_on_invalid_toml() {
         }
         other => panic!("unexpected error: {other:?}"),
     }
+}
+
+#[test]
+fn sync_single_server_to_codex_fails_closed_on_invalid_toml() {
+    let _guard = test_mutex().lock().expect("acquire test mutex");
+    reset_test_fs();
+    let path = cc_gateway_pro_lib::get_codex_config_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("create codex dir");
+    }
+    // 含用户内容 + 语法错误的 config.toml：同步必须报错且不得覆盖文件
+    let broken = "model = \"gpt-5.5\"\ninvalid = [\n";
+    fs::write(&path, broken).expect("write invalid config");
+
+    let config = MultiAppConfig::default();
+    let err = cc_gateway_pro_lib::sync_single_server_to_codex(
+        &config,
+        "srv",
+        &json!({ "type": "stdio", "command": "echo" }),
+    )
+    .expect_err("sync should fail instead of wiping the file");
+    match err {
+        cc_gateway_pro_lib::AppError::McpValidation(msg) => {
+            assert!(
+                msg.contains("config.toml"),
+                "error message should mention config.toml"
+            );
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+
+    let text = fs::read_to_string(&path).expect("read config.toml");
+    assert_eq!(
+        text, broken,
+        "invalid config.toml must be left untouched on sync failure"
+    );
 }
 
 #[test]
@@ -644,6 +748,7 @@ command = "echo"
                 claude: false,
                 codex: false, // 初始未启用
                 gemini: false,
+                grokbuild: false,
                 opencode: false,
                 hermes: false,
             },
@@ -773,6 +878,7 @@ fn import_from_claude_merges_into_config() {
                 claude: false, // 初始未启用
                 codex: false,
                 gemini: false,
+                grokbuild: false,
                 opencode: false,
                 hermes: false,
             },
@@ -1066,7 +1172,7 @@ fn export_sql_returns_error_for_invalid_path() {
 
     // Try to export to an invalid path (nonexistent parent or invalid name on Windows)
     let invalid_parent = if cfg!(windows) {
-        std::env::temp_dir().join("cc-gateway-pro-test-invalid<>dir")
+        std::env::temp_dir().join("cc-switch-test-invalid<>dir")
     } else {
         PathBuf::from("/nonexistent/directory")
     };
@@ -1096,20 +1202,20 @@ fn export_sql_returns_error_for_invalid_path() {
 }
 
 #[test]
-fn import_sql_rejects_non_cc_gateway_pro_backup() {
+fn import_sql_rejects_non_cc_switch_backup() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
     let home = ensure_test_home();
 
     let state = create_test_state().expect("create test state");
 
-    let import_path = home.join("not-cc-gateway-pro.sql");
+    let import_path = home.join("not-cc-switch.sql");
     fs::write(&import_path, "CREATE TABLE x (id INTEGER);").expect("write import sql");
 
     let err = state
         .db
         .import_sql(&import_path)
-        .expect_err("non-cc-gateway-pro sql should be rejected");
+        .expect_err("non-cc-switch sql should be rejected");
 
     match err {
         AppError::Localized { key, .. } => {
@@ -1120,7 +1226,7 @@ fn import_sql_rejects_non_cc_gateway_pro_backup() {
 }
 
 #[test]
-fn import_sql_accepts_cc_gateway_pro_exported_backup() {
+fn import_sql_accepts_cc_switch_exported_backup() {
     let _guard = test_mutex().lock().expect("acquire test mutex");
     reset_test_fs();
     let home = ensure_test_home();
@@ -1144,7 +1250,7 @@ fn import_sql_accepts_cc_gateway_pro_exported_backup() {
     }
 
     let state = create_test_state_with_config(&config).expect("create test state");
-    let export_path = home.join("cc-gateway-pro-export.sql");
+    let export_path = home.join("cc-switch-export.sql");
     state
         .db
         .export_sql(&export_path)

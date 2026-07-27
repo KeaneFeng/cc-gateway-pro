@@ -172,6 +172,7 @@ impl SessionProjectRouter {
     }
 
     /// Get the project path for a session_id
+    #[allow(dead_code)]
     pub fn get_project_for_session(&self, session_id: &str) -> Option<String> {
         self.session_projects
             .read()
