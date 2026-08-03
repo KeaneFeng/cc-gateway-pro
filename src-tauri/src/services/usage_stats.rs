@@ -229,6 +229,12 @@ fn data_source_expr(log_alias: &str) -> String {
     format!("COALESCE({log_alias}.data_source, 'proxy')")
 }
 
+fn dedup_app_type_match_sql(left: &str, right: &str) -> String {
+    format!(
+        "{left} IN ({right}, CASE WHEN {right} = 'claude' THEN 'claude-desktop' ELSE {right} END)"
+    )
+}
+
 /// SQL 标量表达式：把 Claude Desktop 网关的 `claude-desktop` app_type 在“展示口径”
 /// 上折叠进 `claude`，其余 app_type 原样返回。
 ///
@@ -242,8 +248,8 @@ fn data_source_expr(log_alias: &str) -> String {
 /// 而不改动任何已存储的行（详情面板仍读原始 `app_type`）。
 ///
 /// 注意：包裹后该列上的索引在此比较中失效，但这些都是已带时间过滤的聚合扫描，
-/// app_type 本就不是主访问路径，可接受。仅用于读侧；去重匹配（`has_matching_
-/// proxy_usage_log`）与额度检查（`check_provider_limits`）必须保留原始精确比较。
+/// app_type 本就不是主访问路径，可接受。仅用于读侧；跨源去重使用更窄的
+/// [`dedup_app_type_match_sql`]，额度检查（`check_provider_limits`）仍保留原始精确比较。
 fn folded_app_type_sql(column: &str) -> String {
     format!("CASE WHEN {column} = 'claude-desktop' THEN 'claude' ELSE {column} END")
 }
@@ -297,6 +303,8 @@ fn push_provider_model_filters(
 pub(crate) fn effective_usage_log_filter(log_alias: &str) -> String {
     let data_source = data_source_expr(log_alias);
     let proxy_data_source = data_source_expr("proxy_dedup");
+    let app_type_match =
+        dedup_app_type_match_sql("proxy_dedup.app_type", &format!("{log_alias}.app_type"));
     format!(
         "NOT (
             {data_source} IN ('session_log', 'codex_session', 'gemini_session', 'opencode_session')
@@ -304,7 +312,7 @@ pub(crate) fn effective_usage_log_filter(log_alias: &str) -> String {
                 SELECT 1
                 FROM proxy_request_logs proxy_dedup
                 WHERE {proxy_data_source} = 'proxy'
-                  AND proxy_dedup.app_type = {log_alias}.app_type
+                  AND {app_type_match}
                   AND proxy_dedup.status_code >= 200
                   AND proxy_dedup.status_code < 300
                   AND proxy_dedup.input_tokens = {log_alias}.input_tokens
@@ -377,12 +385,13 @@ pub(crate) fn has_matching_proxy_usage_log(
         matches!(key.app_type, "codex" | "gemini" | "opencode") && key.cache_creation_tokens == 0;
 
     let l_data_source = data_source_expr("l");
+    let app_type_match = dedup_app_type_match_sql("l.app_type", "?1");
     let sql = format!(
         "SELECT EXISTS (
             SELECT 1
             FROM proxy_request_logs l
             WHERE {l_data_source} = 'proxy'
-              AND l.app_type = ?1
+              AND {app_type_match}
               AND l.status_code >= 200
               AND l.status_code < 300
               AND l.input_tokens = ?3
