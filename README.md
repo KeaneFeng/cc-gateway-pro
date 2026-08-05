@@ -27,6 +27,7 @@ This project is forked from [farion1231/cc-switch](https://github.com/farion1231
 | Claude Desktop | Official and third-party profiles, direct mode, local routed mode, model route mapping                           |
 | Codex          | Provider switching, local proxy takeover, project routing, OAuth/Copilot helpers, MCP, prompts, skills, sessions |
 | Gemini CLI     | Provider switching, local proxy takeover, MCP, prompts, skills, sessions                                         |
+| Grok Build     | Provider switching, local proxy takeover, quota, failover, MCP, prompts, skills, sessions                       |
 | OpenCode       | Provider presets, common config snippets, MCP, prompts, skills, sessions                                         |
 | OpenClaw       | Provider presets, workspace files, agent defaults, tool and environment panels                                   |
 | Hermes Agent   | Provider presets, memory panel, MCP and skills management                                                        |
@@ -135,7 +136,7 @@ The repository also includes a helper:
 - [User manual](docs/user-manual/zh/README.md)
 - [Architecture and flows](docs/architecture-and-flows-zh.md)
 - [Proxy guide](docs/proxy-guide-zh.md)
-- [Release notes](docs/release-notes/v3.16.10-en.md)
+- [Release notes](docs/release-notes/v3.19.1-en.md)
 
 ## Data Locations
 

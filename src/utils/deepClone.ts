@@ -32,6 +32,9 @@ export function deepClone<T>(obj: T): T {
     const clonedObj = {} as T;
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        // Assigning __proto__ invokes the legacy setter and mutates the
+        // clone's prototype instead of creating an own data property.
+        if (key === "__proto__") continue;
         clonedObj[key] = deepClone(obj[key]);
       }
     }

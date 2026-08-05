@@ -77,16 +77,17 @@ requires_openai_auth = true`;
 }
 
 export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
-  // ===== 赞助商预设：文件顺序 = 应用内展示顺序，与 README 赞助商表对齐 =====
   {
     name: "PackyCode",
-    websiteUrl: "https://www.packyapi.com",
-    apiKeyUrl: "https://www.packyapi.com/register?aff=cc-gateway-pro",
+    websiteUrl: "https://www.packyapi.ai",
+    apiKeyUrl: "https://www.packyapi.ai/register?aff=cc-gateway-pro",
     auth: grokAuth(),
-    config: grokPresetConfig("PackyCode", "https://www.packyapi.com/v1"),
+    config: grokPresetConfig("PackyCode", "https://www.packyapi.ai/v1"),
     endpointCandidates: [
+      "https://www.packyapi.ai/v1",
+      "https://cf.api.fan/v1",
+      "https://slb-v1.api.fan/v1",
       "https://www.packyapi.com/v1",
-      "https://api-slb.packyapi.com/v1",
     ],
     category: "third_party",
     isPartner: true,
@@ -107,11 +108,11 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
   },
   {
     name: "APINebula",
-    websiteUrl: "https://apinebula.com",
-    apiKeyUrl: "https://apinebula.com/VjM74M",
+    websiteUrl: "https://apinebula.ai",
+    apiKeyUrl: "https://apinebula.ai/VjM74M",
     auth: grokAuth(),
-    config: grokPresetConfig("APINebula", "https://apinebula.com/v1"),
-    endpointCandidates: ["https://apinebula.com/v1"],
+    config: grokPresetConfig("APINebula", "https://apinebula.ai/v1"),
+    endpointCandidates: ["https://apinebula.ai/v1"],
     apiFormat: "openai_responses",
     category: "third_party",
     isPartner: true,
@@ -120,16 +121,15 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
   },
   {
     name: "AICodeMirror",
-    websiteUrl: "https://www.aicodemirror.com",
-    apiKeyUrl: "https://www.aicodemirror.com/register?invitecode=9915W3",
+    websiteUrl: "https://www.aicodemirror.ai",
+    apiKeyUrl: "https://www.aicodemirror.ai/register?invitecode=9915W3",
     auth: grokAuth(),
     config: grokPresetConfig(
       "AICodeMirror",
-      "https://api.aicodemirror.com/api/codex/backend-api/codex",
+      "https://api.aicodemirror.ai/api/codex/backend-api/codex",
     ),
     endpointCandidates: [
-      "https://api.aicodemirror.com/api/codex/backend-api/codex",
-      "https://api.claudecode.net.cn/api/codex/backend-api/codex",
+      "https://api.aicodemirror.ai/api/codex/backend-api/codex",
     ],
     isPartner: true,
     partnerPromotionKey: "aicodemirror",
@@ -202,11 +202,11 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
   },
   {
     name: "AIGoCode",
-    websiteUrl: "https://aigocode.com",
-    apiKeyUrl: "https://aigocode.com/invite/CC-SWITCH",
+    websiteUrl: "https://aigocode.app",
+    apiKeyUrl: "https://aigocode.app/invite/CC-SWITCH",
     auth: grokAuth(),
-    config: grokPresetConfig("AIGoCode", "https://api.aigocode.com"),
-    endpointCandidates: ["https://api.aigocode.com"],
+    config: grokPresetConfig("AIGoCode", "https://api.aigocode.app"),
+    endpointCandidates: ["https://api.aigocode.app"],
     category: "third_party",
     isPartner: true,
     partnerPromotionKey: "aigocode",
@@ -290,6 +290,18 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
     icon: "nekocode",
   },
   {
+    name: "A6API",
+    websiteUrl: "https://www.a6api.com",
+    apiKeyUrl: "https://a6api.com/register?aff=AqNr",
+    auth: grokAuth(),
+    config: grokPresetConfig("A6API", "https://api.a6api.com/v1"),
+    endpointCandidates: ["https://api.a6api.com/v1"],
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "a6api",
+    icon: "a6api",
+  },
+  {
     name: "Compshare",
     nameKey: "providerForm.presets.ucloud",
     websiteUrl: "https://www.compshare.cn",
@@ -369,10 +381,10 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
   },
   {
     name: "RightCode",
-    websiteUrl: "https://www.right.codes",
-    apiKeyUrl: "https://www.right.codes/register?aff=CCSWITCH",
+    websiteUrl: "https://www.rightapi.ai",
+    apiKeyUrl: "https://www.rightapi.ai/register?aff=CCSWITCH",
     auth: grokAuth(),
-    config: grokPresetConfig("RightCode", "https://right.codes/codex/v1"),
+    config: grokPresetConfig("RightCode", "https://www.rightapi.ai/codex/v1"),
     category: "third_party",
     isPartner: true,
     partnerPromotionKey: "rightcode",
@@ -456,7 +468,7 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
     name: "SudoCode.chat",
     websiteUrl: "https://sudocode.chat",
     apiKeyUrl:
-      "https://sudocode.chat/register?utm_source=ccswitch&utm_medium=partner",
+      "https://sudocode.chat/sign-up?aff=CC-SWITCH&utm_source=cc-switch&utm_medium=sponsor&utm_campaign=ccswitch",
     auth: grokAuth(),
     config: grokPresetConfig("SudoCode.chat", "https://api.sudocode.chat/v1"),
     endpointCandidates: ["https://api.sudocode.chat/v1"],
@@ -478,7 +490,6 @@ export const grokBuildProviderPresets: GrokBuildProviderPreset[] = [
     isPartner: true,
     icon: "sudocode-us",
   },
-  // ===== 非赞助商预设：应用内展示按显示名排序，此处文件顺序不影响展示 =====
   {
     name: "xAI (Grok)",
     websiteUrl: "https://x.ai/api",

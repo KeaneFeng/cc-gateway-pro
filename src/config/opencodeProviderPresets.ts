@@ -99,8 +99,8 @@ export const OPENCODE_PRESET_MODEL_VARIANTS: Record<
       },
     },
     {
-      id: "gemini-3.5-flash",
-      name: "Gemini 3.5 Flash",
+      id: "gemini-3.6-flash",
+      name: "Gemini 3.6 Flash",
       contextLimit: 1048576,
       outputLimit: 65536,
       modalities: {
@@ -125,8 +125,8 @@ export const OPENCODE_PRESET_MODEL_VARIANTS: Record<
   ],
   "@ai-sdk/openai": [
     {
-      id: "gpt-5.5",
-      name: "GPT-5.5",
+      id: "gpt-5.6-sol",
+      name: "GPT-5.6 Sol",
       contextLimit: 400000,
       outputLimit: 128000,
       modalities: { input: ["text", "image"], output: ["text"] },
@@ -156,8 +156,8 @@ export const OPENCODE_PRESET_MODEL_VARIANTS: Record<
   ],
   "@ai-sdk/amazon-bedrock": [
     {
-      id: "global.anthropic.claude-opus-4-8",
-      name: "Claude Opus 4.8",
+      id: "global.anthropic.claude-opus-5",
+      name: "Claude Opus 5",
       contextLimit: 1000000,
       outputLimit: 128000,
       modalities: { input: ["text", "image", "pdf"], output: ["text"] },
@@ -224,8 +224,8 @@ export const OPENCODE_PRESET_MODEL_VARIANTS: Record<
       },
     },
     {
-      id: "claude-opus-4-8",
-      name: "Claude Opus 4.8",
+      id: "claude-opus-5",
+      name: "Claude Opus 5",
       contextLimit: 1000000,
       outputLimit: 128000,
       modalities: { input: ["text", "image", "pdf"], output: ["text"] },
@@ -357,19 +357,19 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   },
   {
     name: "PackyCode",
-    websiteUrl: "https://www.packyapi.com",
-    apiKeyUrl: "https://www.packyapi.com/register?aff=cc-gateway-pro",
+    websiteUrl: "https://www.packyapi.ai",
+    apiKeyUrl: "https://www.packyapi.ai/register?aff=cc-gateway-pro",
     settingsConfig: {
       npm: "@ai-sdk/anthropic",
       name: "PackyCode",
       options: {
-        baseURL: "https://www.packyapi.com/v1",
+        baseURL: "https://www.packyapi.ai/v1",
         apiKey: "",
         setCacheKey: true,
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -397,7 +397,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -414,18 +414,18 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   },
   {
     name: "APINebula",
-    websiteUrl: "https://apinebula.com",
-    apiKeyUrl: "https://apinebula.com/VjM74M",
+    websiteUrl: "https://apinebula.ai",
+    apiKeyUrl: "https://apinebula.ai/VjM74M",
     settingsConfig: {
       npm: "@ai-sdk/openai-compatible",
       name: "APINebula",
       options: {
-        baseURL: "https://apinebula.com/v1",
+        baseURL: "https://apinebula.ai/v1",
         apiKey: "",
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "third_party",
@@ -442,19 +442,19 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   },
   {
     name: "AICodeMirror",
-    websiteUrl: "https://www.aicodemirror.com",
-    apiKeyUrl: "https://www.aicodemirror.com/register?invitecode=9915W3",
+    websiteUrl: "https://www.aicodemirror.ai",
+    apiKeyUrl: "https://www.aicodemirror.ai/register?invitecode=9915W3",
     settingsConfig: {
       npm: "@ai-sdk/anthropic",
       name: "AICodeMirror",
       options: {
-        baseURL: "https://api.aicodemirror.com/api/claudecode",
+        baseURL: "https://api.aicodemirror.ai/api/claudecode",
         apiKey: "",
         setCacheKey: true,
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4.8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -484,7 +484,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -513,7 +513,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-haiku-4-5": { name: "Claude Haiku 4.5" },
       },
     },
@@ -542,7 +542,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -571,7 +571,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "anthropic/claude-opus-4.8": { name: "Claude Opus 4.8" },
+        "anthropic/claude-opus-5": { name: "Claude Opus 5" },
         "anthropic/claude-sonnet-5": { name: "Claude Sonnet 5" },
       },
     },
@@ -688,19 +688,19 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   },
   {
     name: "AIGoCode",
-    websiteUrl: "https://aigocode.com",
-    apiKeyUrl: "https://aigocode.com/invite/CC-SWITCH",
+    websiteUrl: "https://aigocode.app",
+    apiKeyUrl: "https://aigocode.app/invite/CC-SWITCH",
     settingsConfig: {
       npm: "@ai-sdk/anthropic",
       name: "AIGoCode",
       options: {
-        baseURL: "https://api.aigocode.com",
+        baseURL: "https://api.aigocode.app",
         apiKey: "",
         setCacheKey: true,
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -708,6 +708,36 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
     partnerPromotionKey: "aigocode",
     icon: "aigocode",
     iconColor: "#5B7FFF",
+    templateValues: {
+      apiKey: {
+        label: "API Key",
+        placeholder: "",
+        editorValue: "",
+      },
+    },
+  },
+  {
+    name: "AICoding",
+    websiteUrl: "https://aicoding.inc",
+    apiKeyUrl: "https://aicoding.inc/i/CCSWITCH",
+    settingsConfig: {
+      npm: "@ai-sdk/anthropic",
+      name: "AICoding",
+      options: {
+        baseURL: "https://api.aicoding.inc",
+        apiKey: "",
+        setCacheKey: true,
+      },
+      models: {
+        "claude-sonnet-5": { name: "Claude Sonnet 5" },
+        "claude-opus-5": { name: "Claude Opus 5" },
+      },
+    },
+    category: "third_party",
+    isPartner: true,
+    partnerPromotionKey: "aicoding",
+    icon: "aicoding",
+    iconColor: "#000000",
     templateValues: {
       apiKey: {
         label: "API Key",
@@ -729,7 +759,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -757,7 +787,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
         "claude-haiku-4-5": { name: "Claude Haiku 4.5" },
       },
@@ -787,7 +817,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -816,7 +846,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -845,7 +875,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-haiku-4-5": { name: "Claude Haiku 4.5" },
       },
     },
@@ -874,13 +904,41 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
     isPartner: true,
     partnerPromotionKey: "nekocode",
     icon: "nekocode",
+    templateValues: {
+      apiKey: {
+        label: "API Key",
+        placeholder: "",
+        editorValue: "",
+      },
+    },
+  },
+  {
+    name: "A6API",
+    websiteUrl: "https://www.a6api.com",
+    apiKeyUrl: "https://a6api.com/register?aff=AqNr",
+    settingsConfig: {
+      npm: "@ai-sdk/openai-compatible",
+      name: "A6API",
+      options: {
+        baseURL: "https://api.a6api.com/v1",
+        apiKey: "",
+        setCacheKey: true,
+      },
+      models: {
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
+      },
+    },
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "a6api",
+    icon: "a6api",
     templateValues: {
       apiKey: {
         label: "API Key",
@@ -930,7 +988,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -959,7 +1017,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -988,7 +1046,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
       },
     },
@@ -1007,18 +1065,18 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
   },
   {
     name: "RightCode",
-    websiteUrl: "https://www.right.codes",
-    apiKeyUrl: "https://www.right.codes/register?aff=CCSWITCH",
+    websiteUrl: "https://www.rightapi.ai",
+    apiKeyUrl: "https://www.rightapi.ai/register?aff=CCSWITCH",
     settingsConfig: {
       npm: "@ai-sdk/openai",
       name: "RightCode",
       options: {
-        baseURL: "https://right.codes/codex/v1",
+        baseURL: "https://www.rightapi.ai/codex/v1",
         apiKey: "",
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "third_party",
@@ -1047,7 +1105,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
       },
     },
@@ -1078,7 +1136,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -1109,7 +1167,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "third_party",
@@ -1139,7 +1197,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "aggregator",
@@ -1167,7 +1225,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -1186,7 +1244,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
     name: "SudoCode.chat",
     websiteUrl: "https://sudocode.chat",
     apiKeyUrl:
-      "https://sudocode.chat/register?utm_source=ccswitch&utm_medium=partner",
+      "https://sudocode.chat/sign-up?aff=CC-SWITCH&utm_source=cc-switch&utm_medium=sponsor&utm_campaign=ccswitch",
     settingsConfig: {
       npm: "@ai-sdk/openai",
       name: "SudoCode.chat",
@@ -1224,7 +1282,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "third_party",
@@ -1251,7 +1309,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "aggregator",
@@ -1798,7 +1856,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "aggregator",
@@ -1826,7 +1884,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "anthropic/claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "anthropic/claude-opus-4.8": { name: "Claude Opus 4.8" },
+        "anthropic/claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "aggregator",
@@ -1853,7 +1911,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
       },
       models: {
         "anthropic/claude-sonnet-5": { name: "Claude Sonnet 5" },
-        "anthropic/claude-opus-4.8": { name: "Claude Opus 4.8" },
+        "anthropic/claude-opus-5": { name: "Claude Opus 5" },
       },
     },
     category: "aggregator",
@@ -1883,8 +1941,8 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         "anthropic/claude-sonnet-5": { name: "Claude Sonnet 5" },
         "openai/gpt-5.3-codex": { name: "GPT-5.3 Codex" },
         "openai/gpt-5.2": { name: "GPT-5.2" },
-        "google/gemini-3.5-flash": {
-          name: "Gemini 3.5 Flash",
+        "google/gemini-3.6-flash": {
+          name: "Gemini 3.6 Flash",
         },
         "qwen/qwen3-coder-480b": { name: "Qwen3 Coder 480B" },
       },
@@ -1965,7 +2023,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "claude-opus-4-8": { name: "claude-opus-4-8" },
+        "claude-opus-5": { name: "claude-opus-5" },
         "claude-sonnet-5": { name: "claude-sonnet-5" },
         "claude-haiku-4-5-20251001": { name: "claude-haiku-4-5-20251001" },
       },
@@ -2023,7 +2081,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "global.anthropic.claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "global.anthropic.claude-opus-5": { name: "Claude Opus 5" },
         "global.anthropic.claude-sonnet-5": {
           name: "Claude Sonnet 5",
         },
@@ -2098,7 +2156,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "third_party",
@@ -2126,7 +2184,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "claude-opus-4-8": { name: "Claude Opus 4.8" },
+        "claude-opus-5": { name: "Claude Opus 5" },
         "claude-sonnet-4-6": { name: "Claude Sonnet 4.6" },
       },
     },
@@ -2156,7 +2214,7 @@ export const opencodeProviderPresets: OpenCodeProviderPreset[] = [
         setCacheKey: true,
       },
       models: {
-        "gpt-5.5": { name: "GPT-5.5" },
+        "gpt-5.6-sol": { name: "GPT-5.6 Sol" },
       },
     },
     category: "third_party",

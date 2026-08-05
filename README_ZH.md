@@ -27,6 +27,7 @@ CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以
 | Claude Desktop | 官方与第三方配置、直连模式、本地路由模式、模型映射                                        |
 | Codex          | Provider 切换、本地代理接管、项目路由、OAuth/Copilot 辅助、MCP、Prompts、Skills、Sessions |
 | Gemini CLI     | Provider 切换、本地代理接管、MCP、Prompts、Skills、Sessions                               |
+| Grok Build     | Provider 切换、本地代理接管、配额、故障转移、MCP、Prompts、Skills、Sessions               |
 | OpenCode       | Provider 预设、通用配置片段、MCP、Prompts、Skills、Sessions                               |
 | OpenClaw       | Provider 预设、工作区文件、Agent 默认配置、工具和环境变量面板                             |
 | Hermes Agent   | Provider 预设、Memory 面板、MCP 与 Skills 管理                                            |
@@ -135,7 +136,7 @@ pnpm tauri build
 - [用户手册](docs/user-manual/zh/README.md)
 - [架构与核心流程](docs/architecture-and-flows-zh.md)
 - [代理使用指南](docs/proxy-guide-zh.md)
-- [发布说明](docs/release-notes/v3.16.10-zh.md)
+- [发布说明](docs/release-notes/v3.19.1-zh.md)
 
 ## 数据位置
 

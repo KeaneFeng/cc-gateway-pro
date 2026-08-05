@@ -133,7 +133,10 @@ fn decompress_single(
 }
 
 /// 解压单个 content-coding（无输出上限，向后兼容）。未知编码返回 `Ok(None)`。
-fn decompress_single_unbounded(coding: &str, body: &[u8]) -> Result<Option<Vec<u8>>, std::io::Error> {
+fn decompress_single_unbounded(
+    coding: &str,
+    body: &[u8],
+) -> Result<Option<Vec<u8>>, std::io::Error> {
     match coding {
         "gzip" | "x-gzip" => {
             let mut decoder = flate2::read::GzDecoder::new(body);
@@ -376,6 +379,9 @@ mod tests {
         let compressed = encoder.finish().unwrap();
 
         let result = decompress_body_with_limit("gzip", &compressed, limit);
-        assert!(matches!(result, Err(DecompressError::TooLarge { limit: 3 })));
+        assert!(matches!(
+            result,
+            Err(DecompressError::TooLarge { limit: 3 })
+        ));
     }
 }

@@ -136,18 +136,20 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "PackyCode",
-    websiteUrl: "https://www.packyapi.com",
-    apiKeyUrl: "https://www.packyapi.com/register?aff=cc-gateway-pro",
+    websiteUrl: "https://www.packyapi.ai",
+    apiKeyUrl: "https://www.packyapi.ai/register?aff=cc-gateway-pro",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://www.packyapi.com",
+        ANTHROPIC_BASE_URL: "https://www.packyapi.ai",
         ANTHROPIC_AUTH_TOKEN: "",
       },
     },
     // 请求地址候选（用于地址管理/测速）
     endpointCandidates: [
+      "https://www.packyapi.ai",
+      "https://cf.api.fan",
+      "https://slb-v1.api.fan",
       "https://www.packyapi.com",
-      "https://api-slb.packyapi.com",
     ],
     category: "third_party",
     isPartner: true, // 合作伙伴
@@ -171,16 +173,16 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "APINebula",
-    websiteUrl: "https://apinebula.com",
-    apiKeyUrl: "https://apinebula.com/VjM74M",
+    websiteUrl: "https://apinebula.ai",
+    apiKeyUrl: "https://apinebula.ai/VjM74M",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://apinebula.com",
+        ANTHROPIC_BASE_URL: "https://apinebula.ai",
         ANTHROPIC_AUTH_TOKEN: "",
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
       },
     },
-    endpointCandidates: ["https://apinebula.com"],
+    endpointCandidates: ["https://apinebula.ai"],
     category: "third_party",
     isPartner: true,
     partnerPromotionKey: "apinebula",
@@ -188,18 +190,15 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "AICodeMirror",
-    websiteUrl: "https://www.aicodemirror.com",
-    apiKeyUrl: "https://www.aicodemirror.com/register?invitecode=9915W3",
+    websiteUrl: "https://www.aicodemirror.ai",
+    apiKeyUrl: "https://www.aicodemirror.ai/register?invitecode=9915W3",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://api.aicodemirror.com/api/claudecode",
+        ANTHROPIC_BASE_URL: "https://api.aicodemirror.ai/api/claudecode",
         ANTHROPIC_AUTH_TOKEN: "",
       },
     },
-    endpointCandidates: [
-      "https://api.aicodemirror.com/api/claudecode",
-      "https://api.claudecode.net.cn/api/claudecode",
-    ],
+    endpointCandidates: ["https://api.aicodemirror.ai/api/claudecode"],
     category: "third_party",
     isPartner: true, // 合作伙伴
     partnerPromotionKey: "aicodemirror", // 促销信息 i18n key
@@ -218,7 +217,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_MODEL: "anthropic/claude-sonnet-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "anthropic/claude-haiku-4.5",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "anthropic/claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-4.8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-5",
       },
     },
     category: "aggregator",
@@ -358,21 +357,38 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "AIGoCode",
-    websiteUrl: "https://aigocode.com",
-    apiKeyUrl: "https://aigocode.com/invite/CC-SWITCH",
+    websiteUrl: "https://aigocode.app",
+    apiKeyUrl: "https://aigocode.app/invite/CC-SWITCH",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://api.aigocode.com",
+        ANTHROPIC_BASE_URL: "https://api.aigocode.app",
         ANTHROPIC_AUTH_TOKEN: "",
       },
     },
     // 请求地址候选（用于地址管理/测速）
-    endpointCandidates: ["https://api.aigocode.com"],
+    endpointCandidates: ["https://api.aigocode.app"],
     category: "third_party",
     isPartner: true, // 合作伙伴
     partnerPromotionKey: "aigocode", // 促销信息 i18n key
     icon: "aigocode",
     iconColor: "#5B7FFF",
+  },
+  {
+    name: "AICoding",
+    websiteUrl: "https://aicoding.inc",
+    apiKeyUrl: "https://aicoding.inc/i/CCSWITCH",
+    settingsConfig: {
+      env: {
+        ANTHROPIC_BASE_URL: "https://api.aicoding.inc",
+        ANTHROPIC_AUTH_TOKEN: "",
+      },
+    },
+    endpointCandidates: ["https://api.aicoding.inc"],
+    category: "third_party",
+    isPartner: true, // 合作伙伴
+    partnerPromotionKey: "aicoding", // 促销信息 i18n key
+    icon: "aicoding",
+    iconColor: "#000000",
   },
   {
     name: "SubRouter",
@@ -408,11 +424,11 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "ClaudeAPI",
-    websiteUrl: "https://claudeapi.com",
-    apiKeyUrl: "https://console.claudeapi.com/register?aff=pCLD",
+    websiteUrl: "https://www.apito.ai",
+    apiKeyUrl: "https://console.apito.ai/agent/register/pQBql2buaqiX3dDS",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://gw.claudeapi.com",
+        ANTHROPIC_BASE_URL: "https://gw.apito.ai",
         ANTHROPIC_AUTH_TOKEN: "",
       },
     },
@@ -521,6 +537,21 @@ export const providerPresets: ProviderPreset[] = [
     isPartner: true,
     partnerPromotionKey: "nekocode",
     icon: "nekocode",
+  },
+  {
+    name: "A6API",
+    websiteUrl: "https://www.a6api.com",
+    apiKeyUrl: "https://a6api.com/register?aff=AqNr",
+    settingsConfig: {
+      env: {
+        ANTHROPIC_BASE_URL: "https://api.a6api.com",
+        ANTHROPIC_AUTH_TOKEN: "",
+      },
+    },
+    category: "aggregator",
+    isPartner: true,
+    partnerPromotionKey: "a6api",
+    icon: "a6api",
   },
   {
     name: "AtlasCloud",
@@ -636,11 +667,11 @@ export const providerPresets: ProviderPreset[] = [
   },
   {
     name: "RightCode",
-    websiteUrl: "https://www.right.codes",
-    apiKeyUrl: "https://www.right.codes/register?aff=CCSWITCH",
+    websiteUrl: "https://www.rightapi.ai",
+    apiKeyUrl: "https://www.rightapi.ai/register?aff=CCSWITCH",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://www.right.codes/claude",
+        ANTHROPIC_BASE_URL: "https://www.rightapi.ai/claude",
         ANTHROPIC_AUTH_TOKEN: "",
       },
     },
@@ -743,7 +774,7 @@ export const providerPresets: ProviderPreset[] = [
     name: "SudoCode.chat",
     websiteUrl: "https://sudocode.chat",
     apiKeyUrl:
-      "https://sudocode.chat/register?utm_source=ccswitch&utm_medium=partner",
+      "https://sudocode.chat/sign-up?aff=CC-SWITCH&utm_source=cc-switch&utm_medium=sponsor&utm_campaign=ccswitch",
     settingsConfig: {
       env: {
         ANTHROPIC_BASE_URL: "https://api.sudocode.chat",
@@ -795,10 +826,10 @@ export const providerPresets: ProviderPreset[] = [
       env: {
         ANTHROPIC_BASE_URL: "https://generativelanguage.googleapis.com",
         ANTHROPIC_API_KEY: "",
-        ANTHROPIC_MODEL: "gemini-3.5-flash",
-        ANTHROPIC_DEFAULT_HAIKU_MODEL: "gemini-3.5-flash",
-        ANTHROPIC_DEFAULT_SONNET_MODEL: "gemini-3.5-flash",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "gemini-3.5-flash",
+        ANTHROPIC_MODEL: "gemini-3.6-flash",
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: "gemini-3.6-flash",
+        ANTHROPIC_DEFAULT_SONNET_MODEL: "gemini-3.6-flash",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "gemini-3.6-flash",
       },
     },
     category: "third_party",
@@ -1126,7 +1157,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_MODEL: "anthropic/claude-sonnet-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "anthropic/claude-haiku-4.5",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "anthropic/claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-4.8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-5",
       },
     },
     category: "aggregator",
@@ -1179,7 +1210,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_MODEL: "anthropic/claude-sonnet-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "anthropic/claude-haiku-4.5",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "anthropic/claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-4.8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-5",
       },
     },
     category: "aggregator",
@@ -1198,7 +1229,7 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_MODEL: "anthropic/claude-sonnet-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "anthropic/claude-haiku-4.5",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "anthropic/claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-4.8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "anthropic/claude-opus-5",
       },
     },
     category: "aggregator",
@@ -1250,12 +1281,12 @@ export const providerPresets: ProviderPreset[] = [
         // base_url 由代理后端强制重写为 chatgpt.com/backend-api/codex
         // 用户无需配置
         ANTHROPIC_BASE_URL: "https://chatgpt.com/backend-api/codex",
-        ANTHROPIC_MODEL: "gpt-5.6",
+        ANTHROPIC_MODEL: "gpt-5.6-sol",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "gpt-5.6-luna",
-        ANTHROPIC_DEFAULT_SONNET_MODEL: "gpt-5.6",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "gpt-5.6",
+        ANTHROPIC_DEFAULT_SONNET_MODEL: "gpt-5.6-sol",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "gpt-5.6-sol",
         // Claude Code falls back to a 200K context window for unrecognized
-        // non-Claude model ids. The ChatGPT Codex backend catalogs gpt-5.6
+        // non-Claude model ids. The ChatGPT Codex backend catalogs gpt-5.6-sol
         // at a 372K window with a ~353K effective budget (openai/codex#31860),
         // not the 1.05M API window. Pin both knobs: the compact window equals
         // min(model window, value), so matching the window is behavior-neutral
@@ -1319,10 +1350,10 @@ export const providerPresets: ProviderPreset[] = [
       env: {
         ANTHROPIC_BASE_URL: "https://cc-api.pipellm.ai",
         ANTHROPIC_AUTH_TOKEN: "",
-        ANTHROPIC_MODEL: "claude-opus-4-8",
+        ANTHROPIC_MODEL: "claude-opus-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL: "claude-haiku-4-5-20251001",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "claude-opus-4-8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "claude-opus-5",
       },
       includeCoAuthoredBy: false,
     },
@@ -1375,11 +1406,11 @@ export const providerPresets: ProviderPreset[] = [
         AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}",
         AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}",
         AWS_REGION: "${AWS_REGION}",
-        ANTHROPIC_MODEL: "global.anthropic.claude-opus-4-8",
+        ANTHROPIC_MODEL: "global.anthropic.claude-opus-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL:
           "global.anthropic.claude-haiku-4-5-20251001-v1:0",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "global.anthropic.claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "global.anthropic.claude-opus-4-8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "global.anthropic.claude-opus-5",
         CLAUDE_CODE_USE_BEDROCK: "1",
       },
     },
@@ -1413,11 +1444,11 @@ export const providerPresets: ProviderPreset[] = [
         ANTHROPIC_BASE_URL:
           "https://bedrock-runtime.${AWS_REGION}.amazonaws.com",
         AWS_REGION: "${AWS_REGION}",
-        ANTHROPIC_MODEL: "global.anthropic.claude-opus-4-8",
+        ANTHROPIC_MODEL: "global.anthropic.claude-opus-5",
         ANTHROPIC_DEFAULT_HAIKU_MODEL:
           "global.anthropic.claude-haiku-4-5-20251001-v1:0",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "global.anthropic.claude-sonnet-5",
-        ANTHROPIC_DEFAULT_OPUS_MODEL: "global.anthropic.claude-opus-4-8",
+        ANTHROPIC_DEFAULT_OPUS_MODEL: "global.anthropic.claude-opus-5",
         CLAUDE_CODE_USE_BEDROCK: "1",
       },
     },

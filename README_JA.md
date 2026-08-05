@@ -27,6 +27,7 @@ CC-Gateway-Pro は、AI コーディングツール向けのデスクトップ�
 | Claude Desktop | 公式/サードパーティプロファイル、直接接続モード、ローカルルーティングモード、モデルマッピング                                |
 | Codex          | Provider 切り替え、ローカルプロキシ接管、プロジェクトルーティング、OAuth/Copilot 補助、MCP、Prompts、Skills、Sessions        |
 | Gemini CLI     | Provider 切り替え、ローカルプロキシ接管、MCP、Prompts、Skills、Sessions                                                      |
+| Grok Build     | Provider 切り替え、ローカルプロキシ接管、クォータ、フェイルオーバー、MCP、Prompts、Skills、Sessions                          |
 | OpenCode       | Provider プリセット、共通設定スニペット、MCP、Prompts、Skills、Sessions                                                      |
 | OpenClaw       | Provider プリセット、ワークスペースファイル、Agent 既定値、ツール/環境変数パネル                                             |
 | Hermes Agent   | Provider プリセット、Memory パネル、MCP と Skills 管理                                                                       |
@@ -135,7 +136,7 @@ pnpm tauri build
 - [ユーザーマニュアル](docs/user-manual/ja/README.md)
 - [Architecture and flows](docs/architecture-and-flows-zh.md)
 - [Proxy guide](docs/proxy-guide-zh.md)
-- [Release notes](docs/release-notes/v3.16.10-ja.md)
+- [Release notes](docs/release-notes/v3.19.1-ja.md)
 
 ## データ保存場所
 

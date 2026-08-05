@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.19.1] - 2026-08-05
+
+This release ports the complete CC Switch v3.19.1 feature and security set while preserving CC-Gateway-Pro's local gateway, project routing, Vision Model routing, Session Traces, provider catalog, storage paths, schema v17, and release identity.
+
+### Added
+
+- **Grok and Grok Build expansion**: Added official Grok quota display, Grok Build session/usage import, takeover and failover integration, deep-link support, environment checks, and GUI-safe CLI upgrades.
+- **Current model ecosystem**: Added Claude Opus 5, GPT-5.6 Sol, Gemini 3.6 Flash, DeepSeek native Responses catalogs, Tencent Hunyuan TokenHub, Volcengine native Responses, and automatic `models.dev` pricing synchronization.
+- **Tool-result media bridging**: Images, files, and audio embedded in tool results are moved into each target protocol's native media format instead of being replayed as token-heavy Base64 text.
+
+### Changed
+
+- **Direct Codex integrations**: DeepSeek and Volcengine Coding Plan now use their confirmed native Responses paths without requiring local protocol takeover; Tencent Hunyuan is direct from its first preset.
+- **Provider catalog refresh**: Updated model defaults, endpoints, pricing, partner presets, and routing metadata while retaining CC-Gateway-Pro-only CTok.ai, LemonData, LionCCAPI, and SudoCode entries and fork referral links.
+- **Lean frontend and toolbar**: Removed unused dependencies and dead components, and simplified the app switcher to accessible icon-only controls.
+
+### Fixed
+
+- **Usage and authentication**: Deduplicated Claude Desktop proxy/session usage, repaired stale official Codex authentication cleanup, corrected Grok Build request/session handling, and filled missing model prices.
+- **Proxy reliability**: Hardened malformed upstream response handling, missing-index tool-call streaming, content decompression limits, tool-result media fallback, and cross-protocol transformations.
+- **Configuration preservation**: Hand-edited OpenCode/Codex/GrokBuild configuration sections are validated or normalized without discarding unrelated user settings.
+
+### Security
+
+- Added SQLite authorizer restrictions for imported backups, blocking database attachment, unsafe pragmas, virtual tables, and unknown operations while retaining compatibility with CC-Gateway-Pro and legacy CC Switch exports.
+- Added Skill repository coordinate validation, ZIP-slip protection, archive entry/size/symlink limits, and safe cleanup for untrusted database rows.
+- Hardened deep-link previews and URL-safe Base64 handling, disabled imported usage scripts by default, masked sensitive values, and surfaced shell/environment/network risks before confirmation.
+- Prevented prototype pollution in common-config merges, command substitution through terminal working-directory names, and credential substitution/leakage in Gemini and Grok Build flows.
+
 ## [3.16.10] - 2026-06-08
 
 Development since v3.15.0 focuses on local observability: faster access to proxy request logs, opt-in Session Traces for context analysis, safer trace defaults, and refreshed documentation/screenshot previews that avoid exposing real local paths.

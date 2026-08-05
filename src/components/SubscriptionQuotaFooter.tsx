@@ -35,6 +35,10 @@ export const TIER_I18N_KEYS: Record<string, string> = {
   gemini_flash_lite: "subscription.geminiFlashLite",
   // Token Plan（five_hour 已在上方官方映射中）
   weekly_limit: "subscription.sevenDay",
+  // 火山方舟 Agent Plan / Coding Plan 的月窗口
+  monthly: "subscription.monthly",
+  // Grok credit 额度的兜底窗口（重置距离可识别时归入 weekly_limit/monthly）
+  credits: "subscription.credits",
   // GitHub Copilot
   premium: "subscription.copilotPremium",
 };
