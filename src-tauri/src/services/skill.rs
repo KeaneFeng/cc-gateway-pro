@@ -469,6 +469,42 @@ impl SkillService {
         Some(path.to_string())
     }
 
+    /// 由真实解析出的源目录推导 SKILL.md 在仓库内的相对文档路径（正斜杠）。
+    /// 两个参数都应是已 canonicalize 的路径（安装流程已做包含性校验）。
+    fn doc_path_for_source(repo_root: &Path, source: &Path) -> Option<String> {
+        let rel = source.strip_prefix(repo_root).ok()?;
+        let mut parts: Vec<String> = rel
+            .components()
+            .filter_map(|component| match component {
+                std::path::Component::Normal(part) => Some(part.to_string_lossy().to_string()),
+                _ => None,
+            })
+            .collect();
+        parts.push("SKILL.md".to_string());
+        Some(parts.join("/"))
+    }
+
+    /// 选择 readme_url 使用的仓库内文档路径：真实解析出的源目录优先，其次是
+    /// 旧 readme_url 中保存的路径，最后才按 directory 拼接。skills.sh 的
+    /// `directory` 只是 skillId（末级目录名），嵌套目录场景直接拼接会丢路径、
+    /// 文档链接 404（#6111），所以真实源目录必须排第一优先级。
+    fn choose_doc_path(
+        resolved_source_doc_path: Option<String>,
+        readme_url: Option<&str>,
+        directory: &str,
+    ) -> String {
+        if let Some(path) = resolved_source_doc_path {
+            return path;
+        }
+        if let Some(path) = readme_url.and_then(Self::extract_doc_path_from_url) {
+            if path.ends_with("/SKILL.md") || path == "SKILL.md" {
+                return path;
+            }
+            return format!("{}/SKILL.md", path.trim_end_matches('/'));
+        }
+        format!("{}/SKILL.md", directory.trim_end_matches('/'))
+    }
+
     // ========== 路径管理 ==========
 
     /// 获取 SSOT 目录（根据设置返回 ~/.cc-gateway-pro/skills/ 或 ~/.agents/skills/）
@@ -639,6 +675,8 @@ impl SkillService {
         let dest = ssot_dir.join(&install_name);
 
         let mut repo_branch = skill.repo_branch.clone();
+        // 真实解析出的源目录推导的文档路径（仅本次真正下载解析时可得）
+        let mut resolved_doc_path: Option<String> = None;
 
         // 如果已存在则跳过下载
         if !dest.exists() {
@@ -697,6 +735,10 @@ impl SkillService {
                 )));
             }
 
+            // 用真实解析出的源目录推导文档路径——skills.sh 的 directory 只是
+            // skillId（末级目录名），嵌套目录场景直接拼接会丢路径、链接 404（#6111）
+            resolved_doc_path = Self::doc_path_for_source(&canonical_temp, &canonical_source);
+
             Self::copy_dir_recursive(&canonical_source, &dest)?;
             let _ = fs::remove_dir_all(&temp_dir);
 
@@ -712,18 +754,11 @@ impl SkillService {
             }
         }
 
-        let doc_path = skill
-            .readme_url
-            .as_deref()
-            .and_then(Self::extract_doc_path_from_url)
-            .map(|path| {
-                if path.ends_with("/SKILL.md") || path == "SKILL.md" {
-                    path
-                } else {
-                    format!("{}/SKILL.md", path.trim_end_matches('/'))
-                }
-            })
-            .unwrap_or_else(|| format!("{}/SKILL.md", skill.directory.trim_end_matches('/')));
+        let doc_path = Self::choose_doc_path(
+            resolved_doc_path,
+            skill.readme_url.as_deref(),
+            &skill.directory,
+        );
 
         let readme_url = Some(Self::build_skill_doc_url(
             &skill.repo_owner,

@@ -74,6 +74,10 @@ pub enum ProxyError {
     #[allow(dead_code)]
     #[error("内部错误: {0}")]
     Internal(String),
+
+    /// 响应体超过最大允许大小
+    #[error("响应体过大: {0} 字节")]
+    ResponseBodyTooLarge(usize),
 }
 
 impl IntoResponse for ProxyError {
@@ -153,6 +157,9 @@ impl IntoResponse for ProxyError {
                         (StatusCode::GATEWAY_TIMEOUT, self.to_string())
                     }
                     ProxyError::AuthError(_) => (StatusCode::UNAUTHORIZED, self.to_string()),
+                    ProxyError::ResponseBodyTooLarge(_) => {
+                        (StatusCode::BAD_GATEWAY, self.to_string())
+                    }
                     ProxyError::Internal(_) => {
                         (StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
                     }

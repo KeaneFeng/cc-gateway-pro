@@ -27,8 +27,113 @@ fn is_single_supported(coding: &str) -> bool {
     )
 }
 
-/// 解压单个 content-coding。未知编码返回 `Ok(None)`。
-fn decompress_single(coding: &str, body: &[u8]) -> Result<Option<Vec<u8>>, std::io::Error> {
+/// 解压失败原因。把「输出超预算」与「数据损坏」区分开：前者是安全拒绝信号，
+/// 响应侧调用方应据此拒绝响应（502），而不是当成普通解压失败静默回退。
+#[derive(Debug)]
+pub(crate) enum DecompressError {
+    /// 底层解码失败（数据损坏 / 格式不符）。
+    Io(std::io::Error),
+    /// 解压输出超过 `limit` 字节即中止；此时真实输出大小未知，只会大于 limit。
+    TooLarge { limit: usize },
+}
+
+impl std::fmt::Display for DecompressError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "{e}"),
+            Self::TooLarge { limit } => write!(f, "解压输出超过上限 {limit} 字节"),
+        }
+    }
+}
+
+impl std::error::Error for DecompressError {}
+
+impl From<std::io::Error> for DecompressError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
+
+impl From<DecompressError> for std::io::Error {
+    fn from(e: DecompressError) -> Self {
+        match e {
+            DecompressError::Io(e) => e,
+            DecompressError::TooLarge { limit } => {
+                std::io::Error::other(format!("decompressed body exceeds {limit} bytes"))
+            }
+        }
+    }
+}
+
+/// 从解码器读取解压输出，最多 `max_bytes`；一旦输出超过预算立即中止读取并返回
+/// [`DecompressError::TooLarge`] —— 压缩炸弹在预算耗尽处被截停，而不是先在内存里
+/// 完整展开再比较大小。
+fn read_with_output_limit<R: Read>(
+    reader: R,
+    max_bytes: usize,
+) -> Result<Vec<u8>, DecompressError> {
+    // saturating_add：无界调用（max_bytes = usize::MAX）时预算保持 usize::MAX
+    let budget = max_bytes.saturating_add(1) as u64;
+    let mut limited = reader.take(budget);
+    let mut out = Vec::new();
+    limited.read_to_end(&mut out)?;
+    if out.len() > max_bytes {
+        return Err(DecompressError::TooLarge { limit: max_bytes });
+    }
+    Ok(out)
+}
+
+/// 解压单个 content-coding，输出上限 `max_output_bytes`。未知编码返回 `Ok(None)`。
+fn decompress_single(
+    coding: &str,
+    body: &[u8],
+    max_output_bytes: usize,
+) -> Result<Option<Vec<u8>>, DecompressError> {
+    match coding {
+        "gzip" | "x-gzip" => {
+            let decoder = flate2::read::GzDecoder::new(body);
+            Ok(Some(read_with_output_limit(decoder, max_output_bytes)?))
+        }
+        "deflate" => {
+            // RFC 9110: deflate 指 zlib 包裹格式；但部分上游 / 客户端发 raw deflate 流。
+            // 先按规范尝试 zlib，失败再回退 raw —— 否则合规来源必然解压失败，
+            // 原始压缩字节会被 fail-open 透传给 JSON 解析（#2234 形态 C 之一）。
+            let zlib = flate2::read::ZlibDecoder::new(body);
+            match read_with_output_limit(zlib, max_output_bytes) {
+                Ok(decompressed) => Ok(Some(decompressed)),
+                Err(zlib_err) => {
+                    log::debug!("deflate 按 zlib 解压失败（{zlib_err}），回退 raw deflate");
+                    let raw = flate2::read::DeflateDecoder::new(body);
+                    Ok(Some(read_with_output_limit(raw, max_output_bytes)?))
+                }
+            }
+        }
+        "br" => {
+            let mut decompressed = Vec::new();
+            brotli::BrotliDecompress(&mut std::io::Cursor::new(body), &mut decompressed)?;
+            if decompressed.len() > max_output_bytes {
+                return Err(DecompressError::TooLarge {
+                    limit: max_output_bytes,
+                });
+            }
+            Ok(Some(decompressed))
+        }
+        "zstd" | "zst" => {
+            // Codex 登录态对请求体启用 zstd（Compression::Zstd）；上游也可能 zstd 压缩响应。
+            let full = zstd::stream::decode_all(std::io::Cursor::new(body))?;
+            if full.len() > max_output_bytes {
+                return Err(DecompressError::TooLarge {
+                    limit: max_output_bytes,
+                });
+            }
+            Ok(Some(full))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// 解压单个 content-coding（无输出上限，向后兼容）。未知编码返回 `Ok(None)`。
+fn decompress_single_unbounded(coding: &str, body: &[u8]) -> Result<Option<Vec<u8>>, std::io::Error> {
     match coding {
         "gzip" | "x-gzip" => {
             let mut decoder = flate2::read::GzDecoder::new(body);
@@ -90,9 +195,38 @@ pub(crate) fn decompress_body(
     let mut data: Option<Vec<u8>> = None;
     for coding in codings.iter().rev() {
         let input = data.as_deref().unwrap_or(body);
-        match decompress_single(coding, input)? {
+        match decompress_single_unbounded(coding, input)? {
             Some(decompressed) => data = Some(decompressed),
             // 上面 is_single_supported 已校验，理论不会发生；防御性兜底。
+            None => return Ok(None),
+        }
+    }
+    Ok(data)
+}
+
+/// 根据 content-encoding 解压 body 字节，输出上限 `max_output_bytes`，支持堆叠编码。
+///
+/// 与 [`decompress_body`] 相同逻辑，但每层解码均受 `max_output_bytes` 限制，防止
+/// 压缩炸弹（如 1 字节 gzip 展开为 2 GiB）耗尽内存。
+pub(crate) fn decompress_body_with_limit(
+    content_encoding: &str,
+    body: &[u8],
+    max_output_bytes: usize,
+) -> Result<Option<Vec<u8>>, DecompressError> {
+    let codings = split_codings(content_encoding);
+    if codings.is_empty() {
+        return Ok(None);
+    }
+    if !codings.iter().all(|c| is_single_supported(c)) {
+        log::warn!("不支持的 content-encoding: {content_encoding}，跳过解压");
+        return Ok(None);
+    }
+
+    let mut data: Option<Vec<u8>> = None;
+    for coding in codings.iter().rev() {
+        let input = data.as_deref().unwrap_or(body);
+        match decompress_single(coding, input, max_output_bytes)? {
+            Some(decompressed) => data = Some(decompressed),
             None => return Ok(None),
         }
     }
@@ -230,5 +364,18 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.append("content-encoding", HeaderValue::from_static("identity"));
         assert_eq!(get_content_encoding(&headers), None);
+    }
+
+    #[test]
+    fn decompress_body_with_limit_rejects_oversized_output() {
+        let payload = b"hello";
+        let limit = 3;
+        // gzip 压缩后仍只有几十字节，但原始内容 > limit
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        std::io::Write::write_all(&mut encoder, payload).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let result = decompress_body_with_limit("gzip", &compressed, limit);
+        assert!(matches!(result, Err(DecompressError::TooLarge { limit: 3 })));
     }
 }
