@@ -1823,8 +1823,17 @@ pub(crate) fn chat_usage_to_responses_usage(usage: Option<&Value>) -> Value {
 
     let cached = usage
         .pointer("/prompt_tokens_details/cached_tokens")
-        .or_else(|| usage.pointer("/input_tokens_details/cached_tokens"))
-        .and_then(|v| v.as_u64())
+        .and_then(Value::as_u64)
+        .or_else(|| {
+            usage
+                .pointer("/input_tokens_details/cached_tokens")
+                .and_then(Value::as_u64)
+        })
+        // DeepSeek Chat 的文档化缓存命中字段（与 usage/parser.rs 的处理对应），末位兜底。
+        // 官方端点目前把同值镜像进未文档化的 prompt_tokens_details.cached_tokens（上面的
+        // 标准字段已命中），故仅当上游只发文档字段、不发镜像时此兜底生效（如部分中转），
+        // 并防御未文档化镜像将来消失；上游发任一标准字段时行为零变化。
+        .or_else(|| usage.get("prompt_cache_hit_tokens").and_then(Value::as_u64))
         .unwrap_or(0);
     let cache_write = usage
         .pointer("/prompt_tokens_details/cache_write_tokens")

@@ -14,6 +14,13 @@ fn openai_cache_read_tokens(usage: &Value) -> u32 {
         .get("cache_read_input_tokens")
         .or_else(|| usage.pointer("/input_tokens_details/cached_tokens"))
         .or_else(|| usage.pointer("/prompt_tokens_details/cached_tokens"))
+        // DeepSeek Chat 文档化缓存命中字段，末位兜底：官方端点目前把同值
+        // 镜像进未文档化的 prompt_tokens_details.cached_tokens（上面标准字段
+        // 已命中），仅当上游只发文档字段、不发镜像时本兜底生效（如部分中转），
+        // 并防御未文档化镜像将来消失。prompt_tokens 本身已含命中+未命中
+        // （miss 见 prompt_cache_miss_tokens，仅作参考、无需在此扣减），
+        // 故命中数直接作 cache_read 即可。
+        .or_else(|| usage.get("prompt_cache_hit_tokens"))
         .and_then(Value::as_u64)
         .unwrap_or(0) as u32
 }
