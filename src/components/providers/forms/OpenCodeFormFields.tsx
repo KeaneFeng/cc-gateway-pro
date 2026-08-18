@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ImeSafeInput } from "@/components/ui/ime-safe-input";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -56,12 +57,13 @@ function ModelIdInput({
   }, [modelId]);
 
   return (
-    <Input
+    <ImeSafeInput
       value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={() => {
-        if (localValue !== modelId && localValue.trim()) {
-          onChange(localValue);
+      onValueChange={setLocalValue}
+      onBlur={(event) => {
+        const nextValue = event.currentTarget.value;
+        if (nextValue !== modelId && nextValue.trim()) {
+          onChange(nextValue);
         }
       }}
       placeholder={placeholder}
@@ -98,11 +100,11 @@ function ExtraOptionKeyInput({
   }, [isPlaceholderKey, optionKey]);
 
   return (
-    <Input
+    <ImeSafeInput
       value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={() => {
-        const trimmed = localValue.trim();
+      onValueChange={setLocalValue}
+      onBlur={(event) => {
+        const trimmed = event.currentTarget.value.trim();
         if (trimmed && trimmed !== optionKey) {
           const accepted = onChange(trimmed);
           if (accepted === false) {
@@ -137,11 +139,11 @@ function ModelOptionKeyInput({
   }, [optionKey]);
 
   return (
-    <Input
+    <ImeSafeInput
       value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={() => {
-        const trimmed = localValue.trim();
+      onValueChange={setLocalValue}
+      onBlur={(event) => {
+        const trimmed = event.currentTarget.value.trim();
         if (trimmed && trimmed !== optionKey) {
           onChange(trimmed);
         }
