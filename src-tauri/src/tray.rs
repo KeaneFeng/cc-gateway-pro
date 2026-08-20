@@ -305,6 +305,19 @@ fn format_script_summary(result: &crate::provider::UsageResult) -> Option<String
 }
 
 fn provider_uses_official_subscription(provider: &crate::provider::Provider) -> bool {
+    // Managed Codex quota is account-scoped in the native footer; the tray's
+    // app-wide subscription cache cannot represent it safely.
+    if provider.id != crate::database::CODEX_OFFICIAL_PROVIDER_ID
+        && provider.category.as_deref() == Some("official")
+        && provider
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.managed_account_id_for("codex_oauth"))
+            .is_some_and(|id| !id.trim().is_empty())
+    {
+        return false;
+    }
+
     provider
         .meta
         .as_ref()
