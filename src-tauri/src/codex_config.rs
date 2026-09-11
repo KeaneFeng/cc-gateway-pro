@@ -3364,8 +3364,8 @@ base_url = "https://production.api/v1"
                 base_instructions: None,
             },
             CodexCatalogModelSpec {
-                model: "deepseek/deepseek-v4-pro".to_string(),
-                display_name: Some("DeepSeek V4 Pro".to_string()),
+                model: "qwen/qwen3-coder-plus".to_string(),
+                display_name: Some("Qwen3 Coder Plus".to_string()),
                 context_window: Some(128_000),
                 supports_parallel_tool_calls: None,
                 input_modalities: None,
@@ -3414,7 +3414,7 @@ base_url = "https://production.api/v1"
             };
 
             assert_eq!(modalities("gpt-5.4"), json!(["text", "image"]));
-            assert_eq!(modalities("deepseek/deepseek-v4-pro"), json!(["text"]));
+            assert_eq!(modalities("qwen/qwen3-coder-plus"), json!(["text"]));
             assert_eq!(modalities("glm-5.2v"), json!(["text", "image"]));
             assert_eq!(
                 modalities("deepseek-v4-flash"),
@@ -3979,7 +3979,7 @@ web_search = "disabled"
         let catalog = r#"{
             "models": [
                 { "slug": "gpt-5.4", "input_modalities": ["text", "image"] },
-                { "slug": "deepseek-v4-pro", "input_modalities": ["text"] },
+                { "slug": "qwen3-coder-plus", "input_modalities": ["text"] },
                 { "slug": "gpt-text-override", "input_modalities": ["text"] },
                 { "slug": "deepseek-v4-flash", "input_modalities": ["text", "image"] }
             ]
