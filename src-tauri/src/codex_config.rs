@@ -619,6 +619,15 @@ fn codex_catalog_model_entry(
         }
     }
 
+    if profile == CodexCatalogToolProfile::ProxyChat {
+        // Codex's `original` image detail (full-resolution) is rejected by
+        // strict Chat gateways with `400 invalid_request_error`, param
+        // `messages.N.content`. Never advertise the capability on the
+        // ProxyChat contract so Codex keeps to auto/high.
+        entry_obj.insert("supports_image_detail_original".to_string(), json!(false));
+    }
+
+
     entry
 }
 
