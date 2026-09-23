@@ -1868,6 +1868,18 @@ impl Database {
                 "0.30",
                 "3.75",
             ),
+<<<<<<< HEAD
+=======
+            // GPT-6 系列（Astra 2026-09-04 发布，1.05M 窗口；Sol / Luna 2026-09-22 发布）
+            // 2026-09-23 核对官方价页 + 模型页 + models.dev：录入 Standard 短上下文价，
+            // cache read 0.1×、cache write 1.25× 输入价。>272K 长上下文档（输入与缓存 2×、输出 1.5×）、
+            // Batch/Flex、Fast mode、区域加价本表无法表达，与 gpt-5.5 同样忽略。
+            // effort 档 low/medium/high/xhigh 由查价剥后缀回落到本行；max 不在剥离列表
+            //（会与 *-max 真 id 撞名），不另加后缀行。
+            ("gpt-6-astra", "GPT-6 Astra", "10", "50", "1", "12.5"),
+            ("gpt-6-sol", "GPT-6 Sol", "2", "10", "0.20", "2.50"),
+            ("gpt-6-luna", "GPT-6 Luna", "0.10", "0.50", "0.01", "0.125"),
+>>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // GPT-5.6 系列（Sol / Terra / Luna，2026-06 发布）
             // 5.6 家族起 cache write 收 1.25× 输入价（此前 GPT 模型写缓存免费，勿回填旧系列）
             ("gpt-5.6-sol", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
@@ -1881,6 +1893,7 @@ impl Database {
                 "0.02",
                 "0.25",
             ),
+<<<<<<< HEAD
             // 裸名 gpt-5.6 是 sol 的官方别名；effort 后缀对齐 gpt-5.5 系列的记账形态
             ("gpt-5.6", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
             ("gpt-5.6-low", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
@@ -1888,6 +1901,27 @@ impl Database {
             ("gpt-5.6-high", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
             ("gpt-5.6-xhigh", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
             ("gpt-5.6-minimal", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
+=======
+            // GPT-5.6 Cyber（Daybreak 计划的网安模型，需 Trusted Access；2026-09-23 核对官方价页）。
+            // 别名 gpt-daybreak-red-latest / gpt-daybreak-blue-latest 当前分别指向 gpt-5.6-cyber /
+            // gpt-5.6-sol，官方明说别名改指向时价格随之改变，故别名不入表。
+            (
+                "gpt-5.6-cyber",
+                "GPT-5.6 Cyber",
+                "12.50",
+                "75",
+                "1.25",
+                "15.625",
+            ),
+            // 裸名 gpt-5.6 是 sol 的官方别名；effort 后缀对齐 gpt-5.5 系列的记账形态。
+            // 查价先精确匹配 id 再剥 effort 后缀，这些行必须与 sol 同步改价，否则旧价会压过基础行。
+            ("gpt-5.6", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+            ("gpt-5.6-low", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+            ("gpt-5.6-medium", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+            ("gpt-5.6-high", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+            ("gpt-5.6-xhigh", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+            ("gpt-5.6-minimal", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
+>>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // GPT-5.5 系列
             ("gpt-5.5", "GPT-5.5", "5", "30", "0.50", "0"),
             ("gpt-5.5-low", "GPT-5.5", "5", "30", "0.50", "0"),
@@ -2074,6 +2108,44 @@ impl Database {
             ("gpt-4.1", "GPT-4.1", "2", "8", "0.50", "0"),
             ("gpt-4.1-mini", "GPT-4.1 Mini", "0.40", "1.60", "0.10", "0"),
             ("gpt-4.1-nano", "GPT-4.1 Nano", "0.10", "0.40", "0.025", "0"),
+<<<<<<< HEAD
+=======
+            // OpenAI 文本模型补全（2026-09-23）：各模型页的标准 token 价。
+            // 来源：https://developers.openai.com/api/docs/models/<model_id>
+            // 已按 /api/docs/deprecations 排除弃用模型；不含工具调用费及多模态价格。
+            // Pro 系列未提供缓存折扣，与 o3-pro 一样将未支持的缓存价格记为 0。
+            // 有意不收：chat-latest 是滚动别名（改指向即改价）；gpt-rosalind-research 官方
+            // 2026-10-05 才开始计费且仅限 Trusted Access，提前入表会给免费期用量记账。
+            ("gpt-5.5-pro", "GPT-5.5 Pro", "30", "180", "0", "0"),
+            ("gpt-5.4-pro", "GPT-5.4 Pro", "30", "180", "0", "0"),
+            ("gpt-5.2-pro", "GPT-5.2 Pro", "21", "168", "0", "0"),
+            ("gpt-4o", "GPT-4o", "2.50", "10", "1.25", "0"),
+            ("gpt-4o-mini", "GPT-4o Mini", "0.15", "0.60", "0.075", "0"),
+            // Gemini 3.8 系列（2026-09-02 发布，1M 窗口）
+            // 介绍价 0.75/3.75/0.075 至 2026-12-31，2027-01-01 起挂牌价 1.50/7.50/0.15；口径同 3.7 Flash，勿加豁免。
+            (
+                "gemini-3.8-flash",
+                "Gemini 3.8 Flash",
+                "0.75",
+                "3.75",
+                "0.075",
+                "0",
+            ),
+            // Gemini 3.7 系列
+            // 录的是介绍价（官方公告 + ai.google.dev 价表 + models.dev 三源一致）。
+            // ⚠️ 介绍价 2026-12-31 到期，2027-01-01 起恢复挂牌价 1.50/7.50/0.15（3.6/3.8 Flash 同此规则）。
+            // 到期后需走 seed + repair 双写改回；届时 models.dev 会先更新，
+            // /jason-update-model 审计的 A 段会自动报出这一行作为提醒——
+            // 因此这一行刻意不进 audit-ignore.json，勿加豁免（会屏蔽掉该提醒）。
+            (
+                "gemini-3.7-flash",
+                "Gemini 3.7 Flash",
+                "0.75",
+                "3.75",
+                "0.075",
+                "0",
+            ),
+>>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // Gemini 3.6 系列
             (
                 "gemini-3.6-flash",
