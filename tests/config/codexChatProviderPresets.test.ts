@@ -183,6 +183,9 @@ describe("Codex Chat provider presets", () => {
           contextWindows: {
             "mimo-v2.5-pro": 1048576,
             "mimo-v2.5": 1048576,
+            "mimo-v2.6-pro": 1048576,
+            "mimo-v2.6-flash": 1048576,
+            "mimo-v2.6-pro-ultraspeed": 1048576,
           },
         },
       ],
@@ -192,6 +195,8 @@ describe("Codex Chat provider presets", () => {
           contextWindows: {
             "mimo-v2.5-pro": 1048576,
             "mimo-v2.5": 1048576,
+            "mimo-v2.6-pro": 1048576,
+            "mimo-v2.6-flash": 1048576,
           },
         },
       ],
