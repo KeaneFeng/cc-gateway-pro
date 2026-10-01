@@ -360,14 +360,19 @@ pub fn anthropic_to_responses(
             .iter()
             .filter(|t| t.get("type").and_then(|v| v.as_str()) != Some("BatchTool"))
             .map(|t| {
-                json!({
+                let mut response_tool = json!({
                     "type": "function",
                     "name": t.get("name").and_then(|n| n.as_str()).unwrap_or(""),
-                    "description": t.get("description"),
-                    "parameters": super::transform::clean_schema(
-                        t.get("input_schema").cloned().unwrap_or(json!({}))
-                    )
-                })
+                });
+                // 同 transform.rs：缺失的 description 省略而非输出 null，
+                // 否则严格上游会拒绝整个请求。
+                if let Some(description) = t.get("description").filter(|d| !d.is_null()) {
+                    response_tool["description"] = description.clone();
+                }
+                response_tool["parameters"] = super::transform::clean_schema(
+                    t.get("input_schema").cloned().unwrap_or(json!({})),
+                );
+                response_tool
             })
             .collect();
 
@@ -1123,6 +1128,28 @@ mod tests {
         );
         // input_schema should not appear
         assert!(result["tools"][0].get("input_schema").is_none());
+    }
+
+    #[test]
+    fn test_anthropic_to_responses_omits_missing_tool_description() {
+        let input = json!({
+            "model": "gpt-4o",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "hi"}],
+            "tools": [
+                {"name": "NoDesc", "input_schema": {"type": "object"}},
+                {"name": "Described", "description": "Has one",
+                 "input_schema": {"type": "object"}}
+            ]
+        });
+
+        let result = anthropic_to_responses(input, None, false, false).unwrap();
+        let tools = result["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 2);
+        // 缺 description：省略字段而不是序列化成 null（严格上游会 400）
+        assert!(tools[0].get("description").is_none());
+        assert!(!tools[0].is_null());
+        assert_eq!(tools[1]["description"], json!("Has one"));
     }
 
     #[test]
