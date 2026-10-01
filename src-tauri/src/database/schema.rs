@@ -1719,6 +1719,22 @@ impl Database {
     /// 注意: model_id 使用短横线格式（如 claude-haiku-4-5），与 API 返回的模型名称标准化后一致
     fn seed_model_pricing(conn: &Connection) -> Result<(), AppError> {
         let pricing_data = [
+            (
+                "claude-fable-5-1",
+                "Claude Fable 5.1",
+                "10",
+                "50",
+                "0.25",
+                "12.50",
+            ),
+            (
+                "claude-mythos-5-1",
+                "Claude Mythos 5.1",
+                "10",
+                "50",
+                "0.25",
+                "12.50",
+            ),
             // Claude Fable 5（Opus 之上的新档）
             (
                 "claude-fable-5",
@@ -1754,10 +1770,10 @@ impl Database {
             (
                 "claude-sonnet-5",
                 "Claude Sonnet 5",
-                "3",
-                "15",
-                "0.30",
-                "3.75",
+                "2",
+                "10",
+                "0.20",
+                "2.50",
             ),
             // Claude 4.7 系列
             (
@@ -1868,8 +1884,6 @@ impl Database {
                 "0.30",
                 "3.75",
             ),
-<<<<<<< HEAD
-=======
             // GPT-6 系列（Astra 2026-09-04 发布，1.05M 窗口；Sol / Luna 2026-09-22 发布）
             // 2026-09-23 核对官方价页 + 模型页 + models.dev：录入 Standard 短上下文价，
             // cache read 0.1×、cache write 1.25× 输入价。>272K 长上下文档（输入与缓存 2×、输出 1.5×）、
@@ -1882,7 +1896,6 @@ impl Database {
             ("gpt-6.1-sol", "GPT-6.1 Sol", "2", "10", "0.10", "2.50"),
             ("gpt-6-sol", "GPT-6 Sol", "2", "10", "0.20", "2.50"),
             ("gpt-6-luna", "GPT-6 Luna", "0.10", "0.50", "0.01", "0.125"),
->>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // GPT-5.6 系列（Sol / Terra / Luna，2026-06 发布）
             // 5.6 家族起 cache write 收 1.25× 输入价（此前 GPT 模型写缓存免费，勿回填旧系列）
             ("gpt-5.6-sol", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
@@ -1896,15 +1909,6 @@ impl Database {
                 "0.02",
                 "0.25",
             ),
-<<<<<<< HEAD
-            // 裸名 gpt-5.6 是 sol 的官方别名；effort 后缀对齐 gpt-5.5 系列的记账形态
-            ("gpt-5.6", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-            ("gpt-5.6-low", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-            ("gpt-5.6-medium", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-            ("gpt-5.6-high", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-            ("gpt-5.6-xhigh", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-            ("gpt-5.6-minimal", "GPT-5.6 Sol", "5", "30", "0.50", "6.25"),
-=======
             // GPT-5.6 Cyber（Daybreak 计划的网安模型，需 Trusted Access；2026-09-23 核对官方价页）。
             // 别名 gpt-daybreak-red-latest / gpt-daybreak-blue-latest 当前分别指向 gpt-5.6-cyber /
             // gpt-5.6-sol，官方明说别名改指向时价格随之改变，故别名不入表。
@@ -1924,7 +1928,6 @@ impl Database {
             ("gpt-5.6-high", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
             ("gpt-5.6-xhigh", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
             ("gpt-5.6-minimal", "GPT-5.6 Sol", "4", "20", "0.40", "5"),
->>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // GPT-5.5 系列
             ("gpt-5.5", "GPT-5.5", "5", "30", "0.50", "0"),
             ("gpt-5.5-low", "GPT-5.5", "5", "30", "0.50", "0"),
@@ -2111,8 +2114,6 @@ impl Database {
             ("gpt-4.1", "GPT-4.1", "2", "8", "0.50", "0"),
             ("gpt-4.1-mini", "GPT-4.1 Mini", "0.40", "1.60", "0.10", "0"),
             ("gpt-4.1-nano", "GPT-4.1 Nano", "0.10", "0.40", "0.025", "0"),
-<<<<<<< HEAD
-=======
             // OpenAI 文本模型补全（2026-09-23）：各模型页的标准 token 价。
             // 来源：https://developers.openai.com/api/docs/models/<model_id>
             // 已按 /api/docs/deprecations 排除弃用模型；不含工具调用费及多模态价格。
@@ -2148,7 +2149,6 @@ impl Database {
                 "0.075",
                 "0",
             ),
->>>>>>> 85caa69e (feat(pricing): 添加新 Anthropic 和 OpenAI 定价 (#7610))
             // Gemini 3.6 系列
             (
                 "gemini-3.6-flash",
@@ -2558,8 +2558,6 @@ impl Database {
             ("glm-5", "GLM-5", "1", "3.2", "0.2", "0"),
             ("glm-5.1", "GLM-5.1", "1.4", "4.4", "0.26", "0"),
             ("glm-5.2", "GLM-5.2", "1.4", "4.4", "0.26", "0"),
-<<<<<<< HEAD
-=======
             ("glm-5.3", "GLM-5.3", "1.4", "4.4", "0.26", "0"),
             (
                 "glm-5.3-flash",
@@ -2577,7 +2575,6 @@ impl Database {
                 "0.075",
                 "0",
             ),
->>>>>>> 42200b42 (feat(pricing): add Grok 4.7 and GLM-5.3-FlashX)
             ("glm-5-turbo", "GLM-5-Turbo", "1.2", "4", "0.24", "0"),
             ("glm-5v-turbo", "GLM-5V-Turbo", "1.2", "4", "0.24", "0"),
             // MiMo (小米)
@@ -2694,15 +2691,11 @@ impl Database {
             ("qwq-32b", "QwQ 32B", "0.20", "0.60", "0", "0"),
             ("qwen3-32b", "Qwen3 32B", "0.16", "0.64", "0", "0"),
             // Grok 系列 (xAI)
-<<<<<<< HEAD
-            ("grok-4.5", "Grok 4.5", "2", "6", "0.50", "0"),
-=======
             // 4.5/4.6/4.7 均为分档计价：prompt ≥200K 时单价翻倍（4/12，cached 亦翻倍）。
             // 本表无档位列，统一取基础档（<200K），与其它分档厂商口径一致
             ("grok-4.7", "Grok 4.7", "2", "6", "0.50", "0"),
             ("grok-4.6", "Grok 4.6", "2", "6", "0.50", "0"),
             ("grok-4.5", "Grok 4.5", "2", "6", "0.30", "0"),
->>>>>>> 42200b42 (feat(pricing): add Grok 4.7 and GLM-5.3-FlashX)
             // Grok CLI 官方 OAuth 态 modelUsage 上报的内部别名。定价由
             // costUsdTicks（1 tick = 1e-10 USD）双轮实测反推：input/output 与
             // grok-4.5 同为 2/6，cache read 实际按 0.30 计（非 API 挂牌的 0.50）
@@ -2900,6 +2893,20 @@ impl Database {
 
     fn repair_current_model_pricing(conn: &Connection) -> Result<(), AppError> {
         let pricing_fixes = [
+            // 2026-09-02 官方定价页确认 Sonnet 5 $2/$10 介绍价转为正式价、原定 09-01 涨至
+            // $3/$15 取消：早先按 list 价 seed 的行改回正式价（用户手改过的行不匹配旧值，不动）
+            (
+                "claude-sonnet-5",
+                "Claude Sonnet 5",
+                "2",
+                "10",
+                "0.20",
+                "2.50",
+                "3",
+                "15",
+                "0.30",
+                "3.75",
+            ),
             // 2026-07-30 OpenAI GPT-5.6 降价：luna -80%、terra -20%（sol 不变）。
             // 每档两条守卫：主守卫匹配 ≥v3.19（已跑过 07-12 cache_write 修正），
             // 0 态守卫匹配 <v3.19 直升用户（cache_write 仍为旧 seed 的 0）
