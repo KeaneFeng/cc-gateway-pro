@@ -927,6 +927,11 @@ fn pick_latest_version(
     Some(best)
 }
 
+/// 单条「最新版本」探测的超时。工具版本卡片有多条来源(npm/GitHub/PyPI),
+/// 任何一条卡住都不该拖住整卡:全局客户端的 600s 总超时是给代理转发用的,
+/// 这里必须用短超时,取不到就返回 None 由调用方显示「未知」。
+const LATEST_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
 /// npm 包 dist-tags 专用端点的 URL。
 ///
 /// 该端点的响应体就是 dist-tags 对象本身(几十到几千字节);而 `/{package}` 返回的是

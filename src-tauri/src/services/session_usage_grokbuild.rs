@@ -127,24 +127,48 @@ pub fn sync_grokbuild_usage(db: &Database) -> Result<SessionSyncResult, AppError
     Ok(result)
 }
 
+/// 单个会话日志文件的大小上限，超过直接跳过，避免一次性读取耗尽内存。
+const MAX_GROK_FILE_BYTES: u64 = 50 * 1024 * 1024;
+/// 目录递归收集的深度上限，配合 symlink 跳过一起防御循环链接。
+const MAX_COLLECT_DEPTH: usize = 16;
+
 /// 收集所有 Grok 会话的 updates.jsonl（含归档会话，与会话浏览器同根）
 fn collect_grok_updates_files() -> Vec<PathBuf> {
     let mut files = Vec::new();
     for root in crate::session_manager::providers::grokbuild::session_roots() {
-        collect_files_named(&root, "updates.jsonl", &mut files);
+        collect_files_named(&root, "updates.jsonl", &mut files, 0);
     }
     files
 }
 
 /// 递归收集目录下指定文件名的文件（容忍布局深度变化，对齐会话浏览器的做法）
-fn collect_files_named(root: &Path, name: &str, files: &mut Vec<PathBuf>) {
+fn collect_files_named(root: &Path, name: &str, files: &mut Vec<PathBuf>, depth: usize) {
+    if depth > MAX_COLLECT_DEPTH {
+        log::warn!(
+            "Grok session directory traversal exceeded max depth {} at {}",
+            MAX_COLLECT_DEPTH,
+            root.display()
+        );
+        return;
+    }
     let Ok(entries) = fs::read_dir(root) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_dir() {
-            collect_files_named(&path, name, files);
+        // `entry.metadata()` 不跟随符号链接（不同于 `path.is_dir()`），这里据此
+        // **无条件跳过一切 symlink**：目录 symlink 不递归（避免循环），文件
+        // symlink 也不收集——同名文件若经 symlink 指向 sessions 根之外，会把用户
+        // 意料之外的内容当作会话日志读入。代价：把 sessions 目录整体做成 symlink
+        // 的用户会同步不到数据，所以跳过必须留日志，便于排查"用量数据静默缺失"。
+        let metadata = entry.metadata();
+        if metadata.as_ref().map(|m| m.is_symlink()).unwrap_or(false) {
+            log::info!("[GROK-SYNC] 跳过符号链接（不跟随）: {}", path.display());
+            continue;
+        }
+        let is_dir = metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false);
+        if is_dir {
+            collect_files_named(&path, name, files, depth + 1);
         } else if path.file_name().and_then(|n| n.to_str()) == Some(name) {
             files.push(path);
         }

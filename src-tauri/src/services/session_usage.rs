@@ -66,6 +66,9 @@ pub(crate) struct SyncCursor {
     pub last_modified: i64,
     pub last_line_offset: i64,
     pub last_byte_offset: Option<i64>,
+    /// 上游 Pi 解析器把编码后的 revision 存在这里；本 fork 无 Pi 路径，
+    /// 字段只随游标预取/回写流转，保留以贴近上游结构。
+    #[allow(dead_code)]
     pub last_synced_at: i64,
 }
 
