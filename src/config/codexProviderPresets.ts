@@ -376,29 +376,6 @@ requires_openai_auth = true`,
     iconColor: "#5B7FFF",
   },
   {
-<<<<<<< HEAD
-=======
-    name: "Qiniu",
-    nameKey: "providerForm.presets.qiniu",
-    websiteUrl: "https://s.qiniu.com/nMvAvy",
-    apiKeyUrl: "https://s.qiniu.com/nMvAvy",
-    category: "aggregator",
-    auth: generateThirdPartyAuth(""),
-    config: generateThirdPartyConfig(
-      "qiniu",
-      "https://api.qnaigc.com/bypass/openai/v1",
-      "gpt-6-astra",
-    ),
-    endpointCandidates: [
-      "https://api.qnaigc.com/bypass/openai/v1",
-      "https://api.modelink.ai/bypass/openai/v1",
-    ],
-    isPartner: true,
-    partnerPromotionKey: "qiniu",
-    icon: "qiniu",
-  },
-  {
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     name: "AICoding",
     websiteUrl: "https://aicoding.inc",
     apiKeyUrl: "https://aicoding.inc/i/CCSWITCH",
@@ -1397,14 +1374,8 @@ requires_openai_auth = true`,
     endpointCandidates: ["https://api.xiaomimimo.com/v1"],
     // 小米 MiMo 官方 Codex 文档已声明原生支持 Responses API（wire_api=responses 对自家 base_url），无需路由接管转换
     apiFormat: "openai_responses",
-<<<<<<< HEAD
     // 官方 Codex catalog（mimo.mi.com/.../codex-configuration）：
     // shell_command 编辑、不声明 freeform apply_patch
-=======
-    // 官方目录 2026-09-23 起改为四档（none/low/medium/high）、默认 low。
-    // https://mimo.mi.com/docs/tokenplan/integration/codex-configuration
-    // 仅同步模型元数据，沿用现有工具传输配置。
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     modelCatalog: modelCatalog([
       {
         model: "mimo-v2.6-pro",
@@ -1413,8 +1384,6 @@ requires_openai_auth = true`,
         inputModalities: ["text", "image"],
         supportsParallelToolCalls: false,
         baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
       },
       {
         model: "mimo-v2.6-flash",
@@ -1423,8 +1392,6 @@ requires_openai_auth = true`,
         inputModalities: ["text", "image"],
         supportsParallelToolCalls: false,
         baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
       },
       {
         model: "mimo-v2.6-pro-ultraspeed",
@@ -1433,38 +1400,22 @@ requires_openai_auth = true`,
         inputModalities: ["text", "image"],
         supportsParallelToolCalls: false,
         baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
       },
       {
         model: "mimo-v2.5-pro",
         displayName: "MiMo V2.5 Pro",
         contextWindow: 1048576,
         inputModalities: ["text"],
-<<<<<<< HEAD
         baseInstructions:
           "You are MiMo, an AI assistant developed by Xiaomi. Today's date: {date} {week}. Your knowledge cutoff date is December 2024.",
-=======
-        supportsParallelToolCalls: false,
-        baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
       },
       {
         model: "mimo-v2.5",
         displayName: "MiMo V2.5",
         contextWindow: 1048576,
         inputModalities: ["text", "image"],
-<<<<<<< HEAD
         baseInstructions:
           "You are MiMo, an AI assistant developed by Xiaomi. Today's date: {date} {week}. Your knowledge cutoff date is December 2024.",
-=======
-        supportsParallelToolCalls: false,
-        baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
       },
     ]),
     category: "cn_official",
@@ -1485,14 +1436,8 @@ requires_openai_auth = true`,
     endpointCandidates: ["https://token-plan-cn.xiaomimimo.com/v1"],
     // 小米 MiMo 官方 Codex 文档已声明原生支持 Responses API（wire_api=responses 对自家 base_url），无需路由接管转换
     apiFormat: "openai_responses",
-<<<<<<< HEAD
     // 官方 Codex catalog（mimo.mi.com/.../codex-configuration）：
     // shell_command 编辑、不声明 freeform apply_patch
-=======
-    // 官方目录 2026-09-23 起改为四档（none/low/medium/high）、默认 low。
-    // https://mimo.mi.com/docs/tokenplan/integration/codex-configuration
-    // 仅同步模型元数据，沿用现有工具传输配置。
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     modelCatalog: modelCatalog([
       {
         model: "mimo-v2.6-pro",
@@ -1501,8 +1446,6 @@ requires_openai_auth = true`,
         inputModalities: ["text", "image"],
         supportsParallelToolCalls: false,
         baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
       },
       {
         model: "mimo-v2.6-flash",
@@ -1511,38 +1454,22 @@ requires_openai_auth = true`,
         inputModalities: ["text", "image"],
         supportsParallelToolCalls: false,
         baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
       },
       {
         model: "mimo-v2.5-pro",
         displayName: "MiMo V2.5 Pro",
         contextWindow: 1048576,
         inputModalities: ["text"],
-<<<<<<< HEAD
         baseInstructions:
           "You are MiMo, an AI assistant developed by Xiaomi. Today's date: {date} {week}. Your knowledge cutoff date is December 2024.",
-=======
-        supportsParallelToolCalls: false,
-        baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
       },
       {
         model: "mimo-v2.5",
         displayName: "MiMo V2.5",
         contextWindow: 1048576,
         inputModalities: ["text", "image"],
-<<<<<<< HEAD
         baseInstructions:
           "You are MiMo, an AI assistant developed by Xiaomi. Today's date: {date} {week}. Your knowledge cutoff date is December 2024.",
-=======
-        supportsParallelToolCalls: false,
-        baseInstructions: MIMO_CODEX_BASE_INSTRUCTIONS,
-        reasoningLevels: ["none", "low", "medium", "high"],
-        defaultReasoningLevel: "low",
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
       },
     ]),
     category: "cn_official",
@@ -1599,7 +1526,6 @@ requires_openai_auth = true`,
         contextWindow: 500000,
         supportsParallelToolCalls: true,
         inputModalities: ["text", "image"],
-        reasoningLevels: ["low", "medium", "high", "xhigh"],
       },
       {
         model: "grok-4.5",

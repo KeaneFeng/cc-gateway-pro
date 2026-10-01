@@ -421,7 +421,6 @@ where
 
 // ─── Tests ───────────────────────────────────────────────────
 
-
 // ─── Sync operation lock ────────────────────────────────────
 
 /// Serialize every snapshot upload/download across all transports.

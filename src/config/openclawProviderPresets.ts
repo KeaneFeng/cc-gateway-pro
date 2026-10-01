@@ -164,73 +164,6 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
       modelCatalog: { "kimi/kimi-k2.7-code": { alias: "Kimi" } },
     },
   },
-<<<<<<< HEAD
-=======
-  // API 开放平台海外/Global 变体：platform.kimi.ai + api.moonshot.ai 端点
-  {
-    name: "Kimi Global",
-    websiteUrl: "https://platform.kimi.ai?aff=cc-switch",
-    apiKeyUrl: "https://platform.kimi.ai/console/api-keys?aff=cc-switch",
-    settingsConfig: {
-      baseUrl: "https://api.moonshot.ai/v1",
-      apiKey: "",
-      api: "openai-completions",
-      models: [
-        {
-          id: "kimi-k2.7-code",
-          name: "Kimi K2.7 Code",
-          contextWindow: 262144,
-          cost: { input: 0.95, output: 4, cacheRead: 0.19 },
-        },
-        {
-          id: "kimi-k3",
-          name: "Kimi K3",
-          contextWindow: 1048576,
-          cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 0 },
-        },
-        {
-          id: "kimi-k2.7-code-highspeed",
-          name: "Kimi K2.7 Code HighSpeed",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 262144,
-          maxTokens: 262144,
-          cost: { input: 1.9, output: 8, cacheRead: 0.38 },
-        },
-        {
-          id: "kimi-k2.6",
-          name: "Kimi K2.6",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 262144,
-          maxTokens: 262144,
-          cost: { input: 0.95, output: 4, cacheRead: 0.16 },
-        },
-      ],
-    },
-    category: "cn_official",
-    partnerPromotionKey: "kimi",
-    icon: "kimi",
-    iconColor: "#6366F1",
-    templateValues: {
-      baseUrl: {
-        label: "Base URL",
-        placeholder: "https://api.moonshot.ai/v1",
-        defaultValue: "https://api.moonshot.ai/v1",
-        editorValue: "",
-      },
-      apiKey: {
-        label: "API Key",
-        placeholder: "sk-...",
-        editorValue: "",
-      },
-    },
-    suggestedDefaults: {
-      model: { primary: "kimi/kimi-k2.7-code" },
-      modelCatalog: { "kimi/kimi-k2.7-code": { alias: "Kimi" } },
-    },
-  },
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
   {
     name: "Kimi For Coding",
     primePartner: true,
@@ -819,74 +752,6 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     },
   },
   {
-<<<<<<< HEAD
-=======
-    name: "Qiniu",
-    nameKey: "providerForm.presets.qiniu",
-    websiteUrl: "https://s.qiniu.com/nMvAvy",
-    apiKeyUrl: "https://s.qiniu.com/nMvAvy",
-    settingsConfig: {
-      baseUrl: "https://api.qnaigc.com/v1",
-      apiKey: "",
-      api: "openai-completions",
-      models: [
-        {
-          id: "gpt-6-astra",
-          name: "GPT-6 Astra",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1050000,
-          maxTokens: 128000,
-          cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-        },
-        {
-          id: "moonshotai/kimi-k3",
-          name: "Kimi K3",
-          contextWindow: 1048576,
-          maxTokens: 131072,
-          input: ["text", "image"],
-          reasoning: true,
-        },
-        {
-          id: "z-ai/glm-5.3",
-          name: "GLM-5.3",
-          reasoning: true,
-          input: ["text"],
-          contextWindow: 1048576,
-          maxTokens: 131072,
-        },
-        {
-          id: "z-ai/glm-5.3-flash",
-          name: "GLM-5.3-Flash",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1048576,
-          maxTokens: 131072,
-        },
-      ],
-    },
-    category: "aggregator",
-    isPartner: true,
-    partnerPromotionKey: "qiniu",
-    icon: "qiniu",
-    templateValues: {
-      apiKey: {
-        label: "API Key",
-        placeholder: "",
-        editorValue: "",
-      },
-    },
-    suggestedDefaults: {
-      model: {
-        primary: "qiniu/gpt-6-astra",
-      },
-      modelCatalog: {
-        "qiniu/gpt-6-astra": { alias: "GPT-6 Astra" },
-      },
-    },
-  },
-  {
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     name: "AICoding",
     websiteUrl: "https://aicoding.inc",
     apiKeyUrl: "https://aicoding.inc/i/CCSWITCH",
@@ -1027,76 +892,6 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     },
   },
   {
-<<<<<<< HEAD
-=======
-    name: "9527CODE",
-    websiteUrl: "https://9527.codes",
-    apiKeyUrl: "https://9527.codes/register?aff=e5zI",
-    settingsConfig: {
-      baseUrl: "https://9527.codes",
-      apiKey: "",
-      api: "anthropic-messages",
-      models: [
-        {
-          id: "claude-opus-5",
-          name: "Claude Opus 5",
-          contextWindow: 1000000,
-        },
-        {
-          id: "claude-sonnet-5",
-          name: "Claude Sonnet 5",
-          contextWindow: 1000000,
-        },
-        {
-          id: "claude-haiku-4-5",
-          name: "Claude Haiku 4.5",
-          contextWindow: 200000,
-        },
-        {
-          id: "claude-opus-5-5",
-          name: "Claude Opus 5.5",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 128000,
-          cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
-        },
-        {
-          id: "claude-fable-5-1",
-          name: "Claude Fable 5.1",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 128000,
-          cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
-        },
-      ],
-    },
-    category: "aggregator",
-    isPartner: true,
-    partnerPromotionKey: "9527code",
-    icon: "9527code",
-    templateValues: {
-      apiKey: {
-        label: "API Key",
-        placeholder: "",
-        editorValue: "",
-      },
-    },
-    suggestedDefaults: {
-      model: {
-        primary: "9527code/claude-opus-5",
-        fallbacks: ["9527code/claude-sonnet-5"],
-      },
-      modelCatalog: {
-        "9527code/claude-opus-5": { alias: "Opus" },
-        "9527code/claude-sonnet-5": { alias: "Sonnet" },
-        "9527code/claude-haiku-4-5": { alias: "Haiku" },
-      },
-    },
-  },
-  {
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     name: "Code0",
     websiteUrl: "https://code0.ai",
     apiKeyUrl: "https://code0.ai/agent/register/B2XHxGjGmRvqgznY",
@@ -2008,55 +1803,6 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     },
   },
   {
-<<<<<<< HEAD
-=======
-    name: "XycAi",
-    websiteUrl: "https://xycai.us",
-    apiKeyUrl: "https://xycai.us/register?aff=Uhu9",
-    settingsConfig: {
-      baseUrl: "https://apicdn.xycai.us/v1",
-      apiKey: "",
-      api: "openai-completions",
-      models: [
-        {
-          id: "gpt-5.6-sol",
-          name: "GPT-5.6 Sol",
-          contextWindow: 400000,
-        },
-        {
-          id: "gpt-6-astra",
-          name: "GPT-6 Astra",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1050000,
-          maxTokens: 128000,
-          cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-        },
-      ],
-    },
-    category: "aggregator",
-    isPartner: true,
-    partnerPromotionKey: "xycai",
-    icon: "xycai",
-    templateValues: {
-      apiKey: {
-        label: "API Key",
-        placeholder: "",
-        editorValue: "",
-      },
-    },
-    suggestedDefaults: {
-      model: {
-        primary: "xycai/gpt-5.6-sol",
-      },
-      modelCatalog: {
-        "xycai/gpt-5.6-sol": { alias: "GPT-5.6 Sol" },
-      },
-    },
-  },
-  // ===== 非赞助商预设：应用内展示按显示名排序，此处文件顺序不影响展示 =====
-  {
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     name: "Amux",
     websiteUrl: "https://amux.ai",
     apiKeyUrl: "https://amux.ai",
@@ -2424,20 +2170,10 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
       api: "openai-completions",
       models: [
         {
-<<<<<<< HEAD
           id: "MiniMax-M2.7",
           name: "MiniMax M2.7",
           contextWindow: 200000,
           cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.375 },
-=======
-          id: "MiniMax-M3",
-          name: "MiniMax M3",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 131072,
-          cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0 },
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
         },
       ],
     },
@@ -2471,20 +2207,10 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
       api: "openai-completions",
       models: [
         {
-<<<<<<< HEAD
           id: "MiniMax-M2.7",
           name: "MiniMax M2.7",
           contextWindow: 200000,
           cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.375 },
-=======
-          id: "MiniMax-M3",
-          name: "MiniMax M3",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 131072,
-          cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0 },
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
         },
       ],
     },
@@ -3326,67 +3052,7 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     websiteUrl: "https://sudocode.us",
     apiKeyUrl: "https://sudocode.us",
     settingsConfig: {
-<<<<<<< HEAD
       baseUrl: "https://sudocode.us/v1",
-=======
-      baseUrl: "https://api.jiekou.ai/openai/v1",
-      apiKey: "",
-      api: "openai-completions",
-      models: [
-        {
-          id: "claude-fable-5",
-          name: "Claude Fable 5",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 128000,
-          cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-        },
-        {
-          id: "claude-opus-5-5",
-          name: "Claude Opus 5.5",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 128000,
-          // 供应商未公布缓存写入价，按 Anthropic 标准参考价估算。
-          cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
-        },
-        {
-          id: "claude-fable-5-1",
-          name: "Claude Fable 5.1",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1000000,
-          maxTokens: 128000,
-          cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
-        },
-      ],
-    },
-    category: "aggregator",
-    icon: "jiekou",
-    iconColor: "#000000",
-    templateValues: {
-      apiKey: {
-        label: "API Key",
-        placeholder: "sk-...",
-        editorValue: "",
-      },
-    },
-    suggestedDefaults: {
-      model: { primary: "jiekou/claude-fable-5" },
-      modelCatalog: {
-        "jiekou/claude-fable-5": { alias: "Claude Fable 5" },
-      },
-    },
-  },
-  {
-    name: "AICodeWith",
-    websiteUrl: "https://aicodewith.ai",
-    apiKeyUrl: "https://aicodewith.ai/login?tab=register",
-    settingsConfig: {
-      baseUrl: "https://api.aicodewith.ai/v1",
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
       apiKey: "",
       api: "openai-responses",
       models: [

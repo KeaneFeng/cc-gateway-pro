@@ -627,7 +627,6 @@ fn codex_catalog_model_entry(
         entry_obj.insert("supports_image_detail_original".to_string(), json!(false));
     }
 
-
     entry
 }
 
@@ -3981,7 +3980,7 @@ web_search = "disabled"
                 { "slug": "gpt-5.4", "input_modalities": ["text", "image"] },
                 { "slug": "qwen3-coder-plus", "input_modalities": ["text"] },
                 { "slug": "gpt-text-override", "input_modalities": ["text"] },
-                { "slug": "deepseek-v4-flash", "input_modalities": ["text", "image"] }
+                { "slug": "glm-5.2", "input_modalities": ["text", "image"] }
             ]
         }"#;
 

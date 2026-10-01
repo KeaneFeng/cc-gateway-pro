@@ -842,12 +842,7 @@ export const claudeDesktopProviderPresets: ClaudeDesktopProviderPreset[] = [
     modelRoutes: brandedRoutes(
       "deepseek-v4-pro",
       "deepseek-v4-pro",
-<<<<<<< HEAD
       "deepseek-v4-flash",
-=======
-      "deepseek-flash",
-      true,
->>>>>>> da193d4f (fix: 更新预设供应商模型与标准定价，清理已下线模型条目 (#7621))
     ),
     icon: "deepseek",
     iconColor: "#1E88E5",

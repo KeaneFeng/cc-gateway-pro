@@ -28,15 +28,6 @@ pub(crate) const TOOL_RESULT_ERROR_MARKER: &str = "[cc-switch:tool-result-error]
 /// 会被严格网关整体拒绝，转换时把低于下限的预算抬到最小值而不是让请求失败。
 pub(crate) const RESPONSES_MIN_MAX_OUTPUT_TOKENS: u64 = 16;
 
-fn has_http_url_scheme(value: &str) -> bool {
-    value
-        .get(.."http://".len())
-        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("http://"))
-        || value
-            .get(.."https://".len())
-            .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
-}
-
 fn anthropic_image_to_responses_part(block: &Value) -> Option<Value> {
     let source = block.get("source")?;
     match source.get("type").and_then(Value::as_str) {
