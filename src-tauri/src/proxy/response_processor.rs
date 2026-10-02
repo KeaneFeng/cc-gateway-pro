@@ -1019,6 +1019,7 @@ mod tests {
             upstream,
             "test",
             Some(collector),
+            None,
             StreamingTimeoutConfig {
                 first_byte_timeout: 0,
                 idle_timeout: 0,
