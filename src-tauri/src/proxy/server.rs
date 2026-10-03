@@ -336,6 +336,39 @@ impl ProxyServer {
             // OpenAI Models API (Codex CLI reachability check)
             .route("/models", get(handlers::handle_models))
             .route("/v1/models", get(handlers::handle_models))
+            // Codex 独立的 Alpha Search 协议：语义透传，不进转换桥。
+            .route("/alpha/search", post(handlers::handle_alpha_search))
+            .route("/v1/alpha/search", post(handlers::handle_alpha_search))
+            .route("/v1/v1/alpha/search", post(handlers::handle_alpha_search))
+            .route(
+                "/codex/v1/alpha/search",
+                post(handlers::handle_alpha_search),
+            )
+            // Codex 内置 ImageGen 仍调旧的 OpenAI Images API。
+            .route(
+                "/images/generations",
+                post(handlers::handle_images_generations),
+            )
+            .route(
+                "/v1/images/generations",
+                post(handlers::handle_images_generations),
+            )
+            .route(
+                "/v1/v1/images/generations",
+                post(handlers::handle_images_generations),
+            )
+            .route(
+                "/codex/v1/images/generations",
+                post(handlers::handle_images_generations),
+            )
+            // Codex ImageGen 引用已有图片时改发 `/images/edits`。
+            .route("/images/edits", post(handlers::handle_images_edits))
+            .route("/v1/images/edits", post(handlers::handle_images_edits))
+            .route("/v1/v1/images/edits", post(handlers::handle_images_edits))
+            .route(
+                "/codex/v1/images/edits",
+                post(handlers::handle_images_edits),
+            )
             // OpenAI Responses API (Codex CLI，支持带前缀和不带前缀)
             .route("/responses", post(handlers::handle_responses))
             .route("/v1/responses", post(handlers::handle_responses))

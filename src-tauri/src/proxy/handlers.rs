@@ -261,6 +261,7 @@ async fn handle_messages_for_app(
         &state,
         &CLAUDE_PARSER_CONFIG,
         trace_snapshot,
+        is_stream,
         connection_guard,
     )
     .await
@@ -778,6 +779,7 @@ pub async fn handle_chat_completions(
         &state,
         &OPENAI_PARSER_CONFIG,
         trace_snapshot,
+        is_stream,
         connection_guard,
     )
     .await
@@ -938,6 +940,7 @@ async fn handle_responses_for_app(
         &state,
         &CODEX_PARSER_CONFIG,
         trace_snapshot,
+        is_stream,
         connection_guard,
     )
     .await
@@ -949,6 +952,109 @@ pub async fn handle_responses_compact(
     request: axum::extract::Request,
 ) -> Result<axum::response::Response, ProxyError> {
     handle_responses_compact_for_app(state, request, AppType::Codex, "Codex", "codex").await
+}
+
+/// Handle Codex's standalone Alpha Search protocol as a semantic passthrough.
+///
+/// Recent Codex clients send web-search commands to a dedicated endpoint instead
+/// of embedding them in a Responses request. Keep this path out of the
+/// Responses-to-Chat/Anthropic bridges: those formats cannot represent the Alpha
+/// Search protocol.
+pub async fn handle_alpha_search(
+    State(state): State<ProxyState>,
+    request: axum::extract::Request,
+) -> Result<axum::response::Response, ProxyError> {
+    handle_codex_standalone_passthrough(state, request, "/alpha/search").await
+}
+
+/// Handle Codex's legacy Images API endpoint for built-in ImageGen.
+pub async fn handle_images_generations(
+    State(state): State<ProxyState>,
+    request: axum::extract::Request,
+) -> Result<axum::response::Response, ProxyError> {
+    handle_codex_standalone_passthrough(state, request, "/images/generations").await
+}
+
+/// Handle Codex's legacy Images API edit endpoint for built-in ImageGen.
+///
+/// Codex switches from `/images/generations` to `/images/edits` whenever the
+/// ImageGen tool references existing images (explicit file paths or the last N
+/// generated images). The body is plain JSON with data-URL images, so it takes
+/// the same standalone passthrough as generations; only the upstream path differs.
+pub async fn handle_images_edits(
+    State(state): State<ProxyState>,
+    request: axum::extract::Request,
+) -> Result<axum::response::Response, ProxyError> {
+    handle_codex_standalone_passthrough(state, request, "/images/edits").await
+}
+
+async fn handle_codex_standalone_passthrough(
+    state: ProxyState,
+    request: axum::extract::Request,
+    canonical_endpoint: &'static str,
+) -> Result<axum::response::Response, ProxyError> {
+    let (parts, req_body) = request.into_parts();
+    let method = parts.method.clone();
+    let uri = parts.uri;
+    let mut headers = parts.headers;
+    let extensions = parts.extensions;
+    let body_bytes = req_body
+        .collect()
+        .await
+        .map_err(|e| ProxyError::Internal(format!("Failed to read request body: {e}")))?
+        .to_bytes();
+    let body_bytes = decode_codex_request_body(&mut headers, body_bytes)?;
+    let mut body: Value = serde_json::from_slice(&body_bytes)
+        .map_err(|e| ProxyError::InvalidRequest(format!("Failed to parse request body: {e}")))?;
+
+    let mut ctx = RequestContext::new(
+        &state,
+        &mut body,
+        &headers,
+        AppType::Codex,
+        "Codex",
+        "codex",
+    )
+    .await?;
+    let endpoint = endpoint_with_query(&uri, canonical_endpoint);
+
+    let forwarder = ctx.create_forwarder(&state);
+    let mut result = match forwarder
+        .forward_with_retry(
+            &AppType::Codex,
+            method,
+            &endpoint,
+            body,
+            headers,
+            extensions,
+            ctx.get_providers(),
+        )
+        .await
+    {
+        Ok(result) => result,
+        Err(mut err) => {
+            if let Some(provider) = err.provider.take() {
+                ctx.provider = provider;
+            }
+            log_forward_error(&state, &ctx, false, &err.error);
+            return build_codex_proxy_error_response(&ctx, &endpoint, &err.error);
+        }
+    };
+
+    let connection_guard = result.connection_guard.take();
+    ctx.outbound_model = result.outbound_model.take();
+    ctx.provider = result.provider;
+
+    process_response(
+        result.response,
+        &ctx,
+        &state,
+        &CODEX_PARSER_CONFIG,
+        None,
+        false,
+        connection_guard,
+    )
+    .await
 }
 
 pub async fn handle_grokbuild_responses_compact(
@@ -1090,6 +1196,7 @@ async fn handle_responses_compact_for_app(
         &state,
         &CODEX_PARSER_CONFIG,
         trace_snapshot,
+        is_stream,
         connection_guard,
     )
     .await
@@ -1123,7 +1230,8 @@ async fn handle_codex_responses_namespace_restore(
             ctx,
             state,
             &CODEX_PARSER_CONFIG,
-            trace_snapshot,
+            None,
+            false,
             connection_guard,
         )
         .await;
@@ -1276,7 +1384,7 @@ async fn handle_codex_late_arguments_repair(
     response: super::hyper_client::ProxyResponse,
     ctx: &RequestContext,
     state: &ProxyState,
-    _is_stream: bool,
+    is_stream: bool,
     connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<axum::response::Response, ProxyError> {
     let status = response.status();
@@ -1287,6 +1395,7 @@ async fn handle_codex_late_arguments_repair(
             state,
             &CODEX_PARSER_CONFIG,
             None,
+            is_stream,
             connection_guard,
         )
         .await;
@@ -2200,6 +2309,7 @@ pub async fn handle_gemini(
         &state,
         &GEMINI_PARSER_CONFIG,
         trace_snapshot,
+        is_stream,
         connection_guard,
     )
     .await
