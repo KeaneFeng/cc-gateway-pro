@@ -98,6 +98,8 @@ export interface UseDirectorySettingsResult {
   resolvedDirs: ResolvedDirectories;
   isLoading: boolean;
   initialAppConfigDir?: string;
+  /** 保存成功后把已保存的数据目录换成刚存的值 */
+  commitAppConfigDir: (value: string | undefined) => void;
   updateDirectory: (app: DirectoryAppId, value?: string) => void;
   updateAppConfigDir: (value?: string) => void;
   browseDirectory: (app: DirectoryAppId) => Promise<void>;
@@ -151,7 +153,16 @@ export function useDirectorySettings({
     openclaw: "",
     hermes: "",
   });
+  // 已保存的数据目录（保存按钮和「需要重启」都和它比）。ref 给回调用，state 让比较它的
+  // 组件在保存后重渲染：保存成功要把它更新成刚存的值，否则保存按钮一直在、改回去存不了
   const initialAppConfigDirRef = useRef<string | undefined>(undefined);
+  const [initialAppConfigDir, setInitialAppConfigDir] = useState<
+    string | undefined
+  >(undefined);
+  const commitAppConfigDir = useCallback((value: string | undefined) => {
+    initialAppConfigDirRef.current = value;
+    setInitialAppConfigDir(value);
+  }, []);
 
   // 加载目录信息
   useEffect(() => {
@@ -212,7 +223,7 @@ export function useDirectorySettings({
         };
 
         setAppConfigDir(normalizedOverride);
-        initialAppConfigDirRef.current = normalizedOverride;
+        commitAppConfigDir(normalizedOverride);
 
         setResolvedDirs({
           appConfig: normalizedOverride ?? defaultsRef.current.appConfig,
@@ -374,7 +385,8 @@ export function useDirectorySettings({
     appConfigDir,
     resolvedDirs,
     isLoading,
-    initialAppConfigDir: initialAppConfigDirRef.current,
+    initialAppConfigDir,
+    commitAppConfigDir,
     updateDirectory,
     updateAppConfigDir,
     browseDirectory,

@@ -81,6 +81,7 @@ export function useSettings(): UseSettingsResult {
     resolvedDirs,
     isLoading: isDirectoryLoading,
     initialAppConfigDir,
+    commitAppConfigDir,
     updateDirectory,
     updateAppConfigDir,
     browseDirectory,
@@ -355,6 +356,8 @@ export function useSettings(): UseSettingsResult {
         await saveMutation.mutateAsync(payload);
 
         await settingsApi.setAppConfigDirOverride(sanitizedAppDir ?? null);
+        // 基准值换成刚存的：设置页不卸载，下次比较和「需要重启」都只跟真正没保存的改动走
+        commitAppConfigDir(sanitizedAppDir);
 
         // 只在开机自启状态真正改变时调用系统 API
         if (
@@ -474,6 +477,7 @@ export function useSettings(): UseSettingsResult {
     },
     [
       appConfigDir,
+      commitAppConfigDir,
       data,
       initialAppConfigDir,
       queryClient,
