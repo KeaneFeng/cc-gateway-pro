@@ -222,6 +222,12 @@ pub fn provider_needs_responses_namespace_flatten(provider: &Provider) -> bool {
 /// The single built-in official Codex provider.  Unlike managed Codex OAuth
 /// providers used by Claude, this route receives authentication from the
 /// calling Codex client (`requires_openai_auth = true`).
+
+/// 非官方 Codex 上游走原生 Responses 透传时，流式响应需要补齐迟到的
+/// 函数调用参数（responses_late_arguments）。官方后端自己保证顺序，不需要。
+pub fn provider_needs_responses_late_arguments_repair(provider: &Provider) -> bool {
+    !is_codex_official_provider(provider)
+}
 pub fn is_codex_official_provider(provider: &Provider) -> bool {
     provider.id == crate::database::CODEX_OFFICIAL_PROVIDER_ID
         && provider.category.as_deref() == Some("official")

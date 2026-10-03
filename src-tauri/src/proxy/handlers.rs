@@ -921,6 +921,17 @@ async fn handle_responses_for_app(
         .await;
     }
 
+    if super::providers::provider_needs_responses_late_arguments_repair(&ctx.provider) {
+        return handle_codex_late_arguments_repair(
+            response,
+            &ctx,
+            &state,
+            is_stream,
+            connection_guard,
+        )
+        .await;
+    }
+
     process_response(
         response,
         &ctx,
@@ -1062,6 +1073,17 @@ async fn handle_responses_compact_for_app(
         .await;
     }
 
+    if super::providers::provider_needs_responses_late_arguments_repair(&ctx.provider) {
+        return handle_codex_late_arguments_repair(
+            response,
+            &ctx,
+            &state,
+            is_stream,
+            connection_guard,
+        )
+        .await;
+    }
+
     process_response(
         response,
         &ctx,
@@ -1079,6 +1101,7 @@ async fn handle_responses_compact_for_app(
 /// error bodies and everything unrelated pass through unchanged. Usage is
 /// collected exactly as `process_response` would (same `CODEX_PARSER_CONFIG`).
 async fn handle_codex_responses_namespace_restore(
+
     response: super::hyper_client::ProxyResponse,
     ctx: &RequestContext,
     state: &ProxyState,
@@ -1244,6 +1267,55 @@ async fn handle_codex_responses_namespace_restore(
         .map_err(|e| {
             log::error!("[{}] 构建 namespace 还原响应失败: {e}", ctx.tag);
             ProxyError::Internal(format!("Failed to build response: {e}"))
+        })
+}
+
+/// 原生 Responses 透传到官方以外的上游：流式响应补齐迟到的函数调用
+/// 参数（`responses_late_arguments`）。错误体、非流式响应走通用透传，用量按同一套配置统计。
+async fn handle_codex_late_arguments_repair(
+    response: super::hyper_client::ProxyResponse,
+    ctx: &RequestContext,
+    state: &ProxyState,
+    _is_stream: bool,
+    connection_guard: Option<ActiveConnectionGuard>,
+) -> Result<axum::response::Response, ProxyError> {
+    let status = response.status();
+    if !status.is_success() || !response.is_sse() {
+        return process_response(
+            response,
+            ctx,
+            state,
+            &CODEX_PARSER_CONFIG,
+            None,
+            connection_guard,
+        )
+        .await;
+    }
+
+    let mut response_headers = response.headers().clone();
+    strip_hop_by_hop_response_headers(&mut response_headers);
+    let mut builder = axum::response::Response::builder().status(status);
+    for (name, value) in &response_headers {
+        builder = builder.header(name, value);
+    }
+    let repair_stream =
+        super::providers::responses_late_arguments::create_late_arguments_repair_stream(
+            response.bytes_stream(),
+        );
+    let usage_collector = create_usage_collector(ctx, state, status.as_u16(), &CODEX_PARSER_CONFIG);
+    let logged_stream = create_logged_passthrough_stream(
+        repair_stream,
+        ctx.tag,
+        usage_collector,
+        None,
+        ctx.streaming_timeout_config(),
+        connection_guard,
+    );
+    builder
+        .body(axum::body::Body::from_stream(logged_stream))
+        .map_err(|e| {
+            log::error!("[{}] 构建补参数流式响应失败: {e}", ctx.tag);
+            ProxyError::Internal(format!("Failed to build streaming response: {e}"))
         })
 }
 

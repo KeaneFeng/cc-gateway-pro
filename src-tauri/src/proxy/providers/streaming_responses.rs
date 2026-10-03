@@ -60,10 +60,6 @@ fn anthropic_error_sse(message: &str, error_type: &str) -> Bytes {
     )
 }
 
-fn anthropic_ping_sse() -> Bytes {
-    anthropic_sse("ping", &json!({"type": "ping"}))
-}
-
 const UNPROCESSED_REJECTION_MESSAGE: &str = "Upstream rejected the request before processing it \
 (terminal response.incomplete reported max_output_tokens with zero input/output usage). Real \
 output-token truncation reports non-zero usage, so this is a request rejection — commonly caused \
