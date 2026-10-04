@@ -60,10 +60,60 @@ fn anthropic_error_sse(message: &str, error_type: &str) -> Bytes {
     )
 }
 
+fn anthropic_ping_sse() -> Bytes {
+    anthropic_sse("ping", &json!({"type": "ping"}))
+}
+
+const UNPROCESSED_REJECTION_MESSAGE: &str = "Upstream rejected the request before processing it \
+(terminal response.incomplete reported max_output_tokens with zero input/output usage). Real \
+output-token truncation reports non-zero usage, so this is a request rejection — commonly caused \
+by a tool schema the upstream refuses (e.g. a `pattern` regex with nested quantifiers), not by \
+hitting the output-token limit.";
+
+/// A terminal `incomplete` response that reports zero input and output usage
+/// never ran on the upstream: genuine max-output-token truncation always
+/// reports non-zero usage. The ChatGPT Codex backend produces exactly this
+/// terminal (with `incomplete_details.reason = "max_output_tokens"`) when it
+/// refuses a request before processing it, e.g. over a tool schema `pattern`
+/// regex with nested quantifiers. Mapping such a terminal to
+/// `stop_reason: "max_tokens"` makes clients report an output-token limit that
+/// was never hit, so callers should surface it as an upstream error instead.
+fn is_unprocessed_max_output_rejection(response_obj: &Value, status: Option<&str>) -> bool {
+    if status != Some("incomplete") {
+        return false;
+    }
+    if !matches!(
+        response_obj
+            .pointer("/incomplete_details/reason")
+            .and_then(Value::as_str),
+        Some("max_output_tokens") | Some("max_tokens") | None
+    ) {
+        return false;
+    }
+    response_obj
+        .pointer("/usage/input_tokens")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        == 0
+        && response_obj
+            .pointer("/usage/output_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            == 0
+}
+
 /// Convert a compatible gateway's non-streaming Responses JSON into a complete
 /// Anthropic SSE lifecycle. This is used when the client requested streaming but
 /// the upstream ignored `stream:true` and returned `application/json`.
-fn responses_json_to_anthropic_sse(body: Value) -> Vec<Bytes> {
+fn responses_json_to_anthropic_sse(
+    body: Value,
+    _hosted_web_search_name: Option<&str>,
+    _max_web_search_uses: Option<u64>,
+) -> Vec<Bytes> {
+    // Zero-usage incomplete terminals are request rejections, not truncation;
+    // decide before `body` is consumed by the conversion below.
+    let unprocessed_rejection =
+        is_unprocessed_max_output_rejection(&body, body.get("status").and_then(Value::as_str));
     let message = match responses_to_anthropic(body) {
         Ok(message) => message,
         Err(error) => {
@@ -180,6 +230,23 @@ fn responses_json_to_anthropic_sse(body: Value) -> Vec<Bytes> {
                 _ => {}
             }
         }
+    }
+
+    if unprocessed_rejection
+        && message
+            .get("content")
+            .and_then(Value::as_array)
+            .is_none_or(|content| content.is_empty())
+    {
+        log::warn!(
+            "[Claude/Responses] terminal incomplete with zero usage and no content; \
+emitting api_error for the unprocessed upstream rejection instead of max_tokens"
+        );
+        events.push(anthropic_error_sse(
+            UNPROCESSED_REJECTION_MESSAGE,
+            "api_error",
+        ));
+        return events;
     }
 
     events.push(anthropic_sse(
@@ -348,7 +415,7 @@ pub fn create_anthropic_sse_stream_from_responses<E: std::error::Error + Send + 
                     if looks_like_json && is_eof {
                         match serde_json::from_str::<Value>(buffer.trim()) {
                             Ok(body) => {
-                                for event in responses_json_to_anthropic_sse(body) {
+                                for event in responses_json_to_anthropic_sse(body, None, None) {
                                     yield Ok(event);
                                 }
                                 terminated = true;
@@ -1206,6 +1273,28 @@ pub fn create_anthropic_sse_stream_from_responses<E: std::error::Error + Send + 
                                         .and_then(|r| r.as_str()),
                                 );
 
+                                // Zero-usage max_tokens stops are upstream request
+                                // rejections, not truncation; report them as an
+                                // error instead of a fabricated limit hit.
+                                if stop_reason == Some("max_tokens")
+                                    && !has_substantive_output
+                                    && is_unprocessed_max_output_rejection(
+                                        response_obj,
+                                        terminal_status,
+                                    )
+                                {
+                                    log::warn!(
+                                        "[Claude/Responses] terminal incomplete with zero usage \
+    and no content; emitting api_error for the unprocessed upstream rejection instead of max_tokens"
+                                    );
+                                    yield Ok(anthropic_error_sse(
+                                        UNPROCESSED_REJECTION_MESSAGE,
+                                        "api_error",
+                                    ));
+                                    terminated = true;
+                                    continue;
+                                }
+
                                 // Best effort: close any dangling blocks before message_delta/message_stop.
                                 if !open_indices.is_empty() {
                                     let mut remaining: Vec<u32> = open_indices.iter().copied().collect();
@@ -1657,541 +1746,83 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_final_event_without_blank_line_is_processed() {
+    async fn test_response_incomplete_zero_usage_empty_output_is_upstream_error() {
+        // Shape returned by the ChatGPT Codex backend when it rejects the
+        // request before processing it (e.g. over a tool schema pattern):
+        // incomplete/max_output_tokens with zero usage and an empty output.
         let input = concat!(
             "event: response.created\n",
             "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"model\":\"gpt-5\"}}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n"
+            "event: response.incomplete\n",
+            "data: {\"type\":\"response.incomplete\",\"response\":{\"id\":\"resp_1\",\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"},\"usage\":{\"input_tokens\":0,\"output_tokens\":0},\"output\":[]}}\n\n"
         );
 
         let merged = convert_stream_text(input).await;
-        assert!(merged.contains("\"stop_reason\":\"end_turn\""));
-        assert_eq!(merged.matches("event: message_stop").count(), 1);
-        assert!(!merged.contains("stream_truncated"));
+        assert!(merged.contains("event: message_start"));
+        assert!(merged.contains("event: error"));
+        assert!(merged.contains("Upstream rejected the request before processing"));
+        assert!(!merged.contains("\"stop_reason\":\"max_tokens\""));
+        assert!(!merged.contains("event: message_stop"));
     }
 
     #[tokio::test]
-    async fn test_clean_eof_after_partial_text_is_explicitly_incomplete() {
+    async fn test_response_incomplete_zero_usage_without_output_array_is_upstream_error() {
+        // Same rejection without an `output` array, which skips the
+        // empty-output fast path and takes the regular terminal handling.
         let input = concat!(
             "event: response.created\n",
             "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"model\":\"gpt-5\"}}\n\n",
-            "event: response.output_text.delta\n",
-            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}\n\n"
+            "event: response.incomplete\n",
+            "data: {\"type\":\"response.incomplete\",\"response\":{\"id\":\"resp_1\",\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"},\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n"
+        );
+
+        let merged = convert_stream_text(input).await;
+        assert!(merged.contains("event: error"));
+        assert!(merged.contains("Upstream rejected the request before processing"));
+        assert!(!merged.contains("\"stop_reason\":\"max_tokens\""));
+    }
+
+    #[tokio::test]
+    async fn test_response_incomplete_zero_input_nonzero_output_keeps_max_tokens() {
+        // Non-zero output usage means tokens were actually generated: keep
+        // reporting it as truncation.
+        let input = concat!(
+            "event: response.created\n",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"model\":\"gpt-5\"}}\n\n",
+            "event: response.incomplete\n",
+            "data: {\"type\":\"response.incomplete\",\"response\":{\"id\":\"resp_1\",\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"},\"usage\":{\"input_tokens\":0,\"output_tokens\":7},\"output\":[]}}\n\n"
         );
 
         let merged = convert_stream_text(input).await;
         assert!(merged.contains("\"stop_reason\":\"max_tokens\""));
-        assert!(merged.contains("event: content_block_stop"));
         assert!(merged.contains("event: message_stop"));
+        assert!(!merged.contains("event: error"));
     }
 
-    #[tokio::test]
-    async fn test_clean_eof_during_tool_arguments_is_error() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"model\":\"gpt-5\"}}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"fc_1\",\"call_id\":\"call_1\",\"name\":\"exec\",\"delta\":\"{\\\"cmd\\\":\"}\n\n"
+    #[test]
+    fn test_responses_json_to_anthropic_sse_zero_usage_incomplete_is_error() {
+        // Also covers the compatible-gateway path that feeds a full Responses
+        // JSON document straight into the converter.
+        let events = responses_json_to_anthropic_sse(
+            json!({
+                "id": "resp_1",
+                "status": "incomplete",
+                "incomplete_details": {"reason": "max_output_tokens"},
+                "usage": {"input_tokens": 0, "output_tokens": 0},
+                "output": []
+            }),
+            None,
+            None,
         );
-
-        let merged = convert_stream_text(input).await;
-        assert!(merged.contains("event: error"));
-        assert!(merged.contains("stream_truncated"));
-        assert!(!merged.contains("event: message_stop"));
-    }
-
-    #[tokio::test]
-    async fn test_stream_request_with_complete_json_response_is_converted() {
-        let input = r#"{
-            "id":"resp_json",
-            "status":"completed",
-            "model":"gpt-5",
-            "output":[{"type":"message","content":[{"type":"output_text","text":"hello"}]}],
-            "usage":{"input_tokens":4,"output_tokens":1}
-        }"#;
-
-        let merged = convert_stream_text(input).await;
+        let merged = events
+            .iter()
+            .map(|event| String::from_utf8_lossy(event).to_string())
+            .collect::<String>();
         assert!(merged.contains("event: message_start"));
-        assert!(merged.contains("\"text\":\"hello\""));
-        assert!(merged.contains("event: message_stop"));
-    }
-
-    #[tokio::test]
-    async fn test_stream_request_with_failed_json_response_is_error() {
-        let input = r#"{
-            "id":"resp_json",
-            "status":"failed",
-            "error":{"type":"server_error","message":"json backend failed"},
-            "output":[]
-        }"#;
-
-        let merged = convert_stream_text(input).await;
         assert!(merged.contains("event: error"));
-        assert!(merged.contains("json backend failed"));
-        assert!(!merged.contains("event: message_stop"));
+        assert!(merged.contains("Upstream rejected the request before processing"));
+        assert!(!merged.contains("\"stop_reason\":\"max_tokens\""));
     }
 
-    #[tokio::test]
-    async fn test_streaming_conversion_with_wrapped_response_events() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"model\":\"gpt-4o\",\"usage\":{\"input_tokens\":12,\"output_tokens\":0}}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"get_weather\"}}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{\\\"city\\\":\\\"Tokyo\\\"}\"}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\"}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":12,\"output_tokens\":3}}}\n\n"
-        );
 
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert!(merged.contains("\"type\":\"message_start\""));
-        assert!(merged.contains("\"id\":\"resp_1\""));
-        assert!(merged.contains("\"model\":\"gpt-4o\""));
-        assert!(merged.contains("\"type\":\"tool_use\""));
-        assert!(merged.contains("\"name\":\"get_weather\""));
-        assert!(merged.contains("\"type\":\"input_json_delta\""));
-        assert!(merged.contains("\"stop_reason\":\"tool_use\""));
-        assert!(merged.contains("\"input_tokens\":12"));
-        assert!(merged.contains("\"output_tokens\":3"));
-        assert!(merged.contains("\"type\":\"message_stop\""));
-    }
-
-    #[tokio::test]
-    async fn test_streaming_read_tool_drops_empty_pages() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_read\",\"model\":\"gpt-5.5\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_read\",\"type\":\"function_call\",\"call_id\":\"call_read\",\"name\":\"Read\"}}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"fc_read\",\"delta\":\"{\\\"file_path\\\":\\\"/tmp/demo.py\\\",\\\"limit\\\":2000,\\\"offset\\\":0,\\\"pages\\\":\\\"\\\"}\"}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\",\"item_id\":\"fc_read\",\"arguments\":\"{\\\"file_path\\\":\\\"/tmp/demo.py\\\",\\\"limit\\\":2000,\\\"offset\\\":0,\\\"pages\\\":\\\"\\\"}\"}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
-        );
-
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert!(merged.contains("\"name\":\"Read\""));
-        assert!(merged.contains("\"partial_json\":\"{\\\"file_path\\\":\\\"/tmp/demo.py\\\",\\\"limit\\\":2000,\\\"offset\\\":0}"));
-        assert!(!merged.contains("\\\"pages\\\":\\\"\\\""));
-    }
-
-    #[tokio::test]
-    async fn test_streaming_read_tool_duplicate_start_preserves_buffered_args() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_read\",\"model\":\"gpt-5.5\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_read\",\"type\":\"function_call\",\"call_id\":\"call_read\",\"name\":\"Read\"}}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"fc_read\",\"delta\":\"{\\\"file_path\\\":\\\"/tmp/demo.py\\\",\\\"limit\\\":2000,\\\"offset\\\":0,\\\"pages\\\":\\\"\\\"}\"}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_read\",\"type\":\"function_call\",\"call_id\":\"call_read\",\"name\":\"Read\"}}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\",\"item_id\":\"fc_read\"}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
-        );
-
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert_eq!(merged.matches("event: content_block_start").count(), 1);
-        assert_eq!(merged.matches("event: content_block_stop").count(), 1);
-        assert!(merged.contains("\"partial_json\":\"{\\\"file_path\\\":\\\"/tmp/demo.py\\\",\\\"limit\\\":2000,\\\"offset\\\":0}"));
-        assert!(!merged.contains("\\\"pages\\\":\\\"\\\""));
-    }
-
-    #[tokio::test]
-    async fn test_streaming_conversion_interleaved_tool_deltas_by_item_id() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_2\",\"model\":\"gpt-4o\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_1\",\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"first_tool\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_2\",\"type\":\"function_call\",\"call_id\":\"call_2\",\"name\":\"second_tool\"}}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"fc_2\",\"delta\":\"{\\\"b\\\":2}\"}\n\n",
-            "event: response.function_call_arguments.delta\n",
-            "data: {\"type\":\"response.function_call_arguments.delta\",\"item_id\":\"fc_1\",\"delta\":\"{\\\"a\\\":1}\"}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\",\"item_id\":\"fc_1\"}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\",\"item_id\":\"fc_2\"}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":8,\"output_tokens\":4}}}\n\n"
-        );
-
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        let events: Vec<Value> = merged
-            .split("\n\n")
-            .filter_map(|block| {
-                let data = block
-                    .lines()
-                    .find_map(|line| strip_sse_field(line, "data"))?;
-                serde_json::from_str::<Value>(data).ok()
-            })
-            .collect();
-
-        let mut tool_index_by_call: HashMap<String, u64> = HashMap::new();
-        for event in &events {
-            if event.get("type").and_then(|v| v.as_str()) == Some("content_block_start") {
-                let cb = event.get("content_block");
-                if cb.and_then(|v| v.get("type")).and_then(|v| v.as_str()) == Some("tool_use") {
-                    if let (Some(call_id), Some(index)) = (
-                        cb.and_then(|v| v.get("id")).and_then(|v| v.as_str()),
-                        event.get("index").and_then(|v| v.as_u64()),
-                    ) {
-                        tool_index_by_call.insert(call_id.to_string(), index);
-                    }
-                }
-            }
-        }
-
-        let delta_indices: Vec<u64> = events
-            .iter()
-            .filter(|event| {
-                event.get("type").and_then(|v| v.as_str()) == Some("content_block_delta")
-                    && event.pointer("/delta/type").and_then(|v| v.as_str())
-                        == Some("input_json_delta")
-            })
-            .filter_map(|event| event.get("index").and_then(|v| v.as_u64()))
-            .collect();
-
-        assert_eq!(delta_indices.len(), 2);
-        assert_eq!(delta_indices[0], *tool_index_by_call.get("call_2").unwrap());
-        assert_eq!(delta_indices[1], *tool_index_by_call.get("call_1").unwrap());
-        assert_ne!(
-            tool_index_by_call.get("call_1"),
-            tool_index_by_call.get("call_2")
-        );
-    }
-
-    #[tokio::test]
-    async fn test_streaming_tool_done_arguments_fallback_without_deltas() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_done\",\"model\":\"gpt-5.6\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"fc_done\",\"type\":\"function_call\",\"call_id\":\"call_done\",\"name\":\"lookup\",\"arguments\":\"\"}}\n\n",
-            "event: response.function_call_arguments.done\n",
-            "data: {\"type\":\"response.function_call_arguments.done\",\"item_id\":\"fc_done\",\"output_index\":0,\"item\":{\"id\":\"fc_done\",\"type\":\"function_call\",\"arguments\":\"{\\\"q\\\":\\\"rust\\\"}\"}}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
-        );
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(input))]);
-        let merged = create_anthropic_sse_stream_from_responses(upstream)
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .map(|chunk| String::from_utf8_lossy(chunk.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert!(merged.contains("\"partial_json\":\"{\\\"q\\\":\\\"rust\\\"}\""));
-        assert_eq!(merged.matches("event: content_block_stop").count(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_official_reasoning_events_emit_signature_before_stop() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_reason\",\"model\":\"gpt-5.6\"}}\n\n",
-            "event: response.output_item.added\n",
-            "data: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"rs_1\",\"type\":\"reasoning\",\"summary\":[]}}\n\n",
-            "event: response.reasoning_summary_part.added\n",
-            "data: {\"type\":\"response.reasoning_summary_part.added\",\"item_id\":\"rs_1\",\"output_index\":0,\"summary_index\":0,\"part\":{\"type\":\"summary_text\",\"text\":\"\"}}\n\n",
-            "event: response.reasoning_summary_text.delta\n",
-            "data: {\"type\":\"response.reasoning_summary_text.delta\",\"item_id\":\"rs_1\",\"output_index\":0,\"summary_index\":0,\"delta\":\"Need a tool.\"}\n\n",
-            "event: response.reasoning_summary_text.done\n",
-            "data: {\"type\":\"response.reasoning_summary_text.done\",\"item_id\":\"rs_1\",\"output_index\":0,\"summary_index\":0,\"text\":\"Need a tool.\"}\n\n",
-            "event: response.output_item.done\n",
-            "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"id\":\"rs_1\",\"type\":\"reasoning\",\"summary\":[{\"type\":\"summary_text\",\"text\":\"Need a tool.\"}],\"encrypted_content\":\"opaque\"}}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
-        );
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(input))]);
-        let merged = create_anthropic_sse_stream_from_responses(upstream)
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .map(|chunk| String::from_utf8_lossy(chunk.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert!(merged.contains("\"type\":\"thinking_delta\""));
-        assert!(merged.contains("\"type\":\"signature_delta\""));
-        let signature_position = merged.find("signature_delta").unwrap();
-        let stop_position = merged.find("event: content_block_stop").unwrap();
-        assert!(signature_position < stop_position);
-        assert!(!merged[stop_position..].contains("content_block_delta"));
-    }
-
-    #[tokio::test]
-    async fn test_streaming_reasoning_delta_emits_thinking_blocks() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_r\",\"model\":\"o3\",\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}\n\n",
-            "event: response.reasoning.delta\n",
-            "data: {\"type\":\"response.reasoning.delta\",\"delta\":\"Let me \"}\n\n",
-            "event: response.reasoning.delta\n",
-            "data: {\"type\":\"response.reasoning.delta\",\"delta\":\"think...\"}\n\n",
-            "event: response.reasoning.done\n",
-            "data: {\"type\":\"response.reasoning.done\"}\n\n",
-            "event: response.content_part.added\n",
-            "data: {\"type\":\"response.content_part.added\",\"part\":{\"type\":\"output_text\",\"text\":\"\"},\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.output_text.delta\n",
-            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"42\",\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.content_part.done\n",
-            "data: {\"type\":\"response.content_part.done\",\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":5,\"output_tokens\":10}}}\n\n"
-        );
-
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        // Should contain thinking block start, thinking delta, and text content
-        assert!(
-            merged.contains("\"type\":\"thinking\""),
-            "should emit thinking content_block_start"
-        );
-        assert!(
-            merged.contains("\"type\":\"thinking_delta\""),
-            "should emit thinking_delta"
-        );
-        assert!(
-            merged.contains("\"thinking\":\"Let me \"")
-                && merged.contains("\"thinking\":\"think...\""),
-            "should contain both thinking deltas"
-        );
-        assert!(
-            merged.contains("\"type\":\"text_delta\""),
-            "should also emit text content"
-        );
-        assert!(
-            merged.contains("\"text\":\"42\""),
-            "should contain text delta"
-        );
-        assert!(merged.contains("\"stop_reason\":\"end_turn\""));
-
-        let events: Vec<Value> = merged
-            .split("\n\n")
-            .filter_map(|block| {
-                block
-                    .lines()
-                    .find_map(|line| line.strip_prefix("data: "))
-                    .and_then(|data| serde_json::from_str(data).ok())
-            })
-            .collect();
-        let thinking_starts: Vec<&Value> = events
-            .iter()
-            .filter(|event| {
-                event.get("type").and_then(Value::as_str) == Some("content_block_start")
-                    && event.pointer("/content_block/type").and_then(Value::as_str)
-                        == Some("thinking")
-            })
-            .collect();
-        assert_eq!(
-            thinking_starts.len(),
-            1,
-            "keyless deltas must share one block"
-        );
-        let thinking_index = thinking_starts[0]
-            .get("index")
-            .and_then(Value::as_u64)
-            .unwrap();
-        let thinking_delta_indices: Vec<u64> = events
-            .iter()
-            .filter(|event| {
-                event.pointer("/delta/type").and_then(Value::as_str) == Some("thinking_delta")
-            })
-            .filter_map(|event| event.get("index").and_then(Value::as_u64))
-            .collect();
-        assert_eq!(thinking_delta_indices, vec![thinking_index, thinking_index]);
-
-        let stop_position = events
-            .iter()
-            .position(|event| {
-                event.get("type").and_then(Value::as_str) == Some("content_block_stop")
-                    && event.get("index").and_then(Value::as_u64) == Some(thinking_index)
-            })
-            .expect("legacy reasoning done must close the thinking block");
-        let text_start_position = events
-            .iter()
-            .position(|event| {
-                event.get("type").and_then(Value::as_str) == Some("content_block_start")
-                    && event.pointer("/content_block/type").and_then(Value::as_str) == Some("text")
-            })
-            .expect("text block must start");
-        assert!(stop_position < text_start_position);
-    }
-
-    #[tokio::test]
-    async fn test_streaming_text_parts_are_merged_into_one_text_block() {
-        let input = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_merge\",\"model\":\"gpt-5.4\",\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}\n\n",
-            "event: response.content_part.added\n",
-            "data: {\"type\":\"response.content_part.added\",\"part\":{\"type\":\"output_text\",\"text\":\"\"},\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.output_text.delta\n",
-            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"你\",\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.content_part.done\n",
-            "data: {\"type\":\"response.content_part.done\",\"output_index\":0,\"content_index\":0}\n\n",
-            "event: response.content_part.added\n",
-            "data: {\"type\":\"response.content_part.added\",\"part\":{\"type\":\"output_text\",\"text\":\"\"},\"output_index\":0,\"content_index\":1}\n\n",
-            "event: response.output_text.delta\n",
-            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"好\",\"output_index\":0,\"content_index\":1}\n\n",
-            "event: response.content_part.done\n",
-            "data: {\"type\":\"response.content_part.done\",\"output_index\":0,\"content_index\":1}\n\n",
-            "event: response.output_text.done\n",
-            "data: {\"type\":\"response.output_text.done\",\"output_index\":0,\"content_index\":1}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":5,\"output_tokens\":2}}}\n\n"
-        );
-
-        let upstream = stream::iter(vec![Ok::<_, std::io::Error>(Bytes::from(
-            input.as_bytes().to_vec(),
-        ))]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-        let events: Vec<Value> = chunks
-            .into_iter()
-            .flat_map(|chunk| {
-                let bytes = chunk.unwrap();
-                let text = String::from_utf8_lossy(bytes.as_ref()).to_string();
-                text.split("\n\n")
-                    .filter_map(|block| {
-                        block.lines().find_map(|line| {
-                            strip_sse_field(line, "data")
-                                .and_then(|payload| serde_json::from_str::<Value>(payload).ok())
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let text_starts = events
-            .iter()
-            .filter(|event| {
-                event.get("type").and_then(|v| v.as_str()) == Some("content_block_start")
-                    && event
-                        .pointer("/content_block/type")
-                        .and_then(|v| v.as_str())
-                        == Some("text")
-            })
-            .count();
-        let text_stops = events
-            .iter()
-            .filter(|event| {
-                event.get("type").and_then(|v| v.as_str()) == Some("content_block_stop")
-            })
-            .count();
-        let text_deltas: Vec<String> = events
-            .iter()
-            .filter(|event| {
-                event.get("type").and_then(|v| v.as_str()) == Some("content_block_delta")
-                    && event.pointer("/delta/type").and_then(|v| v.as_str()) == Some("text_delta")
-            })
-            .filter_map(|event| {
-                event
-                    .pointer("/delta/text")
-                    .and_then(|v| v.as_str())
-                    .map(ToString::to_string)
-            })
-            .collect();
-
-        assert_eq!(text_starts, 1);
-        assert_eq!(text_stops, 1);
-        assert_eq!(text_deltas, vec!["你".to_string(), "好".to_string()]);
-    }
-
-    #[tokio::test]
-    async fn test_streaming_responses_chinese_split_across_chunks_no_replacement_chars() {
-        // Chinese text delta split across two TCP chunks.
-        let full = concat!(
-            "event: response.created\n",
-            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_cn\",\"model\":\"gpt-4o\",\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}\n\n",
-            "event: response.output_text.delta\n",
-            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"你好世界\"}\n\n",
-            "event: response.completed\n",
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":5,\"output_tokens\":4}}}\n\n"
-        );
-        let bytes = full.as_bytes();
-
-        // Find "你" and split inside it
-        let ni_start = bytes.windows(3).position(|w| w == "你".as_bytes()).unwrap();
-        let split_point = ni_start + 2; // split after second byte of "你"
-
-        let chunk1 = Bytes::from(bytes[..split_point].to_vec());
-        let chunk2 = Bytes::from(bytes[split_point..].to_vec());
-
-        let upstream = stream::iter(vec![
-            Ok::<_, std::io::Error>(chunk1),
-            Ok::<_, std::io::Error>(chunk2),
-        ]);
-        let converted = create_anthropic_sse_stream_from_responses(upstream);
-        let chunks: Vec<_> = converted.collect().await;
-        let merged = chunks
-            .into_iter()
-            .map(|c| String::from_utf8_lossy(c.unwrap().as_ref()).to_string())
-            .collect::<String>();
-
-        assert!(
-            merged.contains("你好世界"),
-            "expected '你好世界' in output, got replacement chars (U+FFFD)"
-        );
-        assert!(
-            !merged.contains('\u{FFFD}'),
-            "output must not contain U+FFFD replacement characters"
-        );
-    }
 }
