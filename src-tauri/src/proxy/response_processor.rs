@@ -3,7 +3,8 @@
 //! 统一处理流式和非流式 API 响应
 
 use super::{
-    content_encoding::{decompress_body, get_content_encoding},
+    content_encoding::{decompress_body_with_limit, get_content_encoding, DecompressError},
+    hyper_client::MAX_RESPONSE_BODY_BYTES,
     forwarder::ActiveConnectionGuard,
     handler_config::{StreamUsageEventFilter, UsageParserConfig},
     handler_context::{RequestContext, StreamingTimeoutConfig},
@@ -90,10 +91,11 @@ pub(crate) async fn read_decoded_body(
 ) -> Result<(HeaderMap, http::StatusCode, Bytes), ProxyError> {
     let mut headers = response.headers().clone();
     let status = response.status();
+    let bytes_future = response.bytes_with_limit(MAX_RESPONSE_BODY_BYTES);
     let raw_bytes = if body_timeout.is_zero() {
-        response.bytes().await?
+        bytes_future.await?
     } else {
-        tokio::time::timeout(body_timeout, response.bytes())
+        tokio::time::timeout(body_timeout, bytes_future)
             .await
             .map_err(|_| {
                 ProxyError::Timeout(format!(
@@ -115,15 +117,19 @@ pub(crate) async fn read_decoded_body(
 
     if let Some(encoding) = get_content_encoding(&headers) {
         log::debug!("[{tag}] 解压非流式响应: content-encoding={encoding}");
-        match decompress_body(&encoding, &raw_bytes) {
+        match decompress_body_with_limit(&encoding, &raw_bytes, MAX_RESPONSE_BODY_BYTES) {
             Ok(Some(decompressed)) => {
+                // 解码器在预算耗尽处即截停，此处必然 ≤ MAX_RESPONSE_BODY_BYTES
                 body_bytes = Bytes::from(decompressed);
                 decoded = true;
             }
             // 不支持的编码：原样透传且保留 content-encoding 头，
             // 让下游诊断/客户端知道这仍是压缩字节
             Ok(None) => {}
-            Err(e) => {
+            Err(DecompressError::TooLarge { .. }) => {
+                return Err(ProxyError::ResponseBodyTooLarge(MAX_RESPONSE_BODY_BYTES));
+            }
+            Err(DecompressError::Io(e)) => {
                 log::warn!("[{tag}] 解压失败 ({encoding}): {e}，使用原始数据");
             }
         }
@@ -135,6 +141,7 @@ pub(crate) async fn read_decoded_body(
 
     Ok((headers, status, body_bytes))
 }
+
 
 // ============================================================================
 // 公共接口
