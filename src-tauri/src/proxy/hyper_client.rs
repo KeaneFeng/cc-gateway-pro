@@ -166,6 +166,12 @@ impl ProxyResponse {
     ///
     /// 所有变体都在累积过程中逐块检查、超限即断开（drop stream 中止上游连接），
     /// 而不是先收满再比较——否则超大明文 body 仍会完整进入内存，限制形同虚设。
+        /// 仅供测试读取完整缓冲响应；生产路径一律走 [`Self::bytes_with_limit`]。
+    #[cfg(test)]
+    pub async fn bytes(self) -> Result<Bytes, ProxyError> {
+        self.bytes_with_limit(MAX_RESPONSE_BODY_BYTES).await
+    }
+
     pub async fn bytes_with_limit(self, max_bytes: usize) -> Result<Bytes, ProxyError> {
         match self {
             Self::Buffered { body, .. } => {
