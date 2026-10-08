@@ -58,15 +58,15 @@ describe("GrokBuildProviderForm", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /88API/ }));
+    await user.click(screen.getByRole("button", { name: /PackyCode/ }));
 
     const websiteInput = container.querySelector<HTMLInputElement>(
       'input[name="websiteUrl"]',
     );
-    expect(websiteInput?.value).toBe("https://88api.ai");
+    expect(websiteInput?.value).toBe("https://www.packyapi.ai");
     expect(screen.getByRole("link", { name: /API Key/ })).toHaveAttribute(
       "href",
-      "https://88api.ai/sign-up?aff=HSGY",
+      "https://www.packyapi.ai/register?aff=cc-gateway-pro",
     );
   });
 

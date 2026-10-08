@@ -4,11 +4,11 @@
 
 use super::{
     content_encoding::{decompress_body_with_limit, get_content_encoding, DecompressError},
-    hyper_client::MAX_RESPONSE_BODY_BYTES,
     forwarder::ActiveConnectionGuard,
     handler_config::{StreamUsageEventFilter, UsageParserConfig},
     handler_context::{RequestContext, StreamingTimeoutConfig},
     hyper_client::ProxyResponse,
+    hyper_client::MAX_RESPONSE_BODY_BYTES,
     server::ProxyState,
     session_trace::{
         create_stream_trace_collector, spawn_record_non_streaming_trace,
@@ -141,8 +141,6 @@ pub(crate) async fn read_decoded_body(
 
     Ok((headers, status, body_bytes))
 }
-
-
 
 // ============================================================================
 // 公共接口

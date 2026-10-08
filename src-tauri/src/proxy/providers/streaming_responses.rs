@@ -1819,6 +1819,4 @@ mod tests {
         assert!(merged.contains("Upstream rejected the request before processing"));
         assert!(!merged.contains("\"stop_reason\":\"max_tokens\""));
     }
-
-
 }

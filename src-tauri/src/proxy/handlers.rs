@@ -1208,7 +1208,6 @@ async fn handle_responses_compact_for_app(
 /// error bodies and everything unrelated pass through unchanged. Usage is
 /// collected exactly as `process_response` would (same `CODEX_PARSER_CONFIG`).
 async fn handle_codex_responses_namespace_restore(
-
     response: super::hyper_client::ProxyResponse,
     ctx: &RequestContext,
     state: &ProxyState,
