@@ -379,6 +379,12 @@ pub fn anthropic_to_responses(
                 let mut response_tool = json!({
                     "type": "function",
                     "name": t.get("name").and_then(|n| n.as_str()).unwrap_or(""),
+                    // Anthropic 工具 schema 允许可选参数（required 是任意子集），而
+                    // Responses 后端把省略的 `strict` 按 true 处理：可选属性会被
+                    // 严格化进 required，模型被迫输出它本应能省略的字段（#7713 中
+                    // Claude Code Agent 的可选 isolation 被强制输出即此形态）。
+                    // 显式 false 保留客户端 schema 的可选语义。
+                    "strict": false,
                 });
                 // 同 transform.rs：缺失的 description 省略而非输出 null，
                 // 否则严格上游会拒绝整个请求。
@@ -1126,6 +1132,46 @@ mod tests {
         assert_eq!(
             result["instructions"],
             "Stable prompt part 1\n\nStable prompt part 2"
+        );
+    }
+
+    #[test]
+    fn test_anthropic_to_responses_marks_function_tools_not_strict() {
+        // #7713：可选参数（required 是任意子集）必须保留可选语义。
+        // 省略 strict 时 Responses 后端按 true 严格化，模型被迫输出 isolation。
+        let input = json!({
+            "model": "gpt-5.6-luna",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "Call the agent"}],
+            "tools": [{
+                "name": "Agent",
+                "description": "Launch a sub-agent",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "description": {"type": "string"},
+                        "prompt": {"type": "string"},
+                        "isolation": {"type": "string", "enum": ["worktree", "remote"]}
+                    },
+                    "required": ["description", "prompt"]
+                }
+            }]
+        });
+
+        let plain = anthropic_to_responses(input.clone(), None, false, false).unwrap();
+        assert_eq!(plain["tools"][0]["strict"], json!(false));
+        // required 保持为原有子集，strict 语义交由后端保留
+        assert_eq!(
+            plain["tools"][0]["parameters"]["required"],
+            json!(["description", "prompt"])
+        );
+
+        // 同一转换分支也服务 Codex OAuth 后端
+        let oauth = anthropic_to_responses(input, None, true, false).unwrap();
+        assert_eq!(oauth["tools"][0]["strict"], json!(false));
+        assert_eq!(
+            oauth["tools"][0]["parameters"]["required"],
+            json!(["description", "prompt"])
         );
     }
 
