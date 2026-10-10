@@ -1625,7 +1625,6 @@ mod tests {
     use super::*;
     use futures::stream;
     use futures::StreamExt;
-    use std::collections::HashMap;
 
     async fn convert_stream_text(input: impl Into<Bytes>) -> String {
         let upstream = stream::iter(vec![Ok::<_, std::io::Error>(input.into())]);
