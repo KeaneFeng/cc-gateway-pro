@@ -66,7 +66,8 @@ pub struct TrayTexts {
 /// 镜像前端 `i18n/getInitialLanguage` 的判定顺序，确保首次安装
 /// （`settings.language` 尚未写入）时托盘语言与界面语言一致：
 /// 繁中系统（zh-TW/HK/MO/Hant）→ `zh-TW`，其余 zh → `zh`，
-/// 日文 → `ja`，英文 → `en`，未知区域回退到 `zh`（与前端默认一致）。
+/// 日文 → `ja`，土耳其文 → `tr`，英文 → `en`，其他语言回退到 `en`，
+/// 区域为空时回退到 `zh`（与前端默认一致）。
 fn map_locale_to_tray_language(locale: &str) -> &'static str {
     let locale = locale.to_lowercase();
     if locale == "zh" {
@@ -83,8 +84,12 @@ fn map_locale_to_tray_language(locale: &str) -> &'static str {
         "ja"
     } else if locale.starts_with("en") {
         "en"
-    } else {
+    } else if locale.is_empty() {
         "zh"
+    } else {
+        // 不支持的系统语言回退英文（上游 dea297ce）；fork 无 Turkish 文案，
+        // 上游 "tr" 分支随 c21106ff i18n 推迟件暂缺。
+        "en"
     }
 }
 
@@ -1197,16 +1202,17 @@ mod tests {
     }
 
     #[test]
-    fn locale_unknown_falls_back_to_zh() {
+    fn locale_unknown_falls_back_to_en() {
         use super::map_locale_to_tray_language;
-        // 与前端 getInitialLanguage 的默认值保持一致。
-        for locale in ["de-DE", "fr", "ko-KR", ""] {
+        // 与前端 getInitialLanguage 保持一致：认不出的语言用英文，区域为空才用默认的 zh。
+        for locale in ["de-DE", "fr", "ko-KR"] {
             assert_eq!(
                 map_locale_to_tray_language(locale),
-                "zh",
-                "expected {locale} -> zh (default)"
+                "en",
+                "expected {locale} -> en"
             );
         }
+        assert_eq!(map_locale_to_tray_language(""), "zh");
     }
 
     #[test]
