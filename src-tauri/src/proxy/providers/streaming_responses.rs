@@ -1546,6 +1546,11 @@ pub fn create_anthropic_sse_stream_from_responses<E: std::error::Error + Send + 
                     }
                 }
                 Err(e) => {
+                    // A late transport failure cannot invalidate an already emitted
+                    // terminal response or append a second terminal event.
+                    if terminated {
+                        break;
+                    }
                     log::error!("Responses stream error: {e}");
                     let error_event = json!({
                         "type": "error",
