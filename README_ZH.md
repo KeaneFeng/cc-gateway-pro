@@ -9,7 +9,7 @@
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
 [![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
-[English](README.md) | 中文 | [日本語](README_JA.md) | [Svenska](README_SV.md) | [更新日志](CHANGELOG.md)
+[English](README.md) | 中文 | [日本語](README_JA.md) | [Svenska](README_SV.md) | [Español](README_ES.md) | [更新日志](CHANGELOG.md)
 
 </div>
 
@@ -134,6 +134,7 @@ pnpm tauri build
 - [English README](README.md)
 - [日本語 README](README_JA.md)
 - [Svenska README](README_SV.md)
+- [Español README](README_ES.md)
 - [用户手册](docs/user-manual/zh/README.md)
 - [架构与核心流程](docs/architecture-and-flows-zh.md)
 - [代理使用指南](docs/proxy-guide-zh.md)

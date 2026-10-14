@@ -9,7 +9,7 @@
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
 [![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
-[English](README.md) | [中文](README_ZH.md) | [日本語](README_JA.md) | Svenska | [Ändringslogg](CHANGELOG.md)
+[English](README.md) | [中文](README_ZH.md) | [日本語](README_JA.md) | Svenska | [Español](README_ES.md) | [Ändringslogg](CHANGELOG.md)
 
 </div>
 
@@ -134,6 +134,7 @@ Repositoriet innehåller även ett hjälpskript:
 - [Engelsk README](README.md)
 - [Kinesisk README](README_ZH.md)
 - [Japansk README](README_JA.md)
+- [Spansk README](README_ES.md)
 - [Användarmanual](docs/user-manual/zh/README.md)
 - [Arkitektur och flöden](docs/architecture-and-flows-zh.md)
 - [Proxyguide](docs/proxy-guide-zh.md)
