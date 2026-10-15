@@ -750,7 +750,8 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
                             for event in state.finalize() {
                                 yield Ok(event);
                             }
-                            continue;
+                            // [DONE] is terminal, including failed/incomplete finalization.
+                            return;
                         }
 
                         let chunk: Value = match serde_json::from_str(&data) {
