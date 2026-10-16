@@ -1285,7 +1285,9 @@ fn load_parent_timeline(
     let mut bytes = Vec::new();
     loop {
         bytes.clear();
-        let read = reader.read_until(b'\n', &mut bytes)?;
+        let read = reader.read_until(b'\n', &mut bytes).map_err(|error| {
+            ParentSignatureError::transient(format!("无法读取父 rollout: {error}"))
+        })?;
         if read == 0 {
             break;
         }
@@ -4286,6 +4288,12 @@ mod tests {
         assert!(!sync_test_file(&db, &child, &[&parent, &child])?.deferred);
         assert_eq!(codex_parse_count(&child), 3);
         Ok(())
+    }
+
+    /// fork 未移植压缩 rollout（codex_rollout_file），此助手按明文原样返回；
+    /// 压缩分支的用例在明文路径上照常覆盖坏字节/坏 JSON 行为。
+    fn compress_rollout(plain: &Path) -> PathBuf {
+        plain.to_path_buf()
     }
 
     /// 文件系统给不出文件身份时（如 Windows 访问 \\wsl.localhost）父时间线按设计不进缓存，

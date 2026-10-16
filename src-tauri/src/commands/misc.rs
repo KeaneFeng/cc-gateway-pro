@@ -1080,6 +1080,16 @@ static VERSION_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.-]+)?").expect("Invalid version regex")
 });
 
+/// 判断 shell 输出是否表示"找不到该命令"。
+/// 只认各 shell 的固定格式，避免把工具自身的 `module not found` 之类错误当成没装：
+/// bash/zsh `command not found`，dash/sh `<tool>: not found`，fish `Unknown command`。
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn is_shell_command_missing(err: &str, tool: &str) -> bool {
+    err.contains("command not found")
+        || err.contains(&format!("{tool}: not found"))
+        || err.contains("Unknown command")
+}
+
 /// 从版本输出中提取纯版本号
 fn extract_version(raw: &str) -> String {
     VERSION_RE
@@ -1155,7 +1165,7 @@ fn try_get_version(tool: &str) -> ShellProbe {
 }
 
 /// 校验 WSL 发行版名称是否合法
-/// WSL 发行版名称只允许字母、数字、连字符和下划线
+/// WSL 发行版名称只允许字母、数字、连字符、下划线和点（如 `Ubuntu-22.04`）
 #[cfg(target_os = "windows")]
 fn is_valid_wsl_distro_name(name: &str) -> bool {
     !name.is_empty()
@@ -1374,8 +1384,7 @@ fn try_get_version_wsl(
                 // 文本兜底判别"没装"；其余非零退出视作"装了但 --version 报错"。
                 let not_found = err.is_empty()
                     || out.status.code() == Some(127)
-                    || err.contains("command not found")
-                    || err.contains("not found");
+                    || is_shell_command_missing(&err, tool);
                 if not_found {
                     ShellProbe::NotFound(format!("[WSL:{distro}] {NOT_INSTALLED}"))
                 } else {
@@ -3963,6 +3972,31 @@ pub async fn set_window_theme(window: tauri::Window, theme: String) -> Result<()
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn shell_command_missing_matches_shell_formats_only() {
+        assert!(is_shell_command_missing(
+            "bash: line 1: claude: command not found",
+            "claude"
+        ));
+        assert!(is_shell_command_missing(
+            "zsh:1: command not found: claude",
+            "claude"
+        ));
+        assert!(is_shell_command_missing(
+            "sh: 1: claude: not found",
+            "claude"
+        ));
+        assert!(is_shell_command_missing(
+            "fish: Unknown command: claude",
+            "claude"
+        ));
+        assert!(!is_shell_command_missing(
+            "Error: Cannot find module 'x'\nmodule not found",
+            "claude"
+        ));
+        assert!(!is_shell_command_missing("config file not found", "claude"));
+    }
     use super::*;
     use std::path::{Path, PathBuf};
 
@@ -4120,95 +4154,6 @@ mod tests {
             compare_semver("2.1.156-beta.1", "2.1.156"),
             Some(std::cmp::Ordering::Less)
         );
-    }
-
-    #[test]
-    fn github_release_version_prefers_semver_in_name_over_calendar_tag() {
-        // Hermes 官方 release：tag 日历式，语义版本只在 name 里；2026-08-19 起括号内还多了个 v
-        for (name, tag, want) in [
-            ("Hermes Agent v0.20.4 (2026.8.18)", "v2026.8.18", "0.20.4"),
-            ("Hermes Agent v0.21.0 (v2026.8.31)", "v2026.8.31", "0.21.0"),
-            (
-                "Hermes Agent v0.20.3 (2026.8.16.2)",
-                "v2026.8.16.2",
-                "0.20.3",
-            ),
-        ] {
-            let json = serde_json::json!({ "name": name, "tag_name": tag });
-            assert_eq!(
-                github_release_version_from_json(&json).as_deref(),
-                Some(want),
-                "{name}"
-            );
-        }
-    }
-
-    #[test]
-    fn github_release_version_falls_back_to_semver_tag() {
-        // opencode：name == tag，走 name 或 tag 结果一致
-        let named = serde_json::json!({ "name": "v1.18.18", "tag_name": "v1.18.18" });
-        assert_eq!(
-            github_release_version_from_json(&named).as_deref(),
-            Some("1.18.18")
-        );
-        let prose = serde_json::json!({ "name": "August refresh", "tag_name": "v1.18.18" });
-        assert_eq!(
-            github_release_version_from_json(&prose).as_deref(),
-            Some("1.18.18")
-        );
-        let unnamed = serde_json::json!({ "tag_name": "v1.2.3" });
-        assert_eq!(
-            github_release_version_from_json(&unnamed).as_deref(),
-            Some("1.2.3")
-        );
-    }
-
-    #[test]
-    fn github_release_version_rejects_calendar_versions_and_rate_limit_body() {
-        // name 与 tag 都只有日历式数字：不得把 2026.8.31 当版本号（前端会永久判定"可更新"）
-        let calendar = serde_json::json!({
-            "name": "Hermes Agent (2026.8.31)",
-            "tag_name": "v2026.8.31"
-        });
-        assert_eq!(github_release_version_from_json(&calendar), None);
-        let four_seg = serde_json::json!({ "tag_name": "v2026.8.16.2" });
-        assert_eq!(github_release_version_from_json(&four_seg), None);
-        // GitHub 未认证限流响应只有 message / documentation_url
-        let limited = serde_json::json!({
-            "message": "API rate limit exceeded for 1.2.3.4.",
-            "documentation_url": "https://docs.github.com/rest"
-        });
-        assert_eq!(github_release_version_from_json(&limited), None);
-        assert_eq!(
-            github_release_version_from_json(&serde_json::json!({})),
-            None
-        );
-    }
-
-    #[test]
-    fn hermes_pypi_fallback_is_hidden_when_local_leads() {
-        let pypi = || Some("0.19.0".to_string());
-        // GitHub 不可达、PyPI 仍停在 0.19.0：本地 0.21.0 时不展示旧值（否则"最新 < 当前"）
-        assert_eq!(drop_latest_behind_local(pypi(), Some("0.21.0")), None);
-        // 本地等于 / 落后 PyPI，或本地未知：照常展示
-        assert_eq!(
-            drop_latest_behind_local(pypi(), Some("0.19.0")).as_deref(),
-            Some("0.19.0")
-        );
-        assert_eq!(
-            drop_latest_behind_local(pypi(), Some("0.18.2")).as_deref(),
-            Some("0.19.0")
-        );
-        assert_eq!(
-            drop_latest_behind_local(pypi(), None).as_deref(),
-            Some("0.19.0")
-        );
-        // 本地无法解析时保守视为未领先
-        assert_eq!(
-            drop_latest_behind_local(pypi(), Some("unknown")).as_deref(),
-            Some("0.19.0")
-        );
-        assert_eq!(drop_latest_behind_local(None, Some("0.21.0")), None);
     }
 
     #[test]

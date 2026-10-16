@@ -274,7 +274,10 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         drop(listener);
 
-        let error = reqwest::Client::new()
+        // 显式绕过系统代理：reqwest 默认读取系统代理配置，本机开着
+        // 127.0.0.1 代理时"连接拒绝"会被代理截成 503，测试就失去确定性。
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let error = client
             .get(format!(
                 "http://127.0.0.1:{port}/v1/responses?key=secret-token"
             ))
