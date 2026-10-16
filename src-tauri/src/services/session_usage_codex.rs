@@ -1278,13 +1278,23 @@ fn load_parent_timeline(
 
     // 必须扫描完整父文件，不能在首个未来时间戳处 break：rollout 写入顺序
     // 不承诺时间戳严格单调。缓存完整时间线后，不同 child cutoff 只需内存过滤。
-    // 注：上游用 codex_rollout_file::reader_from_file 支持压缩 rollout（fork 未
-    // 移植该特性），此处维持普通 BufReader；I/O 错误按 fork 既有路径冒泡。
-    for line in BufReader::new(file).lines() {
-        let Ok(line) = line else {
+    // fork 未移植压缩 rollout（codex_rollout_file），维持普通 BufReader；
+    // 但采纳上游 b542627c 的解码结构：读字节后单独做 UTF-8 解码，
+    // 坏编码记录与坏 JSON 一样按"跳过"处理，而不是可重试的 reader 失败。
+    let mut reader = BufReader::new(file);
+    let mut bytes = Vec::new();
+    loop {
+        bytes.clear();
+        let read = reader.read_until(b'\n', &mut bytes)?;
+        if read == 0 {
+            break;
+        }
+        // Decode separately from reading: malformed UTF-8 is a skipped record,
+        // just like malformed JSON, rather than a retryable reader failure.
+        let Ok(line) = std::str::from_utf8(&bytes) else {
             continue;
         };
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
             continue;
         };
         let timestamp = parse_timestamp(value.get("timestamp"));
@@ -3176,6 +3186,71 @@ mod tests {
 
         let result = sync_test_file(&db, &child, &[&parent, &child])?;
         assert_eq!((result.imported, result.skipped), (1, 2));
+        Ok(())
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_parent_malformed_lines_do_not_defer_child_or_prevent_warm_skip() -> Result<(), AppError>
+    {
+        let cases: &[(&[u8], &[u8], bool)] = &[
+            // A bad record must not hide subsequent valid records, including
+            // a complete final record without a trailing newline.
+            (b"\xff\n", b"", true),
+            (b"", b"\xff\n", false),
+            (b"", b"\xff", false),
+            // Keep the existing malformed-JSON/blank-line behavior too.
+            (b"{malformed\n \t\r\n", b"{malformed", false),
+        ];
+        for compressed in [false, true] {
+            for &(prefix, suffix, remove_final_newline) in cases {
+                clear_codex_replay_caches();
+                let db = Database::memory()?;
+                let temp = tempdir().unwrap();
+                let (parent, child) = retryable_parent_and_child(temp.path());
+                append_jsonl(&parent, turn_context_at("2026-07-10T03:00:10Z"));
+                let mut contents = fs::read(&parent).unwrap();
+                if remove_final_newline {
+                    assert_eq!(contents.pop(), Some(b'\n'));
+                }
+                fs::write(&parent, [prefix, contents.as_slice(), suffix].concat()).unwrap();
+                let parent = if compressed {
+                    compress_rollout(&parent)
+                } else {
+                    parent
+                };
+
+                let result = sync_test_file(&db, &child, &[&parent, &child])?;
+                assert_eq!(
+                    (result.imported, result.skipped, result.deferred),
+                    (1, 1, false)
+                );
+                let timeline = load_parent_timeline(&parent).unwrap();
+                assert_eq!(timeline.events.len(), 1);
+                assert_eq!(
+                    timeline.max_timestamp,
+                    Some("2026-07-10T03:00:10Z".parse::<DateTime<Utc>>().unwrap())
+                );
+                for _ in 0..3 {
+                    let warm = sync_test_file(&db, &child, &[&parent, &child])?;
+                    assert_eq!((warm.imported, warm.deferred), (0, false));
+                }
+                assert_eq!(codex_parse_count(&child), 1);
+                if parent_cache_supported(&parent) {
+                    assert!(Arc::ptr_eq(
+                        &timeline,
+                        &load_parent_timeline(&parent).unwrap()
+                    ));
+                }
+                let conn = lock_conn!(db.conn);
+                let usage: (i64, i64, i64) = conn.query_row(
+                    "SELECT input_tokens, cache_read_tokens, output_tokens FROM proxy_request_logs",
+                    [],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                )?;
+                assert_eq!(usage, (300, 150, 50));
+            }
+        }
         Ok(())
     }
 
