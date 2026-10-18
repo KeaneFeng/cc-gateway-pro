@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::future::Future;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -475,16 +476,6 @@ where
 // ─── Tests ───────────────────────────────────────────────────
 
 // ─── Sync operation lock ────────────────────────────────────
-
-/// Serialize every snapshot upload/download across all transports.
-///
-/// WebDAV and S3 used to own separate mutexes, which allowed two transports to
-/// restore the database and Skills SSOT concurrently. Keep the lock in this
-/// transport-agnostic layer so future transports automatically share it too.
-pub(crate) fn sync_mutex() -> &'static tokio::sync::Mutex<()> {
-    static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
-}
 
 #[cfg(test)]
 mod tests {

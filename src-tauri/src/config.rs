@@ -293,6 +293,18 @@ pub fn write_text_file(path: &Path, data: &str) -> Result<(), AppError> {
     atomic_write(path, data.as_bytes())
 }
 
+/// 原子写入并强制 0600 权限（用于 settings.json 等含密钥的本地文件）。
+pub fn atomic_write_private(path: &Path, data: &[u8]) -> Result<(), AppError> {
+    atomic_write(path, data)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .map_err(|e| AppError::io(path, e))?;
+    }
+    Ok(())
+}
+
 /// 原子写入：写入临时文件后 rename 替换，避免半写状态
 pub fn atomic_write(path: &Path, data: &[u8]) -> Result<(), AppError> {
     if let Some(parent) = path.parent() {

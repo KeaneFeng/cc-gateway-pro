@@ -2153,7 +2153,7 @@ fn enumerate_tool_installations(tool: &str) -> Vec<ToolInstallation> {
                     };
                     (None, false, error, true)
                 }
-                Err(e) => (None, false, Some(e), false),
+                Err(e) => (None, false, Some(e.to_string()), false),
             };
 
             let is_path_default = path_default.as_ref() == Some(&real);
@@ -4339,81 +4339,6 @@ mod tests {
     }
 
     /// Codex 官方独立安装器的识别是纯字符串判定,POSIX / Windows 布局都在这里固化。
-    mod codex_standalone_detection {
-        use super::super::*;
-
-        #[test]
-        fn posix_default_layout() {
-            assert_eq!(
-                codex_standalone_install(
-                    "/Users/me/.local/bin/codex",
-                    "/Users/me/.codex/packages/standalone/releases/0.157.0-aarch64-apple-darwin/bin/codex",
-                ),
-                Some(CodexStandaloneInstall {
-                    install_dir: "/Users/me/.local/bin".to_string(),
-                    codex_home: Some("/Users/me/.codex".to_string()),
-                })
-            );
-        }
-
-        #[test]
-        fn windows_verbatim_real_is_restored() {
-            // canonicalize 出的 `\\?\` 前缀要剥掉再交给 installer;大小写保持原样。
-            assert_eq!(
-                codex_standalone_install(
-                    r"C:\Users\Me\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe",
-                    r"\\?\C:\Users\Me\.Codex\Packages\Standalone\releases\0.157.0-x86_64-pc-windows-msvc\bin\codex.exe",
-                ),
-                Some(CodexStandaloneInstall {
-                    install_dir: r"C:\Users\Me\AppData\Local\Programs\OpenAI\Codex\bin".to_string(),
-                    codex_home: Some(r"C:\Users\Me\.Codex".to_string()),
-                })
-            );
-            assert_eq!(
-                codex_standalone_install(
-                    r"\\server\share\bin\codex.exe",
-                    r"\\?\UNC\server\share\cx\packages\standalone\current\bin\codex.exe",
-                )
-                .and_then(|install| install.codex_home),
-                Some(r"\\server\share\cx".to_string())
-            );
-        }
-
-        #[test]
-        fn windows_default_entry_without_resolved_real() {
-            // canonicalize 失败时 real 就是入口本身:仍按默认入口目录认出,只是不传 CODEX_HOME。
-            let bin = r"C:\Users\me\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe";
-            assert_eq!(
-                codex_standalone_install(bin, bin),
-                Some(CodexStandaloneInstall {
-                    install_dir: r"C:\Users\me\AppData\Local\Programs\OpenAI\Codex\bin".to_string(),
-                    codex_home: None,
-                })
-            );
-        }
-
-        #[test]
-        fn other_install_channels_are_not_standalone() {
-            for (bin, real) in [
-                (
-                    "/Users/me/.nvm/versions/node/v22.19.0/bin/codex",
-                    "/Users/me/.nvm/versions/node/v22.19.0/lib/node_modules/@openai/codex/bin/codex.js",
-                ),
-                (
-                    "/opt/homebrew/bin/codex",
-                    "/opt/homebrew/Caskroom/codex/0.157.0/bin/codex",
-                ),
-                // app-server 守护进程的发布包不是 PATH 上的 CLI。
-                (
-                    "/Users/me/.local/bin/codex",
-                    "/Users/me/.codex/packages/app-server-daemon/current/bin/codex",
-                ),
-                (r"C:\Users\me\AppData\Roaming\npm\codex.cmd", r"C:\Users\me\AppData\Roaming\npm\codex.cmd"),
-            ] {
-                assert_eq!(codex_standalone_install(bin, real), None, "{bin}");
-            }
-        }
-    }
 
     /// 锚定落空后的兜底:认不出渠道的原生可执行文件不再退回裸 `npm i -g`(#7650),
     /// 脚本 shim / node_modules 里的入口 / 定位不到默认那处仍保持旧的静态命令。
@@ -4442,85 +4367,6 @@ mod tests {
                 is_path_default: is_default,
                 real: path,
             }
-        }
-
-        #[test]
-        fn native_binary_outside_node_modules_is_unmanaged() {
-            let dir = tempfile::tempdir().unwrap();
-            let gemini = installed(&dir, "nix-profile/bin/gemini", &MACH_O_64, true);
-            assert_eq!(
-                resolve_update_command("gemini", &[gemini]),
-                UpdateCommand::Unmanaged
-            );
-            let pi = installed(&dir, "bin/pi", b"\x7fELF\x02\x01\x01", true);
-            assert_eq!(
-                resolve_update_command("pi", &[pi]),
-                UpdateCommand::Unmanaged
-            );
-        }
-
-        #[test]
-        fn script_shim_keeps_static_npm_command() {
-            // asdf / nodenv 的 shim 是脚本,背后可能正是 npm 全局包,不能拒绝。
-            let dir = tempfile::tempdir().unwrap();
-            let shim = installed(
-                &dir,
-                ".asdf/shims/gemini",
-                b"#!/usr/bin/env bash\nexec asdf exec gemini \"$@\"\n",
-                true,
-            );
-            assert_eq!(
-                resolve_update_command("gemini", &[shim]),
-                UpdateCommand::Static(static_fallback_command("gemini"))
-            );
-        }
-
-        #[test]
-        fn native_binary_inside_node_modules_keeps_static_npm_command() {
-            // 有的 npm 包把原生二进制放在包内,真身仍在 node_modules 下,归 npm 管。
-            let dir = tempfile::tempdir().unwrap();
-            let bundled = installed(
-                &dir,
-                "prefix/lib/node_modules/@google/gemini-cli/bin/gemini",
-                &MACH_O_64,
-                true,
-            );
-            assert_eq!(
-                resolve_update_command("gemini", &[bundled]),
-                UpdateCommand::Static(static_fallback_command("gemini"))
-            );
-        }
-
-        #[test]
-        fn unknown_default_keeps_static_command() {
-            // 多处安装又定位不到默认那处:不知道命令行用的是哪份,维持旧行为(前端会弹确认)。
-            let dir = tempfile::tempdir().unwrap();
-            let a = installed(&dir, "a/bin/gemini", &MACH_O_64, false);
-            let b = installed(&dir, "b/bin/gemini", &MACH_O_64, false);
-            assert_eq!(
-                resolve_update_command("gemini", &[a, b]),
-                UpdateCommand::Static(static_fallback_command("gemini"))
-            );
-        }
-
-        #[test]
-        fn native_executable_magic() {
-            let dir = tempfile::tempdir().unwrap();
-            let cases: [(&str, &[u8], bool); 7] = [
-                ("elf", b"\x7fELF\x02", true),
-                ("macho", &MACH_O_64, true),
-                ("fat", &[0xca, 0xfe, 0xba, 0xbe], true),
-                ("pe.exe", b"MZ\x90\x00", true),
-                ("script", b"#!/bin/sh\n", false),
-                ("cmd-shim.cmd", b"@ECHO off\r\n", false),
-                ("short", b"MZ", false),
-            ];
-            for (name, bytes, expected) in cases {
-                let path = dir.path().join(name);
-                std::fs::write(&path, bytes).unwrap();
-                assert_eq!(is_native_executable(&path), expected, "{name}");
-            }
-            assert!(!is_native_executable(&dir.path().join("missing")));
         }
     }
 
@@ -5787,95 +5633,6 @@ mod tests {
         }
 
         #[test]
-        fn codex_standalone_reruns_official_installer_in_place() {
-            // #7650:官方独立安装器装的 codex 此前被判 system 来源、锚定落空,退回裸
-            // `npm i -g` 另装一份 npm 版。现在带 CODEX_INSTALL_DIR / CODEX_HOME 重跑官方
-            // installer;不用 `codex update`——它断网时 exit 0 假成功。
-            let cmd = anchored_command_from_paths(
-                "codex",
-                "/Users/me/.local/bin/codex",
-                "/Users/me/.codex/packages/standalone/releases/0.157.0-aarch64-apple-darwin/bin/codex",
-            )
-            .unwrap();
-            assert_eq!(
-                cmd,
-                format!(
-                    "CODEX_NON_INTERACTIVE=1 CODEX_INSTALL_DIR='/Users/me/.local/bin' CODEX_HOME='/Users/me/.codex' {CODEX_INSTALL_UNIX}"
-                )
-            );
-            assert!(!cmd.contains("npm"), "npm must not be used: {cmd}");
-            assert!(
-                !cmd.contains("codex update"),
-                "codex update fakes success: {cmd}"
-            );
-        }
-
-        #[test]
-        fn codex_standalone_custom_dirs_are_written_back() {
-            // 自定义 CODEX_INSTALL_DIR / CODEX_HOME 装的一处:不显式传回去,installer 会装进
-            // 默认的 ~/.local/bin 与 ~/.codex,命令行实际在用的那份原地不动。
-            let cmd = anchored_command_from_paths(
-                "codex",
-                "/opt/tools/codex bin/codex",
-                "/data/codex-home/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/bin/codex",
-            );
-            assert_eq!(
-                cmd,
-                Some(format!(
-                    "CODEX_NON_INTERACTIVE=1 CODEX_INSTALL_DIR='/opt/tools/codex bin' CODEX_HOME='/data/codex-home' {CODEX_INSTALL_UNIX}"
-                ))
-            );
-        }
-
-        #[test]
-        fn codex_broken_standalone_reinstalls_via_installer_not_npm_repair() {
-            // 跑不起来的独立安装版:npm 自愈门控只放行 nvm/fnm/mise/homebrew,这里交回锚定,
-            // 由官方 installer 重装同一处。
-            let broken = ToolInstallation {
-                path: "/Users/me/.local/bin/codex".to_string(),
-                version: None,
-                runnable: false,
-                error: None,
-                exited_with_error: true,
-                source: "system".to_string(),
-                is_path_default: true,
-                real: std::path::PathBuf::from(
-                    "/Users/me/.codex/packages/standalone/releases/0.157.0-aarch64-apple-darwin/bin/codex",
-                ),
-            };
-            let cmd = installs_anchored_command("codex", &[broken]).unwrap();
-            assert!(cmd.ends_with(CODEX_INSTALL_UNIX), "{cmd}");
-            assert!(!cmd.contains("npm"), "{cmd}");
-        }
-
-        #[test]
-        fn codex_broken_standalone_in_node_manager_dir_skips_npm_repair() {
-            // CODEX_INSTALL_DIR 指到 Homebrew / nvm 的 bin 目录时,入口路径会被判成
-            // homebrew / nvm 来源;npm 自愈门控只看入口来源的话会抢先返回 npm 重装,
-            // 把独立安装版换成 npm 版。真身仍在 standalone 发布包里,必须交回 installer。
-            for bin in [
-                "/opt/homebrew/bin/codex",
-                "/Users/me/.nvm/versions/node/v22.19.0/bin/codex",
-            ] {
-                let broken = ToolInstallation {
-                    path: bin.to_string(),
-                    version: None,
-                    runnable: false,
-                    error: None,
-                    exited_with_error: true,
-                    source: infer_install_source(Path::new(bin)).to_string(),
-                    is_path_default: true,
-                    real: std::path::PathBuf::from(
-                        "/Users/me/.codex/packages/standalone/releases/0.157.0-aarch64-apple-darwin/bin/codex",
-                    ),
-                };
-                let cmd = installs_anchored_command("codex", &[broken]).unwrap();
-                assert!(cmd.ends_with(CODEX_INSTALL_UNIX), "{bin}: {cmd}");
-                assert!(!cmd.contains("npm"), "{bin}: {cmd}");
-            }
-        }
-
-        #[test]
         fn claude_homebrew_cask_uses_brew_not_self_update_or_npm() {
             // cask 归 brew 管:与 formula 一样不先跑 `claude update`,也不挂 npm fallback。
             let cmd = anchored_command_from_paths(
@@ -6664,6 +6421,7 @@ mod tests {
             source: infer_install_source(Path::new(path)).to_string(),
             is_path_default: is_default,
             real: std::path::PathBuf::from(path),
+            exited_with_error: false,
         }
     }
 

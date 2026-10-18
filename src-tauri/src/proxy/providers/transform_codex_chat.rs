@@ -1109,6 +1109,48 @@ fn flush_pending_tool_calls(
     messages.push(message);
 }
 
+fn attach_pending_reasoning_to_assistant_unique(
+    message: &mut Value,
+    pending_reasoning: &mut Option<String>,
+) {
+    let Some(reasoning) = pending_reasoning.take() else {
+        return;
+    };
+    let reasoning = reasoning.trim();
+    if reasoning.is_empty() {
+        return;
+    }
+
+    let existing_text = message
+        .get("reasoning_content")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let existing_segments: Vec<&str> = existing_text
+        .split("\n\n")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    let missing_segments: Vec<&str> = reasoning
+        .split("\n\n")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty() && !existing_segments.contains(segment))
+        .collect();
+    if missing_segments.is_empty() {
+        return;
+    }
+
+    let merged = if existing_segments.is_empty() {
+        missing_segments.join("\n\n")
+    } else {
+        let existing = existing_segments.join("\n\n");
+        let missing = missing_segments.join("\n\n");
+        format!("{existing}\n\n{missing}")
+    };
+    if let Some(obj) = message.as_object_mut() {
+        obj.insert("reasoning_content".to_string(), Value::String(merged));
+    }
+}
+
 fn responses_message_item_to_chat_message(
     item: &Value,
     pending_reasoning: &mut Option<String>,

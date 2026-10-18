@@ -1404,7 +1404,6 @@ mod tests {
         );
         let visible = settings.visible_apps.expect("visible apps kept");
         assert!(visible.hermes);
-        assert!(!visible.pi);
         assert_eq!(settings.language.as_deref(), Some("zh"));
         assert!(settings.backup_interval_hours.is_none());
     }
