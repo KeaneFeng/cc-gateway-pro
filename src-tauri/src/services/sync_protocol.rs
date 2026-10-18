@@ -490,8 +490,6 @@ pub(crate) fn sync_mutex() -> &'static tokio::sync::Mutex<()> {
 mod tests {
     use super::*;
 
-<<<<<<< HEAD
-=======
     #[test]
     fn transfer_timeout_grows_with_payload_size() {
         assert_eq!(transfer_timeout(0), Duration::from_secs(300));
@@ -517,7 +515,6 @@ mod tests {
         assert!(s3_lock.try_lock().is_ok());
     }
 
->>>>>>> c696c68f (fix(sync): stop cutting off slow WebDAV/S3 transfers at a fixed 300s)
     fn artifact(sha256: &str, size: u64) -> ArtifactMeta {
         ArtifactMeta {
             sha256: sha256.to_string(),
