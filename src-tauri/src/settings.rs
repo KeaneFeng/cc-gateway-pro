@@ -914,7 +914,8 @@ fn resolve_override_path(raw: &str) -> PathBuf {
         }
     } else if let Some(stripped) = raw.strip_prefix("~\\") {
         if let Some(home) = dirs::home_dir() {
-            return home.join(stripped);
+            // Windows 风格分隔符在非 Windows 平台也要能正确落路径（8a06838d）。
+            return home.join(stripped.replace('\\', "/"));
         }
     }
 

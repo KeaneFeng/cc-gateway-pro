@@ -5,7 +5,6 @@
 
 use std::collections::BTreeMap;
 use std::future::Future;
-use std::sync::OnceLock;
 
 use chrono::Utc;
 use serde_json::Value;
@@ -24,8 +23,8 @@ use super::sync_protocol::{
 // ─── Sync lock ───────────────────────────────────────────────
 
 pub fn sync_mutex() -> &'static tokio::sync::Mutex<()> {
-    static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+    // WebDAV 与 S3 共享同一把全局同步锁（#8428 系列），防止并发 restore。
+    crate::services::sync_protocol::sync_mutex()
 }
 
 pub async fn run_with_sync_lock<T, Fut>(operation: Fut) -> Result<T, AppError>

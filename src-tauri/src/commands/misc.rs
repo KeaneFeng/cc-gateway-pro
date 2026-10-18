@@ -4338,38 +4338,6 @@ mod tests {
         }
     }
 
-    /// Codex 官方独立安装器的识别是纯字符串判定,POSIX / Windows 布局都在这里固化。
-
-    /// 锚定落空后的兜底:认不出渠道的原生可执行文件不再退回裸 `npm i -g`(#7650),
-    /// 脚本 shim / node_modules 里的入口 / 定位不到默认那处仍保持旧的静态命令。
-    mod unmanaged_native_update {
-        use super::super::*;
-
-        const MACH_O_64: [u8; 4] = [0xcf, 0xfa, 0xed, 0xfe];
-
-        /// 在 tempdir 的 `rel` 位置写入 `bytes`,返回指向它的安装记录。TempDir 须保活。
-        fn installed(
-            dir: &tempfile::TempDir,
-            rel: &str,
-            bytes: &[u8],
-            is_default: bool,
-        ) -> ToolInstallation {
-            let path = dir.path().join(rel);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(&path, bytes).unwrap();
-            ToolInstallation {
-                path: path.to_string_lossy().to_string(),
-                version: Some("1.0.0".to_string()),
-                runnable: true,
-                error: None,
-                exited_with_error: false,
-                source: infer_install_source(&path).to_string(),
-                is_path_default: is_default,
-                real: path,
-            }
-        }
-    }
-
     /// Windows-only 锚定升级回归(等价类压缩到 3 种 idiom:volta/pnpm/npm)。整块通过
     /// `cfg(target_os = "windows")` gate,在 macOS/Linux 上不参与 cargo test;Windows
     /// CI 跑全套验证。tempdir 模拟 sibling 入口存在/不存在,锁定"扩展名顺序优先级 +

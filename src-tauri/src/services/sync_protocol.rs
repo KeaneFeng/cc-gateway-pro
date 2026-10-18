@@ -4,7 +4,6 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::future::Future;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -66,35 +65,6 @@ pub(crate) fn transfer_timeout(len: u64) -> Duration {
 pub(crate) fn sync_mutex() -> &'static tokio::sync::Mutex<()> {
     static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
-}
-
-pub(crate) async fn run_with_sync_lock<T, Fut>(operation: Fut) -> Result<T, AppError>
-where
-    Fut: Future<Output = Result<T, AppError>>,
-{
-    let _guard = sync_mutex().lock().await;
-    operation.await
-}
-
-/// Tables whose changes make the remote configuration snapshot stale.
-///
-/// Keep this transport-agnostic so WebDAV and S3 cannot silently drift apart.
-/// `model_pricing` is intentionally excluded while its local JSON sidecar is
-/// the user-owned SSOT.
-pub(crate) fn should_trigger_auto_sync_for_table(table: &str) -> bool {
-    let normalized = table.trim().to_ascii_lowercase();
-    matches!(
-        normalized.as_str(),
-        "providers"
-            | "provider_endpoints"
-            | "mcp_servers"
-            | "prompts"
-            | "skills"
-            | "skill_repos"
-            | "profiles"
-            | "settings"
-            | "proxy_config"
-    )
 }
 
 // ─── Error helpers ───────────────────────────────────────────
