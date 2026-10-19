@@ -41,6 +41,12 @@ where
     operation.await
 }
 
+/// Content type for the manifest PUT. Some WebDAV servers (e.g. CSTCloud
+/// Data Capsule) reject multi-line bodies sent as `application/json` with a
+/// size-mismatch 500, while accepting the same bytes as a generic binary.
+/// The bytes are unchanged, so readers of any version are unaffected.
+const MANIFEST_CONTENT_TYPE: &str = "application/octet-stream";
+
 struct RemoteSnapshot {
     layout: RemoteLayout,
     manifest: SyncManifest,
@@ -83,7 +89,7 @@ pub async fn upload(
         &manifest_url,
         &auth,
         snapshot.manifest_bytes,
-        "application/json",
+        MANIFEST_CONTENT_TYPE,
     )
     .await?;
 
