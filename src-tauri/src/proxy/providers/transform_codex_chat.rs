@@ -578,7 +578,7 @@ fn append_responses_input_as_chat_messages(
                 // 非工具结果条目即回合边界：先输出暂存的孤儿结果，让 Chat 序列
                 // 里 role=tool 消息保持连续；夹在并行工具结果中间直接输出会形成
                 // `tool, user, tool`。
-                if !is_tool_result_item(item) {
+                if !is_tool_result_item(item) && hoisted_system_message(item).is_none() {
                     flush_pending_orphan_results(messages, &mut pending_orphan_results);
                 }
                 append_responses_item_as_chat_message(
@@ -783,6 +783,19 @@ fn append_responses_item_as_chat_message(
         // gateways reject with `messages[N]: missing field "content"`.
         Some("additional_tools") => {}
         Some("input_text" | "input_image" | "input_file" | "input_audio") => {
+            if let Some(system_message) = hoisted_system_message(item) {
+                // Hoisted to messages[0] by collapse_system_messages_to_head; do not
+                // flush pending tool media at its mid-stream position.
+                flush_pending_tool_calls(
+                    messages,
+                    pending_tool_calls,
+                    pending_media,
+                    pending_reasoning,
+                    last_assistant_index,
+                );
+                messages.push(system_message);
+                return Ok(());
+            }
             flush_pending_tool_calls(
                 messages,
                 pending_tool_calls,
@@ -824,7 +837,18 @@ fn append_responses_item_as_chat_message(
             messages.push(message);
         }
         Some("message") | None => {
-            if item.get("role").is_some() || item.get("content").is_some() {
+            if let Some(system_message) = hoisted_system_message(item) {
+                // Hoisted to messages[0] by collapse_system_messages_to_head;
+                // keep surrounding parallel tool outputs and media contiguous.
+                flush_pending_tool_calls(
+                    messages,
+                    pending_tool_calls,
+                    pending_media,
+                    pending_reasoning,
+                    last_assistant_index,
+                );
+                messages.push(system_message);
+            } else if item.get("role").is_some() || item.get("content").is_some() {
                 flush_pending_tool_calls(
                     messages,
                     pending_tool_calls,
@@ -854,7 +878,16 @@ fn append_responses_item_as_chat_message(
             }
         }
         _ => {
-            if item.get("role").is_some() || item.get("content").is_some() {
+            if let Some(system_message) = hoisted_system_message(item) {
+                flush_pending_tool_calls(
+                    messages,
+                    pending_tool_calls,
+                    pending_media,
+                    pending_reasoning,
+                    last_assistant_index,
+                );
+                messages.push(system_message);
+            } else if item.get("role").is_some() || item.get("content").is_some() {
                 flush_pending_tool_calls(
                     messages,
                     pending_tool_calls,
@@ -906,6 +939,50 @@ fn is_tool_result_item(item: &Value) -> bool {
         item.get("type").and_then(Value::as_str),
         Some("function_call_output" | "custom_tool_call_output" | "tool_search_output")
     )
+}
+
+fn is_hoistable_system_message(msg: &Value) -> bool {
+    msg.get("role").and_then(Value::as_str) == Some("system")
+        && msg.get("content").is_some_and(Value::is_string)
+}
+
+fn hoisted_system_message(item: &Value) -> Option<Value> {
+    let item_type = item.get("type").and_then(Value::as_str);
+    if matches!(
+        item_type,
+        Some(
+            "function_call"
+                | "custom_tool_call"
+                | "tool_search_call"
+                | "function_call_output"
+                | "custom_tool_call_output"
+                | "tool_search_output"
+                | "reasoning"
+                | "compaction_trigger"
+                | "compaction"
+                | "compaction_summary"
+                | "context_compaction"
+                | "additional_tools"
+        )
+    ) {
+        return None;
+    }
+    let role = item.get("role").and_then(Value::as_str)?;
+    if responses_role_to_chat_role(role) != "system" {
+        return None;
+    }
+    let content = match item_type {
+        Some("input_text" | "input_image" | "input_file" | "input_audio") => {
+            responses_content_to_chat_content("system", &Value::Array(vec![item.clone()]))
+        }
+        _ => responses_content_to_chat_content("system", item.get("content")?),
+    };
+    content.is_string().then(|| {
+        json!({
+            "role": "system",
+            "content": content
+        })
+    })
 }
 
 /// 输出暂存的孤儿工具结果。孤儿可能夹在并行工具结果中间
@@ -983,6 +1060,20 @@ fn flush_pending_tool_calls(
         return;
     }
 
+    // One Responses model turn can contain an assistant commentary message
+    // directly followed by function-call items. Keep them on the same Chat
+    // assistant message: a standalone text-only assistant turn teaches Chat
+    // models to stop after a progress update instead of emitting the expected
+    // tool call.
+    if let Some(merged_index) = merge_pending_tool_calls_into_adjacent_assistant(
+        messages,
+        pending_tool_calls,
+        pending_reasoning,
+    ) {
+        *last_assistant_index = Some(merged_index);
+        return;
+    }
+
     // Media from the preceding tool-result batch must be presented before a
     // new assistant tool-call turn. Consecutive outputs do not enter here
     // because `pending_tool_calls` is empty after the first output.
@@ -995,6 +1086,82 @@ fn flush_pending_tool_calls(
     attach_pending_reasoning_to_assistant(&mut message, pending_reasoning);
     *last_assistant_index = Some(messages.len());
     messages.push(message);
+}
+
+/// Merge pending Chat tool calls into a directly adjacent assistant message
+/// that does not carry tool calls yet. The Responses input preserves both the
+/// commentary text and the calls as separate items of the same model turn;
+/// serializing them as two consecutive assistant messages lets Chat models
+/// imitate the first text-only message as a complete turn.
+fn merge_pending_tool_calls_into_adjacent_assistant(
+    messages: &mut [Value],
+    pending_tool_calls: &mut Vec<Value>,
+    pending_reasoning: &mut Option<String>,
+) -> Option<usize> {
+    let index = messages
+        .iter()
+        .rposition(|msg| !is_hoistable_system_message(msg))?;
+    let message = messages.get_mut(index)?;
+    if message.get("role").and_then(Value::as_str) != Some("assistant") {
+        return None;
+    }
+    let has_tool_calls = message
+        .get("tool_calls")
+        .and_then(Value::as_array)
+        .is_some_and(|calls| !calls.is_empty());
+    if has_tool_calls {
+        return None;
+    }
+
+    let obj = message.as_object_mut()?;
+    obj.insert(
+        "tool_calls".to_string(),
+        Value::Array(std::mem::take(pending_tool_calls)),
+    );
+    attach_pending_reasoning_to_assistant_unique(message, pending_reasoning);
+    Some(index)
+}
+
+fn attach_pending_reasoning_to_assistant_unique(
+    message: &mut Value,
+    pending_reasoning: &mut Option<String>,
+) {
+    let Some(reasoning) = pending_reasoning.take() else {
+        return;
+    };
+    let reasoning = reasoning.trim();
+    if reasoning.is_empty() {
+        return;
+    }
+
+    let existing_text = message
+        .get("reasoning_content")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let existing_segments: Vec<&str> = existing_text
+        .split("\n\n")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    let missing_segments: Vec<&str> = reasoning
+        .split("\n\n")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty() && !existing_segments.contains(segment))
+        .collect();
+    if missing_segments.is_empty() {
+        return;
+    }
+
+    let merged = if existing_segments.is_empty() {
+        missing_segments.join("\n\n")
+    } else {
+        let existing = existing_segments.join("\n\n");
+        let missing = missing_segments.join("\n\n");
+        format!("{existing}\n\n{missing}")
+    };
+    if let Some(obj) = message.as_object_mut() {
+        obj.insert("reasoning_content".to_string(), Value::String(merged));
+    }
 }
 
 fn responses_message_item_to_chat_message(
@@ -5115,5 +5282,79 @@ mod tests {
             "tools should be present from tool_search_output"
         );
         assert_eq!(result["tools"][0]["function"]["name"], "search_docs");
+    }
+
+    #[test]
+    #[test]
+    #[test]
+    fn developer_resize_notice_between_parallel_image_outputs_keeps_tool_messages_contiguous() {
+        let png_data_url = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        let body = json!({
+            "model": "deepseek-flash",
+            "input": [
+                { "type": "message", "role": "user", "content": "inspect screenshots" },
+                { "type": "message", "role": "assistant", "content": [{ "type": "output_text", "text": "Checking images." }] },
+                { "type": "function_call", "call_id": "call_0", "name": "view_image", "arguments": "{\"path\":\"a.png\"}" },
+                { "type": "function_call", "call_id": "call_1", "name": "view_image", "arguments": "{\"path\":\"b.png\"}" },
+                { "type": "function_call", "call_id": "call_2", "name": "view_image", "arguments": "{\"path\":\"c.png\"}" },
+                { "type": "function_call_output", "call_id": "call_0", "output": [{ "type": "input_image", "image_url": png_data_url }] },
+                { "type": "message", "role": "developer", "content": [{ "type": "input_text", "text": "<image_resize_notice>\nImage 1 of 1 in the preceding tool output was resized.\n</image_resize_notice>" }] },
+                { "type": "function_call_output", "call_id": "call_1", "output": [{ "type": "input_image", "image_url": png_data_url }] },
+                { "type": "function_call_output", "call_id": "call_2", "output": [{ "type": "input_image", "image_url": png_data_url }] }
+            ]
+        });
+
+        let result = responses_to_chat_completions(body).unwrap();
+        let messages = result["messages"].as_array().unwrap();
+        let roles: Vec<&str> = messages
+            .iter()
+            .filter_map(|msg| msg.get("role").and_then(Value::as_str))
+            .collect();
+        assert_eq!(
+            roles,
+            vec![
+                "system",
+                "user",
+                "assistant",
+                "tool",
+                "tool",
+                "tool",
+                "user"
+            ]
+        );
+        assert_eq!(messages[2]["tool_calls"].as_array().unwrap().len(), 3);
+        assert_eq!(messages[3]["tool_call_id"], "call_0");
+        assert_eq!(messages[4]["tool_call_id"], "call_1");
+        assert_eq!(messages[5]["tool_call_id"], "call_2");
+        assert!(messages[0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("image_resize_notice"));
+    }
+
+    #[test]
+    fn developer_resize_notice_between_call_and_output_preserves_commentary_merge() {
+        let body = json!({
+            "model": "deepseek-flash",
+            "input": [
+                { "type": "message", "role": "user", "content": "look" },
+                { "type": "message", "role": "assistant", "content": [{ "type": "output_text", "text": "Checking the image." }] },
+                { "type": "function_call", "call_id": "call_0", "name": "view_image", "arguments": "{\"path\":\"a.png\"}" },
+                { "type": "message", "role": "developer", "content": [{ "type": "input_text", "text": "<image_resize_notice>resized</image_resize_notice>" }] },
+                { "type": "function_call_output", "call_id": "call_0", "output": "ok" }
+            ]
+        });
+
+        let result = responses_to_chat_completions(body).unwrap();
+        let messages = result["messages"].as_array().unwrap();
+        let roles: Vec<&str> = messages
+            .iter()
+            .filter_map(|msg| msg.get("role").and_then(Value::as_str))
+            .collect();
+        assert_eq!(roles, vec!["system", "user", "assistant", "tool"]);
+        assert_eq!(messages[2]["content"], "Checking the image.");
+        assert_eq!(messages[2]["tool_calls"].as_array().unwrap().len(), 1);
+        assert_eq!(messages[2]["tool_calls"][0]["id"], "call_0");
+        assert_eq!(messages[3]["tool_call_id"], "call_0");
     }
 }
