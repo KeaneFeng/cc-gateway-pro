@@ -5285,8 +5285,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
-    #[test]
     fn developer_resize_notice_between_parallel_image_outputs_keeps_tool_messages_contiguous() {
         let png_data_url = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
         let body = json!({
