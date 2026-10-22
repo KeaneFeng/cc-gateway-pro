@@ -1485,6 +1485,24 @@ pub fn create_anthropic_sse_stream_from_responses<E: std::error::Error + Send + 
                                             let delta_sse = format!("event: content_block_delta\ndata: {}\n\n",
                                                 serde_json::to_string(&delta_event).unwrap_or_default());
                                             yield Ok(Bytes::from(delta_sse));
+                                        } else if open_indices.contains(&index) {
+                                            // Deltas may cover only the start of the summary
+                                            // (e.g. a later summary part arrived without
+                                            // deltas). Emit the missing tail; snapshots that
+                                            // do not extend the streamed text are ignored.
+                                            if let Some(suffix) = full_text
+                                                .strip_prefix(emitted_text.as_str())
+                                                .filter(|suffix| !suffix.is_empty())
+                                            {
+                                                let delta_event = json!({
+                                                    "type": "content_block_delta",
+                                                    "index": index,
+                                                    "delta": {"type": "thinking_delta", "thinking": suffix}
+                                                });
+                                                let delta_sse = format!("event: content_block_delta\ndata: {}\n\n",
+                                                    serde_json::to_string(&delta_event).unwrap_or_default());
+                                                yield Ok(Bytes::from(delta_sse));
+                                            }
                                         }
 
                                         let encrypted = final_item
@@ -1506,18 +1524,29 @@ pub fn create_anthropic_sse_stream_from_responses<E: std::error::Error + Send + 
                                                         serde_json::to_string(&signature_event).unwrap_or_default());
                                                     yield Ok(Bytes::from(signature_sse));
                                                 } else {
+                                                    // Encrypted-only item: an empty thinking block
+                                                    // carries the envelope (Claude Code's VS Code
+                                                    // extension cannot render redacted_thinking).
                                                     let start_event = json!({
                                                         "type": "content_block_start",
                                                         "index": index,
-                                                        "content_block": {
-                                                            "type": "redacted_thinking",
-                                                            "data": envelope
-                                                        }
+                                                        "content_block": {"type": "thinking", "thinking": ""}
                                                     });
                                                     let start_sse = format!("event: content_block_start\ndata: {}\n\n",
                                                         serde_json::to_string(&start_event).unwrap_or_default());
                                                     yield Ok(Bytes::from(start_sse));
                                                     open_indices.insert(index);
+                                                    let signature_event = json!({
+                                                        "type": "content_block_delta",
+                                                        "index": index,
+                                                        "delta": {
+                                                            "type": "signature_delta",
+                                                            "signature": envelope
+                                                        }
+                                                    });
+                                                    let signature_sse = format!("event: content_block_delta\ndata: {}\n\n",
+                                                        serde_json::to_string(&signature_event).unwrap_or_default());
+                                                    yield Ok(Bytes::from(signature_sse));
                                                 }
                                             }
                                         }
