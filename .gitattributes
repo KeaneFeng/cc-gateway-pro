@@ -36,3 +36,6 @@
 *.ttf binary
 *.exe binary
 *.dll binary
+
+# Preserve collected upstream notice bytes and their recorded digest.
+THIRD_PARTY_NOTICES.txt -text -whitespace

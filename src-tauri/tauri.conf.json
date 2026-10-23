@@ -37,6 +37,18 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",
+      "../docs/legal/dependency-licenses.json": "docs/legal/dependency-licenses.json",
+      "../docs/legal/supplemental-notices.json": "docs/legal/supplemental-notices.json",
+      "../docs/legal/asset-provenance.json": "docs/legal/asset-provenance.json",
+      "../docs/legal/asset-license-notices.json": "docs/legal/asset-license-notices.json",
+      "../docs/legal/third-party-license-audit.md": "docs/legal/third-party-license-audit.md",
+      "../docs/legal/dependency-follow-up.md": "docs/legal/dependency-follow-up.md",
+      "../docs/legal/dependency-follow-up.json": "docs/legal/dependency-follow-up.json",
+      "../docs/legal/brand-asset-sources.md": "docs/legal/brand-asset-sources.md"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -56,9 +68,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "ccgatewaypro"
-        ]
+        "schemes": ["ccgatewaypro"]
       }
     },
     "updater": {

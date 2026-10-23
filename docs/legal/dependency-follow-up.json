@@ -1,0 +1,293 @@
+[
+  {
+    "package": "npm:@open-draft/deferred-promise@2.2.0",
+    "result": "unresolved",
+    "reason": "发布包没有许可文件；npm gitHead b30f1b68 对应完整 GitHub tree 中也没有 LICENSE/COPYING，README 无完整条款。现有证据仅为 MIT 元数据。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/%40open-draft%2Fdeferred-promise/2.2.0"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-darwin-arm64@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-arm64/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-darwin-x64@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-x64/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-arm-gnueabihf@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm-gnueabihf/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-arm64-gnu@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-gnu/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-arm64-musl@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-musl/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-riscv64-gnu@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-riscv64-gnu/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-x64-gnu@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-gnu/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-linux-x64-musl@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-musl/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-win32-arm64-msvc@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-arm64-msvc/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-win32-ia32-msvc@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-ia32-msvc/2.8.1"
+  },
+  {
+    "package": "npm:@tauri-apps/cli-win32-x64-msvc@2.8.1",
+    "result": "original_notice_collected",
+    "reason": "已从 npm gitHead 8d869717 对应的 Tauri LICENSE_APACHE-2.0 / LICENSE_MIT 补齐；此前文件名候选未覆盖下划线。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
+      "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT"
+    ],
+    "registry_source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.8.1"
+  },
+  {
+    "package": "npm:dlv@1.1.3",
+    "result": "unresolved",
+    "reason": "包及 gitHead e636db81 无许可文件。README 的 MIT 链接 https://oss.ninja/mit/developit/ 现返回与该项目无关的网站首页，不能采信或复制为许可证。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/dlv/1.1.3"
+  },
+  {
+    "package": "npm:html-parse-stringify@3.0.1",
+    "result": "unresolved",
+    "reason": "发布包和 gitHead ce46022f 中没有许可文件；README 的 license 段仅写 MIT，未提供完整原文或版权声明。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/html-parse-stringify/3.0.1"
+  },
+  {
+    "package": "npm:is-node-process@1.2.0",
+    "result": "unresolved",
+    "reason": "npm 未提供 gitHead；已检查 v1.2.0 标签 8a6152c7，tree 仍无许可文件。不能用其他版本的许可原文冒充本版本。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/is-node-process/1.2.0"
+  },
+  {
+    "package": "npm:react-remove-scroll-bar@2.3.8",
+    "result": "unresolved",
+    "reason": "发布包未含许可文本；npm gitHead b3b1287a 的源码读取返回 404，已列出标签最高为 v2.3.7，未建立 2.3.8 对应原文。404 不等于项目已删除。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/react-remove-scroll-bar/2.3.8"
+  },
+  {
+    "package": "npm:stackback@0.0.2",
+    "result": "unresolved",
+    "reason": "npm 无 gitHead；已核查 v0.0.2 标签 29630953，tree 只有 package.json 许可字段而无 LICENSE/COPYING。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/stackback/0.0.2"
+  },
+  {
+    "package": "npm:strict-event-emitter@0.5.1",
+    "result": "unresolved",
+    "reason": "npm 无 gitHead；v0.5.1 标签 56e004cf 可访问，但没有 LICENSE/COPYING 文件。包的 MIT 标识不能替代缺失的原始文本。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/strict-event-emitter/0.5.1"
+  },
+  {
+    "package": "npm:tr46@0.0.3",
+    "result": "unresolved",
+    "reason": "发布包没有许可文本；gitHead a8009f9c 的 tree 未发现许可文件，README 读取 404。不能从新版本或另一仓库猜测版权人。",
+    "sources": [],
+    "registry_source": "https://registry.npmjs.org/tr46/0.0.3"
+  },
+  {
+    "package": "cargo:convert_case@0.4.0",
+    "result": "unresolved",
+    "reason": "crate 和 .cargo_vcs_info 指向的 300d9eef revision 均没有许可文件，README 也未含完整条款；只有 Cargo MIT 字段。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/convert_case/0.4.0/download"
+  },
+  {
+    "package": "cargo:crc-catalog@2.4.0",
+    "result": "original_notice_collected",
+    "reason": "已从精确 revision 的 LICENSES/Apache-2.0.txt 与 MIT.txt 补齐；扫描器现在也支持 LICENSES 目录。",
+    "sources": [
+      "https://raw.githubusercontent.com/akhilles/crc-catalog/b500ea693c552f8d946e290722a7b3ee8b9a7ee2/LICENSES/Apache-2.0.txt",
+      "https://raw.githubusercontent.com/akhilles/crc-catalog/b500ea693c552f8d946e290722a7b3ee8b9a7ee2/LICENSES/MIT.txt"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/crc-catalog/2.4.0/download"
+  },
+  {
+    "package": "cargo:fax@0.2.6",
+    "result": "unresolved",
+    "reason": "crate 与 40b226eb revision 没有 LICENSE/COPYING，README 和检查到的源码没有完整许可声明；仅 Cargo MIT 元数据。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/fax/0.2.6/download"
+  },
+  {
+    "package": "cargo:fax_derive@0.2.0",
+    "result": "unresolved",
+    "reason": "同一 fax 仓库的 derive 子包，40b226eb revision 没有独立或根许可文件；不得补造版权人。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/fax_derive/0.2.0/download"
+  },
+  {
+    "package": "cargo:fxhash@0.2.1",
+    "result": "original_notice_collected",
+    "reason": "已保留锁定 crate lib.rs 的 Rust Project Developers 版权及双许可原始文件头，附 crate 校验和。不是重新生成的版权模板。",
+    "sources": [
+      "https://docs.rs/crate/fxhash/0.2.1/source/lib.rs#1-9"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/fxhash/0.2.1/download"
+  },
+  {
+    "package": "cargo:libappindicator-sys@0.9.0",
+    "result": "original_notice_collected",
+    "reason": "通过已发布 sys crate 的 CHANGELOG 确认 tauri-apps/libappindicator-rs 来源，再用 .cargo_vcs_info 的 eafd1e36 获取双许可原文。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-APACHE",
+      "https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-MIT"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/libappindicator-sys/0.9.0/download"
+  },
+  {
+    "package": "cargo:mac@0.1.1",
+    "result": "unresolved",
+    "reason": "crate 无 .cargo_vcs_info；已检查 0.1.1 标签 66afc663，没有许可文件，README 仅说 MIT/Apache-2.0。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/mac/0.1.1/download"
+  },
+  {
+    "package": "cargo:r-efi@5.3.0",
+    "result": "original_notice_collected",
+    "reason": "完整多许可条款和作者声明位于发布包 AUTHORS；已保留原文，并为 AUTHORS 漏扫补回归测试。",
+    "sources": [
+      "https://raw.githubusercontent.com/r-efi/r-efi/97b55bed1c2c91dcbf787674849f05337ff80b33/AUTHORS"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/r-efi/5.3.0/download"
+  },
+  {
+    "package": "cargo:r-efi@6.0.0",
+    "result": "original_notice_collected",
+    "reason": "完整多许可条款和作者声明位于发布包 AUTHORS；已保留原文，并为 AUTHORS 漏扫补回归测试。",
+    "sources": [
+      "https://raw.githubusercontent.com/r-efi/r-efi/7e1b0322d31d625f81a5656096330934f9cd835d/AUTHORS"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/r-efi/6.0.0/download"
+  },
+  {
+    "package": "cargo:rustls-platform-verifier-android@0.1.1",
+    "result": "unresolved",
+    "reason": "生成的 Android crate 没有许可文件或 .cargo_vcs_info；不能将主项目 v/0.1.1 标签直接当作 android crate 0.1.1。主仓库有 MIT/Apache 文件，但尚未证明该发布包对应的源码修订。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/rustls-platform-verifier-android/0.1.1/download"
+  },
+  {
+    "package": "cargo:seahash@4.1.0",
+    "result": "unresolved",
+    "reason": "crate 没有许可文件；.cargo_vcs_info 给出 94b632ae，但 Redox GitLab 对该 revision 的 LICENSE 请求返回 HTTP 403；本地 README/源码未找到完整原文。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/seahash/4.1.0/download"
+  },
+  {
+    "package": "cargo:selectors@0.35.0",
+    "result": "original_notice_collected",
+    "reason": "已保留精确 revision lib.rs 开头原始 MPL 文件级声明。完整 MPL-2.0 文本同时已收集；未虚构版权人。",
+    "sources": [
+      "https://raw.githubusercontent.com/servo/stylo/71737ad5c8b29c143a6c992af6222833f5d38b43/selectors/lib.rs#L1-L3"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/selectors/0.35.0/download"
+  },
+  {
+    "package": "cargo:tao-macros@0.1.3",
+    "result": "unresolved",
+    "reason": "crate 无许可文件及 .cargo_vcs_info；所核查的 tao 标签未建立宏子包 0.1.3 的精确源码对应。不能把 tao 主包同号标签当作宏子包版本。",
+    "sources": [],
+    "registry_source": "https://crates.io/api/v1/crates/tao-macros/0.1.3/download"
+  },
+  {
+    "package": "cargo:winapi-i686-pc-windows-gnu@0.4.0",
+    "result": "original_notice_collected",
+    "reason": "0.3.6 仓库标签内 i686 子包版本确为 0.4.0，src/lib.rs 与发布包逐字节一致（含版权行）；从该固定 revision 补齐双许可。",
+    "sources": [
+      "https://raw.githubusercontent.com/retep998/winapi-rs/4ac6c90e4ab92850c78b6103137290fe4ab9d273/i686/LICENSE-APACHE",
+      "https://raw.githubusercontent.com/retep998/winapi-rs/4ac6c90e4ab92850c78b6103137290fe4ab9d273/i686/LICENSE-MIT"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/winapi-i686-pc-windows-gnu/0.4.0/download"
+  },
+  {
+    "package": "cargo:winapi-x86_64-pc-windows-gnu@0.4.0",
+    "result": "original_notice_collected",
+    "reason": "0.3.6 仓库标签内 x86_64 子包版本确为 0.4.0，src/lib.rs 与发布包逐字节一致（含版权行）；从该固定 revision 补齐双许可。",
+    "sources": [
+      "https://raw.githubusercontent.com/retep998/winapi-rs/4ac6c90e4ab92850c78b6103137290fe4ab9d273/x86_64/LICENSE-APACHE",
+      "https://raw.githubusercontent.com/retep998/winapi-rs/4ac6c90e4ab92850c78b6103137290fe4ab9d273/x86_64/LICENSE-MIT"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/winapi-x86_64-pc-windows-gnu/0.4.0/download"
+  }
+]

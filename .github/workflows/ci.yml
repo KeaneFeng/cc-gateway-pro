@@ -44,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check license inventory freshness
+        run: python3 scripts/audit-third-party-licenses.py --check
+
       - name: TypeScript type check
         run: pnpm typecheck
 
