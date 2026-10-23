@@ -1,4 +1,38 @@
-# 提交准备度检查
+# 本轮文档提交准备度
+
+日期：2026-10-23；基准 `24a6275e8`。结论：**本轮文档可作为一笔独立文档提交**，但尚未 stage、commit 或 push，也未提交申请。旧三笔提交已经公开，不重复纳入本轮。
+
+## 建议提交白名单
+
+- `CHANGELOG.md`
+- `SECURITY.md`
+- `docs/commit-readiness.md`
+- `docs/jetbrains-application-audit.md`
+- `docs/jetbrains-application-draft.md`
+- `docs/jetbrains-final-checklist.md`
+- `docs/release-notes/published-history.md`
+- `docs/release-notes/v4.0.17-en.md`
+- `docs/roadmap.md`
+
+建议标题：`docs: finalize application evidence and security reporting status`。
+
+`.mimosa/` 是既有无关目录，必须排除。不要使用不区分范围的 `git add .`。本轮没有源码、锁文件、许可证原文或生成清单变更。
+
+## 当前审查结论与验证范围
+
+- 当前公开基准的托管 CI 已成功：609 前端、2644 Linux 后端测试通过，0 失败、3 忽略；这不是本轮尚未提交文档的一次新 CI。
+- 远程私密漏洞报告已按用户明确授权启用；API 回读和公开入口均核验通过，未发送测试报告。此远程设置不依赖文档 commit，也不会包含在 Git diff 中。
+- 13 次正式发行的补充摘要来自真实发布时间和相邻 tag diff，显式说明撤销项和版本号变更，不创造历史版本或修改线上 release body。
+- Homebrew cask 的版本、下载 URL、SHA-256 已静态核验；不宣称完成安装或升级。
+- 英文概览保持 115 词；六人席位需求保留为申请人陈述，名单及非商业用途未确认，未替用户作协议承诺。
+- 本轮验证：修改/新增 Markdown 格式、相对链接、版本引用、许可证摘要和 `git diff --check`。文档变更不重复运行完整应用测试。
+- 依赖原文 15 项、品牌权限、平台安装/分发、六人名单及用途等缺口继续公开；它们不阻止提交如实记录的文档，但不能据此声称全面合规或申请已获资格认可。
+
+以下为原三笔提交前的历史记录，不能用其中“没有新远程 CI”等旧状态覆盖上述当前结论。
+
+---
+
+# 首轮提交准备度（历史记录）
 
 日期：2026-10-23。结论：**当前范围内的测试隔离修复、工具链配置、许可证证据与文档改动可以 commit**。本文件记录提交前核验快照；后续提交以 Git 历史为准。没有提交 JetBrains 申请。此结论不是“全部许可问题已解决”或“可以直接正式发布”。
 
@@ -9,7 +43,7 @@
 - CI/发行工具链与本地约定一致；pnpm 固定为 10.12.3。许可证新鲜度检查纳入 CI。
 - 审计扫描器补齐 AUTHORS 和 LICENSES 路径识别；缺元数据拒绝覆盖旧报告；只有 pnpm 锁文件摘要一致才允许复用既有元数据；不匹配 Cargo.lock 的旧 metadata 被拒绝。
 - 根 LICENSE 内容未变，SHA-256 为 `912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755`。上游版权及许可保留；README 的“参考”措辞同时链接真实代码复用历史。
-- 新生成文件未发现常见私钥/API token 格式或本机 `/Users/keane` 路径；这属于模式扫描和人工差异审查，不是对任意秘密格式的数学保证。
+- 新生成文件未发现常见私钥/API token 格式或本机用户目录路径；这属于模式扫描和人工差异审查，不是对任意秘密格式的数学保证。
 
 ## 验证证据
 

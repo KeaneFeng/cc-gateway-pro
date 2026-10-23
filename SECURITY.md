@@ -104,9 +104,13 @@ Inputs that genuinely cross a trust boundary:
 
 **请不要通过公开的 GitHub Issue 报告安全漏洞。**
 
-Instead, please report them through [GitHub Security Advisories](https://github.com/KeaneFeng/cc-gateway-pro/security/advisories/new).
+Please report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/KeaneFeng/cc-gateway-pro/security/advisories/new).
 
-请通过 [GitHub 安全公告](https://github.com/KeaneFeng/cc-gateway-pro/security/advisories/new) 进行报告。
+请通过 [GitHub 私密漏洞报告](https://github.com/KeaneFeng/cc-gateway-pro/security/advisories/new) 提交。
+
+Verified October 23, 2026: the repository API returns `enabled: true`, and the public Security page displays “Report a vulnerability” linking to this form. No test report was submitted, so report delivery and notification handling have not been tested end to end.
+
+2026-10-23 已核验：仓库 API 返回 `enabled: true`，公开 Security 页面显示“Report a vulnerability”并链接至该表单。未提交测试报告，因此报告送达和通知处理未做端到端验证。
 
 When reporting, please include:
 

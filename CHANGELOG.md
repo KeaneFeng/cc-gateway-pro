@@ -29,7 +29,7 @@ Reconstructed from the published tag on 2026-10-23; see [release notes and valid
 - Preserve contiguous Chat tool outputs across hoisted developer notices.
 - Avoid inherited Unix process environment variables being reported as conflicts.
 
-Intermediate releases after 3.19.1 are not fully summarized here. Consult [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) and the associated tag comparisons. Older entries below include inherited upstream release history and statistics, not an independent contribution count for CC-Gateway-Pro.
+A [reconstructed summary of every published release after 3.19.1](docs/release-notes/published-history.md) now supplies dated release links, comparisons and explicit revert exclusions. GitHub release bodies have not been rewritten. Older entries below include inherited upstream release history and statistics, not an independent contribution count for CC-Gateway-Pro.
 
 ## [3.19.1] - 2026-08-05
 

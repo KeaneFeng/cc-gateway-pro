@@ -1,6 +1,6 @@
 # JetBrains open-source support application — draft
 
-Prepared October 23, 2026. Not submitted. The maintainer must confirm personal statements, intended IDE use, funding/commercial context and the live application fields before submission. Statistics are dated snapshots; refresh them before applying. See the [audit](jetbrains-application-audit.md) for known gaps.
+Updated October 23, 2026 against public revision `24a6275e853a91a67623f90c01fa94c541e6dd55`. Not submitted. The applicant has confirmed the account KeaneFeng and requested six All Products Pack subscriptions, stating that six people participate. The complete recipient list and evidence of each recipient’s regular contributions remain unverified. Non-commercial use, personal contact fields, funding/employment context and intended IDE use still require confirmation. See the [final checklist](jetbrains-final-checklist.md).
 
 ## 1. Project Name / Repository / License
 
@@ -14,7 +14,7 @@ CC-Gateway-Pro is an open-source desktop control plane and local provider gatewa
 
 ## 3. Maintainer Role
 
-The repository owner is KeaneFeng. GitHub attributes 190 commits to this account at the audited revision. Public history records project routing and vision routing development, logging improvements, upstream integration and version maintenance. This count includes imports and maintenance work; it is not a claim of 190 independent inventions. The visible project history begins on May 18, 2026. The applicant should confirm that this describes their own role before using it in the first person.
+The repository owner is KeaneFeng. GitHub attributes 193 commits to this account at the audited revision. Public history records project routing and vision routing development, logging improvements, upstream integration and version maintenance. This count includes imports and maintenance work; it is not a claim of 193 independent inventions. The visible project history begins on May 18, 2026. The applicant has confirmed that they are KeaneFeng; the public history supports this maintenance role. This does not verify the identities or eligibility of the other five proposed recipients.
 
 ## 4. Original Contributions
 
@@ -29,7 +29,7 @@ See [the contribution matrix](original-contributions.md) for implementation path
 
 As of October 23, 2026, the repository is public, with 8 stars, 3 forks and 43 non-draft releases. The latest release is v4.0.17, published October 20. Public release assets total 529 download events; installer/archive assets account for 233 of those events. These are not unique users or successful installations. One external proposal, [PR #8](https://github.com/KeaneFeng/cc-gateway-pro/pull/8), was closed without merging. The 49 GitHub contributor accounts include upstream authors and automation, so they are not evidence of 49 direct community contributors. Broad ecosystem adoption has not been established.
 
-The v4.0.17 packaging workflow succeeded. Its separate CI run passed frontend checks but failed one backend test; the [audit](jetbrains-application-audit.md) records the historical failure and the subsequent local test-isolation fix. Local validation now passes; the fix has not been committed or run on hosted CI. No claim of a new successful public CI run is made.
+The v4.0.17 packaging workflow succeeded. Its historical backend CI failure was addressed by [shared-cache test isolation](https://github.com/KeaneFeng/cc-gateway-pro/commit/19de2600b). [Hosted CI on 24a6275e8](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39893831322) now passes: 609 frontend tests and 2644 Linux backend tests, with zero failures and three ignored backend tests. Type checking, formatting, Clippy and license-inventory freshness checks also pass. These maintenance changes are on main after v4.0.17; no updated release package has been published. Documentation-only commits are not offered as evidence of active code development.
 
 ## 6. Why JetBrains All Products Pack
 
@@ -44,8 +44,43 @@ CC-Gateway-Pro builds on cc-switch. It imported an upstream code snapshot into a
 - [Source and history](https://github.com/KeaneFeng/cc-gateway-pro/commits/main/)
 - [Published v4.0.17](https://github.com/KeaneFeng/cc-gateway-pro/releases/tag/v4.0.17)
 - [Successful release build](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39409186505)
-- [CI results, including outstanding failure](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39408533954)
+- [Successful current CI](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39893831322)
+- [Historical v4.0.17 CI failure](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39408533954), retained for transparency
+- [Reconstructed published release history](release-notes/published-history.md)
 - [Architecture](architecture-and-flows-zh.md), [contributing](../CONTRIBUTING.md), [security](../SECURITY.md)
 - [Official program information](https://www.jetbrains.com/community/opensource/)
 
-New local documents will only become public evidence after the maintainer publishes them. Eligibility and acceptance remain subject to JetBrains review.
+The contribution matrix, provenance documents and license evidence are public at `24a6275e8`. This final revision of the application draft is local and has not been submitted. Eligibility and acceptance remain subject to JetBrains review.
+
+## 9. Mapping to the current application form
+
+Checked against the [official form](https://www.jetbrains.com/shop/eform/opensource) on October 23, 2026. This is a local preparation table; nothing has been entered into or submitted through the form.
+
+| Form field                            | Prepared value / unresolved item                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Previous JetBrains OSS licenses       | Applicant to confirm; do not assume this is a first application                                |
+| Project website                       | https://github.com/KeaneFeng/cc-gateway-pro (public project page; no separate website claimed) |
+| Repository URL                        | https://github.com/KeaneFeng/cc-gateway-pro                                                    |
+| License URL                           | https://github.com/KeaneFeng/cc-gateway-pro/blob/main/LICENSE                                  |
+| Country / region                      | Applicant to supply; not inferred from language or timezone                                    |
+| Number of required licenses           | **6 requested by applicant; recipient eligibility not yet established**                        |
+| Project description                   | Sections 2–7 above, or the compact draft below                                                 |
+| Email / first and last name           | Applicant to supply privately when applying; not inferred from Git author metadata             |
+| Contributor profile                   | https://github.com/KeaneFeng                                                                   |
+| Non-commercial OSS use confirmation   | Pending personal confirmation; do not pre-check                                                |
+| Sharing only with active contributors | Pending six-person recipient/evidence list; upstream author attribution is insufficient        |
+| Account agreement / other consent     | Applicant must review and accept personally                                                    |
+
+The form restricts seats to regularly active contributors and excludes non-code commits as active development evidence. Six subscriptions mean six recipients, not six IDEs for one person. The applicant’s stated team size is retained without treating the repository’s contributor count as proof.
+
+## 10. Compact project-description draft
+
+CC-Gateway-Pro is a public MIT-licensed desktop application for managing AI coding-tool providers and routing requests through a local gateway. It uses Tauri/Rust and React/TypeScript, with SQLite persistence. It builds on cc-switch and retains upstream attribution. KeaneFeng maintains project-specific provider binding, image-aware Vision Model routing, terminal request-log viewing and Session Traces improvements; linked commits in the contribution matrix document this work. Published packages cover macOS arm64, Windows x64 and Linux x64. Current hosted CI passes frontend and backend checks. The repository has 8 stars and 3 forks as of October 23, 2026; broad adoption is not claimed. All Products Pack would support work across the native backend, renderer and database. Six subscriptions are requested, subject to documenting each recipient’s regular contributions and confirming non-commercial use. Dependency-notice and asset-permission gaps remain disclosed in the license audit.
+
+## 11. Items to resolve before submitting
+
+- Confirm all six recipients, their profiles and regular project-specific code contribution links. Only KeaneFeng is presently identified as an applicant; do not add upstream authors without their actual participation and consent.
+- Confirm non-commercial OSS usage, intended tools, funding/employment context, prior OSS licenses and contact fields. GitHub evidence cannot answer these personal declarations.
+- Review the disclosed 15 notice gaps, unconfirmed asset permissions and missing platform installation/distribution checks; do not claim full clearance.
+- Private vulnerability reporting has been enabled and verified through the repository API and public Security page. End-to-end report delivery has not been tested; no synthetic report was submitted.
+- Refresh metrics and apply the live form’s final wording. The official program evaluates applications individually; this material does not establish approval or a guaranteed eligibility threshold.
