@@ -4,9 +4,9 @@
     "pnpm-lock.yaml": "990a8434a1f76ab74ed0a8e92778c3635bbcb1010111ca5ba96739cf2a90c72d",
     "src-tauri/Cargo.lock": "685888281c9fd450a195f8182e75ae70c2f3faf08aa3f7609ac3336ffe60c162",
     "LICENSE": "912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755",
-    "docs/legal/supplemental-notices.json": "8b6d12bba200f6bb904b05c9e2b15e71b446cea408f04cce04b7a643db4bd900",
-    "docs/legal/asset-license-notices.json": "8e492c50f6cb4ffecb3325a3ea55eeb6830888491d907ee7be9ef84971c004c6",
-    "docs/legal/asset-provenance.json": "45ea6fb0ad6aa9b77032ba86c19ca7be93f28a818633b7e64a41e9af3f1c9cc5"
+    "docs/legal/supplemental-notices.json": "95df42ebbb27c3a3333d7b6a2fcb63b8a23b512038f2476cb24a88009cb01269",
+    "docs/legal/asset-license-notices.json": "67c7e6629403fdb93cd62186b2881cc1e05316cf5652c675ab2fdfc9aff70d93",
+    "docs/legal/asset-provenance.json": "ee105a87293cfb47aae1f36837964574dbabf42b9ac48e66e829d5c9bb536619"
   },
   "packages": [
     {
@@ -5800,9 +5800,15 @@
       "version": "3.0.1",
       "license": "MIT",
       "source": "https://registry.npmjs.org/html-parse-stringify/3.0.1",
-      "notice_files": [],
+      "notice_files": [
+        {
+          "path": "upstream/LICENSE",
+          "source": "https://raw.githubusercontent.com/henrikjoreteg/html-parse-stringify/a2659e6eac3603ba8b46958e0bd35b337108261f/LICENSE",
+          "sha256": "f51aa7a410f3d3ff9352a5422b76c072588ac76b63861f59447502caeacacc16"
+        }
+      ],
       "metadata_error": null,
-      "review_required": true
+      "review_required": false
     },
     {
       "ecosystem": "npm",
@@ -11257,9 +11263,15 @@
       "version": "0.2.6",
       "license": "MIT",
       "source": "https://crates.io/api/v1/crates/fax/0.2.6/download",
-      "notice_files": [],
+      "notice_files": [
+        {
+          "path": "upstream/LICENSE",
+          "source": "https://raw.githubusercontent.com/pdf-rs/fax/5d70a161e33b62305f8bce7af3f7fbd011cfaf5d/LICENSE",
+          "sha256": "7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff"
+        }
+      ],
       "metadata_error": null,
-      "review_required": true
+      "review_required": false
     },
     {
       "ecosystem": "cargo",
@@ -11267,9 +11279,15 @@
       "version": "0.2.0",
       "license": "MIT",
       "source": "https://crates.io/api/v1/crates/fax_derive/0.2.0/download",
-      "notice_files": [],
+      "notice_files": [
+        {
+          "path": "upstream/LICENSE",
+          "source": "https://raw.githubusercontent.com/pdf-rs/fax/5d70a161e33b62305f8bce7af3f7fbd011cfaf5d/LICENSE",
+          "sha256": "7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff"
+        }
+      ],
       "metadata_error": null,
-      "review_required": true
+      "review_required": false
     },
     {
       "ecosystem": "cargo",
@@ -17912,9 +17930,15 @@
       "version": "0.1.3",
       "license": "MIT OR Apache-2.0",
       "source": "https://crates.io/api/v1/crates/tao-macros/0.1.3/download",
-      "notice_files": [],
+      "notice_files": [
+        {
+          "path": "upstream/LICENSE",
+          "source": "https://raw.githubusercontent.com/tauri-apps/tao/340684d932b6126bed449fc1f4edca81776ad592/LICENSE",
+          "sha256": "6dc0e068dcf3a5bc8e054205b85b7720e1d49265bbc64bf515d2cf79197df69a"
+        }
+      ],
       "metadata_error": null,
-      "review_required": true
+      "review_required": false
     },
     {
       "ecosystem": "cargo",
@@ -22202,7 +22226,17 @@
       "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/798b90d7d65cd764b7a2dee1f95e7bd56eacb602/LICENSE",
       "evidence": "The imported root pnpm-lock.yaml locks 1.73.0 with this integrity. The downloaded tarball matches it; 49 tracked SVG files and 49 inline SVG strings are byte-identical to archive members. npm gitHead identifies the license revision.",
       "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
+    },
+    {
+      "name": "@lobehub/icons-static-svg",
+      "version": "1.98.0",
+      "license": "MIT",
+      "package_integrity": "sha512-soyLV2g74ujV+9BBymPwXrorJ+kQsEz7WvVd4uzhN2wZnd4Jbyc2FsmyjZBosGaufOirCs1RGJQlLe6l9bjwLg==",
+      "package_source": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.98.0.tgz",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/86b3f06ad9a4cc57011a56e5a7d3a5d4f1e8d835/LICENSE",
+      "evidence": "Integrity-verified archive contains a byte-equal counterpart (ignoring outer whitespace only) for catcoder.svg and inline catcoder under icons/kwaikat.svg. Establishes a licensed library counterpart, not the original download date or trademark authorization.",
+      "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
     }
   ],
-  "notices_sha256": "f2e502b2cdb4f2bf26b4d1ca3bfc9f5e85fb7e4df7510dbdddcd79b94744e557"
+  "notices_sha256": "f6c00b84e93b3ae9e4d0beb59a35520707c16d0a280e068cac27a354adf258f0"
 }

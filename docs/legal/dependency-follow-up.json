@@ -4,7 +4,17 @@
     "result": "unresolved",
     "reason": "发布包没有许可文件；npm gitHead b30f1b68 对应完整 GitHub tree 中也没有 LICENSE/COPYING，README 无完整条款。现有证据仅为 MIT 元数据。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/%40open-draft%2Fdeferred-promise/2.2.0"
+    "registry_source": "https://registry.npmjs.org/%40open-draft%2Fdeferred-promise/2.2.0",
+    "last_verified": "2026-10-23",
+    "recheck": "HEAD 已有 LICENSE.md，但首次加入位于 21dfbc50 的 ESM/依赖迁移重大变更；锁定 b30f1b68 无原文，不能把新版文件直接当作 2.2.0 原文。",
+    "handling": "向维护者确认 2.2.0 许可/版权适用范围；或单独评估升级到带原文的版本，验证 ESM 兼容。",
+    "recheck_evidence": {
+      "repository": "open-draft/deferred-promise",
+      "revision_checked": "b30f1b683311030e92fcdd08d2bd6574d652b77f",
+      "revision_tree_result": [],
+      "head_revision": "d534e74206ffbfc64a0e268eb3d7d43de44e7eae",
+      "head_license_paths": ["LICENSE.md"]
+    }
   },
   {
     "package": "npm:@tauri-apps/cli-darwin-arm64@2.8.1",
@@ -121,56 +131,131 @@
     "result": "unresolved",
     "reason": "包及 gitHead e636db81 无许可文件。README 的 MIT 链接 https://oss.ninja/mit/developit/ 现返回与该项目无关的网站首页，不能采信或复制为许可证。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/dlv/1.1.3"
+    "registry_source": "https://registry.npmjs.org/dlv/1.1.3",
+    "last_verified": "2026-10-23",
+    "recheck": "锁定 e636db81 和当前 HEAD tree 均未找到独立许可原文；原 oss.ninja 链接不是可采信原文。",
+    "handling": "请求 developit 提供 1.1.3 原始声明；若无法取得，评估替换调用该包的依赖，不生成版权模板。",
+    "recheck_evidence": {
+      "repository": "developit/dlv",
+      "revision_checked": "e636db817a96e4ca4710b407163fb992748b3b80",
+      "revision_tree_result": [],
+      "head_revision": "3212139c05647ffe3f1b095acd46afa2f5f635dd",
+      "head_license_paths": []
+    }
   },
   {
     "package": "npm:html-parse-stringify@3.0.1",
-    "result": "unresolved",
-    "reason": "发布包和 gitHead ce46022f 中没有许可文件；README 的 license 段仅写 MIT，未提供完整原文或版权声明。",
-    "sources": [],
-    "registry_source": "https://registry.npmjs.org/html-parse-stringify/3.0.1"
+    "result": "original_notice_collected",
+    "reason": "从 npm gitHead ce46022f 到上游 a2659e6e 仅新增 LICENSE，代码未变。补入维护者随后为同一源码补交的 MIT 原文，明确不是发布包自带文件。",
+    "sources": [
+      "https://raw.githubusercontent.com/henrikjoreteg/html-parse-stringify/a2659e6eac3603ba8b46958e0bd35b337108261f/LICENSE",
+      "https://github.com/henrikjoreteg/html-parse-stringify/compare/ce46022f537ef9b050fac592f9fcc30bf838e5ba...a2659e6eac3603ba8b46958e0bd35b337108261f"
+    ],
+    "registry_source": "https://registry.npmjs.org/html-parse-stringify/3.0.1",
+    "last_verified": "2026-10-23",
+    "handling": "保留补充原文和固定版本映射；后续版本升级重新核查。"
   },
   {
     "package": "npm:is-node-process@1.2.0",
     "result": "unresolved",
     "reason": "npm 未提供 gitHead；已检查 v1.2.0 标签 8a6152c7，tree 仍无许可文件。不能用其他版本的许可原文冒充本版本。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/is-node-process/1.2.0"
+    "registry_source": "https://registry.npmjs.org/is-node-process/1.2.0",
+    "last_verified": "2026-10-23",
+    "recheck": "v1.2.0 与当前 HEAD 同为 8a6152c7，tree 无 LICENSE/COPYING；没有新原文可补。",
+    "handling": "请求 mswjs 补发该标签的许可文件；评估上游测试依赖升级路径。",
+    "recheck_evidence": {
+      "repository": "mswjs/is-node-process",
+      "revision_checked": "8a6152c795d8705be97166bd5167e70ac6efc67c",
+      "revision_tree_result": [],
+      "head_revision": "8a6152c795d8705be97166bd5167e70ac6efc67c",
+      "head_license_paths": []
+    }
   },
   {
     "package": "npm:react-remove-scroll-bar@2.3.8",
     "result": "unresolved",
     "reason": "发布包未含许可文本；npm gitHead b3b1287a 的源码读取返回 404，已列出标签最高为 v2.3.7，未建立 2.3.8 对应原文。404 不等于项目已删除。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/react-remove-scroll-bar/2.3.8"
+    "registry_source": "https://registry.npmjs.org/react-remove-scroll-bar/2.3.8",
+    "last_verified": "2026-10-23",
+    "recheck": "gitHead b3b1287a 的 tree 本轮返回 HTTP 422；新增 LICENSE 的 7301c160 中 package.json 仍为 2.3.7，尚未证明对应 2.3.8。",
+    "handling": "请求维护者补发 2.3.8 的源码 revision/许可；不要用 2.3.7 或 react-remove-scroll 的声明顶替。",
+    "recheck_evidence": {
+      "repository": "theKashey/react-remove-scroll-bar",
+      "revision_checked": "b3b1287aad81def2e2ae707274b74531b61ddbaf",
+      "revision_tree_result": "gh: Invalid object requested. SHA must identify a commit or a tree. (HTTP 422)",
+      "head_revision": "8ca9ba5ea52de03308fe8ced94f7b159a44d28ff",
+      "head_license_paths": ["LICENSE"]
+    }
   },
   {
     "package": "npm:stackback@0.0.2",
     "result": "unresolved",
     "reason": "npm 无 gitHead；已核查 v0.0.2 标签 29630953，tree 只有 package.json 许可字段而无 LICENSE/COPYING。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/stackback/0.0.2"
+    "registry_source": "https://registry.npmjs.org/stackback/0.0.2",
+    "last_verified": "2026-10-23",
+    "recheck": "精确标签 29630953 及当前 HEAD 均无许可文件，仅包元数据。",
+    "handling": "向原维护者请求 0.0.2 版权和许可原文；评估测试运行器升级是否移除此传递依赖。",
+    "recheck_evidence": {
+      "repository": "shtylman/node-stackback",
+      "revision_checked": "2963095372abf7b75ba55f01cef08ab1e62c2ff4",
+      "revision_tree_result": [],
+      "head_revision": "24d55717e16f1bb2109e848ea2b3a90ea900ddb5",
+      "head_license_paths": []
+    }
   },
   {
     "package": "npm:strict-event-emitter@0.5.1",
     "result": "unresolved",
     "reason": "npm 无 gitHead；v0.5.1 标签 56e004cf 可访问，但没有 LICENSE/COPYING 文件。包的 MIT 标识不能替代缺失的原始文本。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/strict-event-emitter/0.5.1"
+    "registry_source": "https://registry.npmjs.org/strict-event-emitter/0.5.1",
+    "last_verified": "2026-10-23",
+    "recheck": "v0.5.1 56e004cf 与当前 HEAD 均未发现许可文件；仍只具 MIT 标识。",
+    "handling": "请求 open-draft 对 0.5.1 补许可；不要套用同组织另一项目的版权。",
+    "recheck_evidence": {
+      "repository": "open-draft/strict-event-emitter",
+      "revision_checked": "56e004cf2793053ea9ece4330fd52cace96acbff",
+      "revision_tree_result": [],
+      "head_revision": "c0c3d5a1f942da9e1fa16f0d36565a75839dae78",
+      "head_license_paths": []
+    }
   },
   {
     "package": "npm:tr46@0.0.3",
     "result": "unresolved",
     "reason": "发布包没有许可文本；gitHead a8009f9c 的 tree 未发现许可文件，README 读取 404。不能从新版本或另一仓库猜测版权人。",
     "sources": [],
-    "registry_source": "https://registry.npmjs.org/tr46/0.0.3"
+    "registry_source": "https://registry.npmjs.org/tr46/0.0.3",
+    "last_verified": "2026-10-23",
+    "recheck": "锁定 a8009f9c 无许可文件；后续 3a6f2972 才加入 MIT，HEAD 也有 LICENSE.md，但旧版本归属范围仍未建立。",
+    "handling": "请求 whatwg/Sebmaster 确认 0.0.3 的原文适用性；优先评估引入该旧版本的 URL/DOM 依赖升级。",
+    "recheck_evidence": {
+      "repository": "Sebmaster/tr46.js",
+      "revision_checked": "a8009f9ce80ff5dbe71dd71e203afe4e4c878d28",
+      "revision_tree_result": [],
+      "head_revision": "6d09104f21991d496aa2a8535d21bdea91a9c216",
+      "head_license_paths": ["LICENSE.md"]
+    }
   },
   {
     "package": "cargo:convert_case@0.4.0",
     "result": "unresolved",
     "reason": "crate 和 .cargo_vcs_info 指向的 300d9eef revision 均没有许可文件，README 也未含完整条款；只有 Cargo MIT 字段。",
     "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/convert_case/0.4.0/download"
+    "registry_source": "https://crates.io/api/v1/crates/convert_case/0.4.0/download",
+    "last_verified": "2026-10-23",
+    "recheck": "已找到后续 f72ca63c 的 MIT 原文，但相对锁定 300d9eef 还包含 src/case.rs cfg/doc 变更；严格版本原文对应仍待确认。",
+    "handling": "向 rutrum 确认该声明覆盖 0.4.0；或在独立变更中升级调用它的宏依赖，勿静默变更锁文件。",
+    "recheck_evidence": {
+      "repository": "rutrum/convert-case",
+      "revision_checked": "300d9eef9e8c970e15f324afbc3df8b6a4ebbf71",
+      "revision_tree_result": [],
+      "head_revision": "637e1aec1717e3a4af07dff1c1dec7a4eb971b2a",
+      "head_license_paths": ["LICENSE"]
+    }
   },
   {
     "package": "cargo:crc-catalog@2.4.0",
@@ -184,25 +269,33 @@
   },
   {
     "package": "cargo:fax@0.2.6",
-    "result": "unresolved",
-    "reason": "crate 与 40b226eb revision 没有 LICENSE/COPYING，README 和检查到的源码没有完整许可声明；仅 Cargo MIT 元数据。",
-    "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/fax/0.2.6/download"
+    "result": "original_notice_collected",
+    "reason": "从 crate vcs 40b226eb 到 5d70a161 仅新增根及 derive/LICENSE，无代码改动；上游提交明确补齐发布包遗漏的 MIT 原文。",
+    "sources": [
+      "https://raw.githubusercontent.com/pdf-rs/fax/5d70a161e33b62305f8bce7af3f7fbd011cfaf5d/LICENSE",
+      "https://github.com/pdf-rs/fax/compare/40b226eb97b391355e971fd95a8dd532a4c127a0...5d70a161e33b62305f8bce7af3f7fbd011cfaf5d"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/fax/0.2.6/download",
+    "last_verified": "2026-10-23",
+    "handling": "保留补充原文和固定版本映射；后续版本升级重新核查。"
   },
   {
     "package": "cargo:fax_derive@0.2.0",
-    "result": "unresolved",
-    "reason": "同一 fax 仓库的 derive 子包，40b226eb revision 没有独立或根许可文件；不得补造版权人。",
-    "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/fax_derive/0.2.0/download"
+    "result": "original_notice_collected",
+    "reason": "同一版本源码到 5d70a161 仅增加许可证文件；derive/LICENSE 是指向 ../LICENSE 的 Git 符号链接（mode 120000），解析后补入根 MIT 原文。",
+    "sources": [
+      "https://raw.githubusercontent.com/pdf-rs/fax/5d70a161e33b62305f8bce7af3f7fbd011cfaf5d/LICENSE",
+      "https://github.com/pdf-rs/fax/compare/40b226eb97b391355e971fd95a8dd532a4c127a0...5d70a161e33b62305f8bce7af3f7fbd011cfaf5d"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/fax_derive/0.2.0/download",
+    "last_verified": "2026-10-23",
+    "handling": "保留补充原文和固定版本映射；后续版本升级重新核查。"
   },
   {
     "package": "cargo:fxhash@0.2.1",
     "result": "original_notice_collected",
     "reason": "已保留锁定 crate lib.rs 的 Rust Project Developers 版权及双许可原始文件头，附 crate 校验和。不是重新生成的版权模板。",
-    "sources": [
-      "https://docs.rs/crate/fxhash/0.2.1/source/lib.rs#1-9"
-    ],
+    "sources": ["https://docs.rs/crate/fxhash/0.2.1/source/lib.rs#1-9"],
     "registry_source": "https://crates.io/api/v1/crates/fxhash/0.2.1/download"
   },
   {
@@ -220,7 +313,17 @@
     "result": "unresolved",
     "reason": "crate 无 .cargo_vcs_info；已检查 0.1.1 标签 66afc663，没有许可文件，README 仅说 MIT/Apache-2.0。",
     "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/mac/0.1.1/download"
+    "registry_source": "https://crates.io/api/v1/crates/mac/0.1.1/download",
+    "last_verified": "2026-10-23",
+    "recheck": "精确标签和当前 HEAD 同为 66afc663，仍没有完整许可文件。",
+    "handling": "请求 reem 提供 0.1.1 双许可原文/版权；评估传递依赖替换，勿借用同作者其他项目许可证。",
+    "recheck_evidence": {
+      "repository": "reem/rust-mac",
+      "revision_checked": "66afc663b68a65633ea165c742b5a9c6734581c2",
+      "revision_tree_result": [],
+      "head_revision": "66afc663b68a65633ea165c742b5a9c6734581c2",
+      "head_license_paths": []
+    }
   },
   {
     "package": "cargo:r-efi@5.3.0",
@@ -245,14 +348,43 @@
     "result": "unresolved",
     "reason": "生成的 Android crate 没有许可文件或 .cargo_vcs_info；不能将主项目 v/0.1.1 标签直接当作 android crate 0.1.1。主仓库有 MIT/Apache 文件，但尚未证明该发布包对应的源码修订。",
     "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/rustls-platform-verifier-android/0.1.1/download"
+    "registry_source": "https://crates.io/api/v1/crates/rustls-platform-verifier-android/0.1.1/download",
+    "last_verified": "2026-10-23",
+    "recheck": "确认主项目 v/0.1.1 的 android 子包实际为 0.1.0，不能同号映射；找到 da3d9c36 将子包升至 0.1.1，但发布包还包含生成的 Maven/AAR，二进制到源码及嵌入材料映射未完成。",
+    "handling": "核对 0.1.1 生成 AAR/发布构建记录及嵌入第三方声明；取得完整版本映射后再补根双许可。",
+    "recheck_evidence": {
+      "repository": "rustls/rustls-platform-verifier",
+      "revision_checked": "00e6363e0f4e0d9a9dcf3f89733e7413ff5b61e4",
+      "revision_tree_result": ["LICENSE-APACHE", "LICENSE-MIT"],
+      "head_revision": "8becdc1beaee80afee396a8c769d42fe9bd9cb4e",
+      "head_license_paths": [
+        "LICENSE-APACHE",
+        "LICENSE-MIT",
+        "android-release-support/LICENSE-APACHE",
+        "android-release-support/LICENSE-MIT",
+        "rustls-platform-verifier/LICENSE-APACHE",
+        "rustls-platform-verifier/LICENSE-MIT"
+      ],
+      "version_mapping_warning": "The same-numbered parent tag contains android 0.1.0, not 0.1.1; candidate 0.1.1 version bump: da3d9c36f48fb9f8f97e94f132fdab67ab0fc75b."
+    }
   },
   {
     "package": "cargo:seahash@4.1.0",
     "result": "unresolved",
     "reason": "crate 没有许可文件；.cargo_vcs_info 给出 94b632ae，但 Redox GitLab 对该 revision 的 LICENSE 请求返回 HTTP 403；本地 README/源码未找到完整原文。",
     "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/seahash/4.1.0/download"
+    "registry_source": "https://crates.io/api/v1/crates/seahash/4.1.0/download",
+    "last_verified": "2026-10-23",
+    "recheck": "本轮重试 GitLab 固定 revision 的 LICENSE 返回 HTTP 404（此前为 403）；尝试 redox-os/seahash GitHub 镜像也返回 404。不可访问不等于项目或许可已删除。",
+    "handling": "请求 Redox 维护者提供 94b632ae 的原始文件或官方可验证镜像；不要采用其他项目 notices 中无版本证据的转抄。",
+    "recheck_evidence": {
+      "repository": "redox-os/seahash",
+      "revision_checked": "94b632aeac099031c373599313d5b5f0acbbaec0",
+      "revision_tree_result": "gh: Not Found (HTTP 404)",
+      "head_revision": null,
+      "head_license_paths": "gh: Not Found (HTTP 404)",
+      "gitlab_license_http_status": 404
+    }
   },
   {
     "package": "cargo:selectors@0.35.0",
@@ -265,10 +397,15 @@
   },
   {
     "package": "cargo:tao-macros@0.1.3",
-    "result": "unresolved",
-    "reason": "crate 无许可文件及 .cargo_vcs_info；所核查的 tao 标签未建立宏子包 0.1.3 的精确源码对应。不能把 tao 主包同号标签当作宏子包版本。",
-    "sources": [],
-    "registry_source": "https://crates.io/api/v1/crates/tao-macros/0.1.3/download"
+    "result": "original_notice_collected",
+    "reason": "发布提交 340684d9 的子包版本为 0.1.3；Cargo.toml 与发布包 Cargo.toml.orig 逐字节一致，src/lib.rs、两个示例、CHANGELOG 均一致。收集该修订根 Apache-2.0 原文作为双许可的一种；保留 MIT OR Apache-2.0 元数据，不虚构 MIT 版权。",
+    "sources": [
+      "https://raw.githubusercontent.com/tauri-apps/tao/340684d932b6126bed449fc1f4edca81776ad592/LICENSE",
+      "https://github.com/tauri-apps/tao/tree/340684d932b6126bed449fc1f4edca81776ad592/tao-macros"
+    ],
+    "registry_source": "https://crates.io/api/v1/crates/tao-macros/0.1.3/download",
+    "last_verified": "2026-10-23",
+    "handling": "保留补充原文和固定版本映射；后续版本升级重新核查。"
   },
   {
     "package": "cargo:winapi-i686-pc-windows-gnu@0.4.0",

@@ -5,9 +5,9 @@ Proposed priorities from the October 23, 2026 repository audit. These are open w
 - [x] Fix shared replay-cache test isolation without changing the nanosecond or cache-size assertions; local validation and [hosted CI](https://github.com/KeaneFeng/cc-gateway-pro/actions/runs/39893831322) pass (609 frontend tests; 2644 Linux backend tests, 3 ignored).
 - [x] Align CI/release Node with `.node-version`, pin Rust 1.95, and pin pnpm 10.12.3. CI runner verification passes. The changed release workflow still awaits a new production release run.
 - [x] Inventory locked dependency licenses and asset provenance, collect original notices and configure Tauri notice resources.
-- [x] Resolve 19 of the original 34 missing dependency notices, identify 49 file/49 inline Lobe icon matches, and verify notice resources in a local macOS debug .app.
+- [x] Resolve 23 of the original 34 missing dependency notices, identify 49 byte-exact file/49 inline Lobe matches plus 2 file/1 inline counterparts differing only in outer whitespace, and verify notice resources in a local macOS debug .app.
 - [x] Enable GitHub private vulnerability reporting with maintainer authorization; verify `enabled: true` and the public reporting button. No report was submitted; delivery remains untested.
-- [ ] Resolve the 15 specifically documented notice gaps and unconfirmed brand permissions; inspect Windows/Linux production packages. See [license audit](legal/third-party-license-audit.md).
+- [ ] Resolve the 11 specifically documented notice gaps and unconfirmed brand permissions; inspect Windows/Linux production packages. See [license audit](legal/third-party-license-audit.md).
 - [ ] Test clean installation and upgrade paths on macOS arm64, Windows x64 and Linux x64; record OS/runtime details.
 - [x] Reconstruct all 13 published release summaries after v3.19.1 with dated comparisons and revert exclusions; see [history](release-notes/published-history.md). Online release bodies remain unchanged.
 - [x] Verify Homebrew tap/cask existence, v4.0.17 arm64 URL and digest against the release API.

@@ -81,6 +81,6 @@ CC-Gateway-Pro is a public MIT-licensed desktop application for managing AI codi
 
 - Confirm all six recipients, their profiles and regular project-specific code contribution links. Only KeaneFeng is presently identified as an applicant; do not add upstream authors without their actual participation and consent.
 - Confirm non-commercial OSS usage, intended tools, funding/employment context, prior OSS licenses and contact fields. GitHub evidence cannot answer these personal declarations.
-- Review the disclosed 15 notice gaps, unconfirmed asset permissions and missing platform installation/distribution checks; do not claim full clearance.
+- Review the disclosed 11 notice gaps, unconfirmed asset permissions and missing platform installation/distribution checks; do not claim full clearance.
 - Private vulnerability reporting has been enabled and verified through the repository API and public Security page. End-to-end report delivery has not been tested; no synthetic report was submitted.
 - Refresh metrics and apply the live form’s final wording. The official program evaluates applications individually; this material does not establish approval or a guaranteed eligibility threshold.

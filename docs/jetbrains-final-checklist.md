@@ -10,7 +10,7 @@
 | ------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | §1 核心原则         | 已落实                         | 保留根 MIT 版权、上游归属及真实历史；未虚构指标或用户；[来源说明](project-history.md)                                                                                              | 继续避免“完全原创”“全面合规”“保证获批”等表述                                                     |
 | §2 仓库事实审计     | 已完成当前快照                 | [审计](jetbrains-application-audit.md)与下方 API/命令；公开、main、独立仓库但含上游代码                                                                                            | 上游导入的精确 revision 未完全建立；逐行原创性不做无证据计数                                     |
-| §3 P0 来源与许可证  | 部分完成                       | 五语言介绍使用“参考”及对应译文；代码复用历史和 MIT 原文保留；1305 个依赖的元数据、1290 项声明/文件头已收集；19 项缺口补齐                                                          | 15 项声明未补；其余品牌来源及使用权限、完整分发合规仍未结案                                      |
+| §3 P0 来源与许可证  | 部分完成                       | 五语言介绍使用“参考”及对应译文；代码复用历史和 MIT 原文保留；1305 个依赖的元数据、1294 项声明/文件头已收集；23 项缺口补齐                                                          | 11 项声明未补；其余品牌来源及使用权限、完整分发合规仍未结案                                      |
 | §4 P1 独立成果      | 已完成证据表                   | [贡献矩阵](original-contributions.md)覆盖原清单六类功能及 Session Traces；区分上游基础能力与项目改进                                                                               | 不把全部贡献者/提交数当作本项目独创；未声称逐模块完全重写                                        |
 | §5 P1 README / 展示 | 已完成文档优化                 | 五语言 README、真实仓库图示、安装/开发入口、历史/许可证/贡献链接                                                                                                                   | 工具×系统兼容矩阵未逐组合实测；Homebrew 渠道未实机验收                                           |
 | §6 P1 发布与维护    | 部分完成                       | 43 个真实发行；[最新版本](https://github.com/KeaneFeng/cc-gateway-pro/releases/tag/v4.0.17)有三平台资产；贡献/安全文档、Issue 模板、Roadmap 及补充版本说明存在                     | 中间版本摘要已补齐（见下节）；线上 release body 仍通用；新资源尚未正式发行；三平台安装升级未验收 |
@@ -48,8 +48,8 @@
 
 ## 尚未关闭的来源与发行缺口
 
-- 15 项依赖：`@open-draft/deferred-promise`、`dlv`、`html-parse-stringify`、`is-node-process`、`react-remove-scroll-bar`、`stackback`、`strict-event-emitter`、`tr46`、`convert_case`、`fax`、`fax_derive`、`mac`、`rustls-platform-verifier-android`、`seahash`、`tao-macros`。确切版本及缺失原文、403/404、版本映射不足等原因见[逐项记录](legal/dependency-follow-up.md)。本轮复核记录与摘要，未将所有历史请求重做，也未宣称远端状态永远不变。
-- 品牌素材：49 个文件和 49 个内联 SVG 已与 Lobe Icons 精确匹配并收集 MIT 声明；其余 51 个品牌文件和 21 个内联条目仅确认 Git 沿革。来源库的版权许可不自动证明独立商标授权，详见[来源表](legal/brand-asset-sources.md)。
+- 11 项依赖：`@open-draft/deferred-promise@2.2.0`、`dlv@1.1.3`、`is-node-process@1.2.0`、`react-remove-scroll-bar@2.3.8`、`stackback@0.0.2`、`strict-event-emitter@0.5.1`、`tr46@0.0.3`、`convert_case@0.4.0`、`mac@0.1.1`、`rustls-platform-verifier-android@0.1.1`、`seahash@4.1.0`。本轮逐项重查固定 revision 和当前仓库；原因及建议见[依赖跟进](legal/dependency-follow-up.md)。
+- 品牌素材：49 个文件和 49 个内联 SVG 已与 Lobe Icons 精确匹配并收集 MIT 声明；另补齐 2 文件/1 内联的 Lobe 内容对应（仅忽略外层空白）；其余 49 个品牌文件和 20 个内联条目仍未建立独立来源。来源库的版权许可不自动证明独立商标授权，详见[来源表](legal/brand-asset-sources.md)。
 - 平台分发：本地 macOS debug 包的 10 个资源已核对；Windows/Linux 包内声明、系统依赖义务、正式签名及三平台安装升级未做最终验收。现有发布资产不会因 main 的配置更新而自动改变。
 
 ## 申请判断与后续动作
@@ -79,4 +79,4 @@ python3 scripts/audit-third-party-licenses.py --check
 - 私密漏洞报告：启用操作成功；两次 API 回读均为 `enabled: true`；匿名访问公开 Security 页面可见报告按钮，目标 `/KeaneFeng/cc-gateway-pro/security/advisories/new` 正确。未填写或提交漏洞报告。
 - 中间发行记录：[历史摘要](release-notes/published-history.md)覆盖 v3.19.1 后所有 13 个正式发行，按发布时间排序并核验相邻 tag 祖先关系；v4.0.5 的版本号变更、v4.0.11/v4.0.16 的撤销操作均明确保留。未补造未发布版本。
 - Homebrew：tap 存在，固定 revision 的 cask 指向 v4.0.17 arm64 DMG，SHA-256 与 release API 的 digest 一致。未执行安装、升级或移除 quarantine 的 postflight；Intel 与其他平台安装体验未据此认证。
-- 15 项许可和未知品牌来源仍需对应版本原文或权利证据；本轮未获得能够改变既有结论的新证据，不通过改写声明关闭缺口。6 人名单及非商业用途仍不能由代理代为确认。
+- 本轮新增 4 项许可补证后剩余 11 项；未知品牌来源仍需权利证据。6 人名单及非商业用途仍不能由代理代为确认。

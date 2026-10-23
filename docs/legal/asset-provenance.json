@@ -1036,7 +1036,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/TeamoRouter-icon-dark.png",
@@ -1045,7 +1048,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/a6-icon.png",
@@ -1054,7 +1060,10 @@
     "file_introduction_commit": "a4db787ab0fe6f27b7957da048d9440b55735996",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/a4db787ab0fe6f27b7957da048d9440b55735996",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/aicodemirror.svg",
@@ -1064,7 +1073,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/aicoding.svg",
@@ -1074,7 +1086,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/aihubmix-color.svg",
@@ -1099,7 +1114,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/alibaba.svg",
@@ -1123,7 +1141,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/anthropic.svg",
@@ -1147,7 +1168,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/apinebula_icon.png",
@@ -1156,7 +1180,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/atlascloud_icon.png",
@@ -1165,7 +1192,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/aws.svg",
@@ -1219,8 +1249,15 @@
     "unchanged_since_import": true,
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
-    "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "source_status": "lobe_content_match_outer_whitespace_only",
+    "permission_status": "MIT library notice collected; establishes content counterpart, not initial download history or separate trademark permission.",
+    "source_package": "@lobehub/icons-static-svg@1.73.0",
+    "archive_member": "package/icons/bailian.svg",
+    "source_integrity": "sha512-ydKUCDoopdmulbjDZo/gppaODd5Ju5nPneVcN9A5dAz9IJZUMkLms8bqostMLrqcdMQ8resKjLuV9RhJaWhaag==",
+    "source_url": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.73.0.tgz",
+    "source_sha256": "e9a43dd5ed7a39e01f8be3cc7e875ac195ba276e4832d2a906e9fcdf94e21063",
+    "comparison": "Byte equality after stripping outer whitespace only; no XML/path/color rewriting.",
+    "license_notice": "asset-license-notices.json"
   },
   {
     "path": "src/icons/extracted/bytedance.svg",
@@ -1245,7 +1282,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/catcoder.svg",
@@ -1254,8 +1294,15 @@
     "unchanged_since_import": true,
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
-    "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "source_status": "lobe_content_match_outer_whitespace_only",
+    "permission_status": "MIT library notice collected; establishes content counterpart, not initial download history or separate trademark permission.",
+    "source_package": "@lobehub/icons-static-svg@1.98.0",
+    "archive_member": "package/icons/kwaikat.svg",
+    "source_integrity": "sha512-soyLV2g74ujV+9BBymPwXrorJ+kQsEz7WvVd4uzhN2wZnd4Jbyc2FsmyjZBosGaufOirCs1RGJQlLe6l9bjwLg==",
+    "source_url": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.98.0.tgz",
+    "source_sha256": "2f5fe0a9822c55b150239a94bde1e5a82f1c19937ca425f85be3c09f6f0b0407",
+    "comparison": "Byte equality after stripping outer whitespace only; no XML/path/color rewriting.",
+    "license_notice": "asset-license-notices.json"
   },
   {
     "path": "src/icons/extracted/ccsub.svg",
@@ -1264,7 +1311,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/chatglm.svg",
@@ -1288,7 +1338,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/claude.svg",
@@ -1313,7 +1366,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/claw.svg",
@@ -1323,7 +1379,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/cloudflare.svg",
@@ -1347,7 +1406,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/cohere.svg",
@@ -1387,7 +1449,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/ctok.svg",
@@ -1397,7 +1462,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/cubence.svg",
@@ -1407,7 +1475,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/dds.svg",
@@ -1417,7 +1488,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/deepseek.svg",
@@ -1457,7 +1531,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/etok.png",
@@ -1466,7 +1543,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/fenno-icon.webp",
@@ -1475,7 +1555,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/gemini.svg",
@@ -1590,7 +1673,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。 对官方仓库 NousResearch/hermes-agent@bf0203a794a07aac3ff764972ab9087baa4e4f4e 中 98 个候选文件作有界字节比对，无匹配；不是穷尽历史证明。"
   },
   {
     "path": "src/icons/extracted/huawei.svg",
@@ -1645,7 +1731,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/kimi.svg",
@@ -1670,7 +1759,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/lioncc.svg",
@@ -1680,7 +1772,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/longcat-color.svg",
@@ -1735,7 +1830,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/midjourney.svg",
@@ -1804,7 +1902,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/newapi.svg",
@@ -1814,7 +1915,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。 对官方仓库 QuantumNous/new-api@7fb6e57a5ff671582131c74e00bdfaa867d4e985 中 8 个候选文件作有界字节比对，无匹配；不是穷尽历史证明。"
   },
   {
     "path": "src/icons/extracted/notion.svg",
@@ -1839,7 +1943,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/nvidia.svg",
@@ -1894,7 +2001,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。 对官方仓库 anomalyco/opencode@2a381f895a79ac55a5a1256aab055582990f70c4 中 100 个候选文件作有界字节比对，无匹配；不是穷尽历史证明。"
   },
   {
     "path": "src/icons/extracted/openrouter.svg",
@@ -1919,7 +2029,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/palm.svg",
@@ -1944,7 +2057,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/perplexity.svg",
@@ -1969,7 +2085,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/qiniu.png",
@@ -1978,7 +2097,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/qwen.svg",
@@ -2003,7 +2125,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/relaxcode.png",
@@ -2013,7 +2138,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/runapi.jpg",
@@ -2023,7 +2151,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/shengsuanyun.svg",
@@ -2033,7 +2164,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/siliconflow.svg",
@@ -2058,7 +2192,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/stability.svg",
@@ -2083,7 +2220,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/subrouter.svg",
@@ -2092,7 +2232,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/sudocode-us.png",
@@ -2101,7 +2244,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/sudocode.png",
@@ -2110,7 +2256,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/tencent.svg",
@@ -2135,7 +2284,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/unity2.png",
@@ -2144,7 +2296,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/vercel.svg",
@@ -2199,7 +2354,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/yi.svg",
@@ -2238,7 +2396,10 @@
     "file_introduction_commit": "08204a91df685b5a5429b17f037a999db4e11b78",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/08204a91df685b5a5429b17f037a999db4e11b78",
     "source_status": "added_after_import",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "栅格素材不以视觉相似或品牌名推断来源；现有 Git 引入记录未给出可验证的原始 URL/权利凭证。"
   },
   {
     "path": "src/icons/extracted/zhipu.svg",
@@ -2264,7 +2425,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2275,7 +2439,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2286,7 +2453,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2313,7 +2483,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "modified_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2484,7 +2657,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2495,7 +2671,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2698,7 +2877,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "modified_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2757,7 +2939,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "modified_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2784,7 +2969,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2843,7 +3031,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2854,7 +3045,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -2993,7 +3187,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3068,7 +3265,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3079,7 +3279,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3138,7 +3341,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3165,7 +3371,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3176,7 +3385,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3187,7 +3399,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3198,7 +3413,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3208,8 +3426,15 @@
     "unchanged_since_import": true,
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
-    "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "source_status": "lobe_content_match_outer_whitespace_only",
+    "permission_status": "MIT library notice collected; establishes content counterpart, not initial download history or separate trademark permission.",
+    "source_package": "@lobehub/icons-static-svg@1.98.0",
+    "archive_member": "package/icons/kwaikat.svg",
+    "source_integrity": "sha512-soyLV2g74ujV+9BBymPwXrorJ+kQsEz7WvVd4uzhN2wZnd4Jbyc2FsmyjZBosGaufOirCs1RGJQlLe6l9bjwLg==",
+    "source_url": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.98.0.tgz",
+    "source_sha256": "2f5fe0a9822c55b150239a94bde1e5a82f1c19937ca425f85be3c09f6f0b0407",
+    "comparison": "Byte equality after stripping outer whitespace only; no XML/path/color rewriting.",
+    "license_notice": "asset-license-notices.json"
   },
   {
     "path": "src/icons/extracted/index.ts",
@@ -3236,7 +3461,10 @@
     "file_introduction_commit": "0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "history_evidence": "https://github.com/KeaneFeng/cc-gateway-pro/commit/0f69cb08506238d89bae17d9fbf23a70eb92e25f",
     "source_status": "unchanged_imported_asset",
-    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license."
+    "permission_status": "Unresolved: Git establishes repository history, but no original supplier URL and per-asset redistribution permission were established. Do not infer permission from filename, logo identity, or root MIT license.",
+    "last_reviewed": "2026-10-23",
+    "handling": "取得供应商品牌资产原始 URL、固定版本或文件摘要，以及适用许可/品牌条款；无法取得时，优先提出使用纯文字名称或自行设计的非品牌通用图标方案，经功能/视觉审查后替换。本轮未替换素材。",
+    "recheck": "与完整性验证过的 Lobe 1.73.0/1.98.0 SVG 归档比对，未建立逐字节或仅外层空白差异对应；仅有 Git 沿革不能证明原始授权。"
   },
   {
     "path": "src/icons/extracted/index.ts",

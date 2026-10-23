@@ -789,7 +789,7 @@ npm:headers-polyfill@4.0.3 | MIT | https://registry.npmjs.org/headers-polyfill/4
 npm:html-encoding-sniffer@4.0.0 | MIT | https://registry.npmjs.org/html-encoding-sniffer/4.0.0
   LICENSE.txt => SHA256 528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa
 npm:html-parse-stringify@3.0.1 | MIT | https://registry.npmjs.org/html-parse-stringify/3.0.1
-  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+  upstream/LICENSE => SHA256 f51aa7a410f3d3ff9352a5422b76c072588ac76b63861f59447502caeacacc16
 npm:http-proxy-agent@7.0.2 | MIT | https://registry.npmjs.org/http-proxy-agent/7.0.2
   LICENSE => SHA256 71368fd0f5b4129191e9afcd1e1ef2dc89a9090d3e4d80bbab92dafd032b3bef
 npm:https-proxy-agent@7.0.6 | MIT | https://registry.npmjs.org/https-proxy-agent/7.0.6
@@ -1582,9 +1582,9 @@ cargo:fastrand@2.3.0 | Apache-2.0 OR MIT | https://crates.io/api/v1/crates/fastr
   LICENSE-APACHE => SHA256 a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2
   LICENSE-MIT => SHA256 23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3
 cargo:fax@0.2.6 | MIT | https://crates.io/api/v1/crates/fax/0.2.6/download
-  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+  upstream/LICENSE => SHA256 7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff
 cargo:fax_derive@0.2.0 | MIT | https://crates.io/api/v1/crates/fax_derive/0.2.0/download
-  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+  upstream/LICENSE => SHA256 7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff
 cargo:fdeflate@0.3.7 | MIT OR Apache-2.0 | https://crates.io/api/v1/crates/fdeflate/0.3.7/download
   LICENSE-APACHE => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
   LICENSE-MIT => SHA256 c77a4cf9da729987d0fe7ccd811e3bd27393914ddf3d23467c18cc22954513b3
@@ -2595,7 +2595,7 @@ cargo:tao@0.34.6 | Apache-2.0 | https://crates.io/api/v1/crates/tao/0.34.6/downl
   LICENSE => SHA256 6dc0e068dcf3a5bc8e054205b85b7720e1d49265bbc64bf515d2cf79197df69a
   LICENSE.spdx => SHA256 02b6448337b757772d90e5f31caaa0f9e6afaad2221c01771d0a3deaa4d4196c
 cargo:tao-macros@0.1.3 | MIT OR Apache-2.0 | https://crates.io/api/v1/crates/tao-macros/0.1.3/download
-  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+  upstream/LICENSE => SHA256 6dc0e068dcf3a5bc8e054205b85b7720e1d49265bbc64bf515d2cf79197df69a
 cargo:tap@1.0.1 | MIT | https://crates.io/api/v1/crates/tap/1.0.1/download
   LICENSE.txt => SHA256 8b4e95f5cf0dc40269c99f7b787203ffe04ded245ca2427422c196efa2b2f42a
 cargo:tar@0.4.44 | MIT OR Apache-2.0 | https://crates.io/api/v1/crates/tar/0.4.44/download
@@ -3259,6 +3259,7 @@ cargo:zvariant_utils@3.3.0 | MIT | https://crates.io/api/v1/crates/zvariant_util
 
 Asset library notices (source identity and rights limits: docs/legal/asset-provenance.json):
 @lobehub/icons-static-svg@1.73.0 | MIT | https://raw.githubusercontent.com/lobehub/lobe-icons/798b90d7d65cd764b7a2dee1f95e7bd56eacb602/LICENSE | SHA256 add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a
+@lobehub/icons-static-svg@1.98.0 | MIT | https://raw.githubusercontent.com/lobehub/lobe-icons/86b3f06ad9a4cc57011a56e5a7d3a5d4f1e8d835/LICENSE | SHA256 add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a
 
 ========================================================================
 SHA256 000cbb5bea6f21829c8f0d9e1fe87410bd5ef0453412ffc017845982a3e19824
@@ -26230,6 +26231,17 @@ DEALINGS IN THE SOFTWARE.
 
 
 ========================================================================
+SHA256 7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff
+Copyright © 2021 The pdf-rs contributers.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+========================================================================
 SHA256 71368fd0f5b4129191e9afcd1e1ef2dc89a9090d3e4d80bbab92dafd032b3bef
 (The MIT License)
 
@@ -43734,6 +43746,31 @@ SHA256 f428305bbf2e70fbd807af0f3c7ac1b7acfb95311640f451e9d2e48db6d7e96b
 MIT License
 
 Copyright (c) 2023 dAxpeDDa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+========================================================================
+SHA256 f51aa7a410f3d3ff9352a5422b76c072588ac76b63861f59447502caeacacc16
+MIT License
+
+Copyright (c) 2025 Henrik Joreteg <henrik@joreteg.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
