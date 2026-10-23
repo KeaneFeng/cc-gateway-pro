@@ -7,7 +7,6 @@
 [![Version](https://img.shields.io/github/v/release/KeaneFeng/cc-gateway-pro?color=blue&label=version)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
 [English](README.md) | [中文](README_ZH.md) | [日本語](README_JA.md) | Svenska | [Español](README_ES.md) | [Ändringslogg](CHANGELOG.md)
 
@@ -17,20 +16,20 @@
 
 CC-Gateway-Pro är en skrivbordsbaserad kontrollpanel och lokal AI-providergateway för AI-verktyg för kodning. Den hanterar providerprofiler, skriver varje verktygs inbyggda konfigurationsfiler och kan dirigera aktiva förfrågningar genom en lokal proxy för förfrågningsloggning, sessionsspårningar, redundansväxling, modelltransformering, providerbindning på projektnivå och Vision Model-routning.
 
-Projektet är en fork av [farion1231/cc-switch](https://github.com/farion1231/cc-switch). Det behåller den ursprungliga idén med visuellt providersbyte och bygger sedan ut den med en lokal gateway i Rust/Tauri, konfigurationshantering för flera appar, förfrågningsroutning, användningsanalys, synkronisering och providerspecifika integrationer.
+CC-Gateway-Pro erbjuder lokal providerhantering, projektroutning, Vision Model-routning och förfrågningsanalys. Projektet använder [cc-switch](https://github.com/farion1231/cc-switch) som referens; återanvänd kod och uppströmsbidrag dokumenteras i projekthistoriken. Se [projekthistorik](docs/project-history.md) och [verifierbara bidrag](docs/original-contributions.md).
 
 ## Appar som stöds
 
-| App            | Huvudsakliga funktioner                                                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code    | Providersbyte, övertagande via lokal proxy, projektroutning, Vision Model-routning, MCP, prompts, skills, sessioner                       |
-| Claude Desktop | Officiella och tredjepartsprofiler, direktläge, lokalt dirigerat läge, mappning av modellrutter                                             |
-| Codex          | Providersbyte, övertagande via lokal proxy, projektroutning, OAuth-/Copilot-hjälp, MCP, prompts, skills, sessioner                         |
-| Gemini CLI     | Providersbyte, övertagande via lokal proxy, MCP, prompts, skills, sessioner                                                                 |
-| Grok Build     | Providersbyte, övertagande via lokal proxy, kvoter, redundansväxling, MCP, prompts, skills, sessioner                                      |
-| OpenCode       | Providerförinställningar, vanliga konfigurationsutdrag, MCP, prompts, skills, sessioner                                                     |
-| OpenClaw       | Providerförinställningar, arbetsytans filer, agentstandarder, paneler för verktyg och miljövariabler                                        |
-| Hermes Agent   | Providerförinställningar, minnespanel, hantering av MCP och skills                                                                          |
+| App            | Huvudsakliga funktioner                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Claude Code    | Providersbyte, övertagande via lokal proxy, projektroutning, Vision Model-routning, MCP, prompts, skills, sessioner |
+| Claude Desktop | Officiella och tredjepartsprofiler, direktläge, lokalt dirigerat läge, mappning av modellrutter                     |
+| Codex          | Providersbyte, övertagande via lokal proxy, projektroutning, OAuth-/Copilot-hjälp, MCP, prompts, skills, sessioner  |
+| Gemini CLI     | Providersbyte, övertagande via lokal proxy, MCP, prompts, skills, sessioner                                         |
+| Grok Build     | Providersbyte, övertagande via lokal proxy, kvoter, redundansväxling, MCP, prompts, skills, sessioner               |
+| OpenCode       | Providerförinställningar, vanliga konfigurationsutdrag, MCP, prompts, skills, sessioner                             |
+| OpenClaw       | Providerförinställningar, arbetsytans filer, agentstandarder, paneler för verktyg och miljövariabler                |
+| Hermes Agent   | Providerförinställningar, minnespanel, hantering av MCP och skills                                                  |
 
 ## Huvudfunktioner
 
@@ -64,16 +63,16 @@ Fler diagram för redundansväxling, användningsloggning, synkronisering av MCP
 
 ## Förhandsvisning av gränssnittet
 
-|                 Huvudskärm                 |                 Lägg till provider                  |
-| :----------------------------------------: | :-------------------------------------------------: |
+|                  Huvudskärm                   |                  Lägg till provider                  |
+| :-------------------------------------------: | :--------------------------------------------------: |
 | ![Huvudskärm](assets/screenshots/main-en.png) | ![Lägg till provider](assets/screenshots/add-en.png) |
 
-|                            Projektroutning                            |                          Konfiguration av Vision Model                          |
-| :-------------------------------------------------------------------: | :---------------------------------------------------------------------------: |
+|                                     Projektroutning                                      |                                      Konfiguration av Vision Model                                      |
+| :--------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: |
 | ![Förhandsvisning av projektroutning](assets/screenshots/project-routing-preview-zh.svg) | ![Förhandsvisning av Vision Model-konfiguration](assets/screenshots/vision-model-config-preview-zh.svg) |
 
-|                          Inställningar för Session Traces                          |                          Analys av Session Traces                          |
-| :-------------------------------------------------------------------------------: | :-----------------------------------------------------------------------: |
+|                                      Inställningar för Session Traces                                      |                                      Analys av Session Traces                                       |
+| :--------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------: |
 | ![Förhandsvisning av Session Traces-inställningar](assets/screenshots/session-traces-settings-preview.svg) | ![Förhandsvisning av Session Traces-analys](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## Installation
@@ -84,7 +83,7 @@ Systemkrav:
 
 - macOS 12 eller senare
 - Windows 10 eller senare
-- Linux-distributioner med en modern WebKitGTK-runtime, till exempel Ubuntu 22.04+, Debian 11+ eller Fedora 34+
+- Linux: WebKitGTK 4.1 / libsoup 3 krävs. Releasebyggen använder Ubuntu 22.04; andra distributioner kräver kompatibilitetskontroll.
 
 ### macOS Homebrew
 
@@ -105,17 +104,17 @@ brew upgrade --cask cc-gateway-pro
 
 ### Manuell nedladdning
 
-- Windows: ladda ner `.msi`-installationsprogrammet eller den portabla `.zip`-filen från [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+- Windows: `.msi` / `.exe` — [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest).
 - macOS: ladda ner `.dmg` från [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
 - Linux: ladda ner `.deb`, `.rpm` eller `.AppImage` från [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
-- Arch Linux: installera med `paru -S cc-gateway-pro-bin`.
+- Andra paketkanaler: kontrollera tillgänglighet hos distributören. GitHub Releases är den officiella nedladdningskällan.
 
 ## Bygg från källkod
 
-Förutsättningar: Node.js 22+, pnpm och Rust stable.
+Förutsättningar: Node.js 22.12+, pnpm 10.12.3 och Rust 1.95 (rust-toolchain.toml).
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm tauri dev
 pnpm tauri build
 ```
@@ -138,7 +137,7 @@ Repositoriet innehåller även ett hjälpskript:
 - [Användarmanual](docs/user-manual/zh/README.md)
 - [Arkitektur och flöden](docs/architecture-and-flows-zh.md)
 - [Proxyguide](docs/proxy-guide-zh.md)
-- [Versionsinformation](docs/release-notes/v3.19.1-en.md)
+- [Versionsinformation](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest)
 
 ## Datalagringsplatser
 
@@ -151,9 +150,22 @@ Lagringskatalogen kan flyttas till Dropbox, OneDrive, iCloud, NAS eller en annan
 
 ## Erkännanden
 
-- Forkad från [farion1231/cc-switch](https://github.com/farion1231/cc-switch)
+- Referens: [farion1231/cc-switch](https://github.com/farion1231/cc-switch)
 - Byggd med Tauri, Rust, React, TypeScript och Tailwind CSS
 
 ## Licens
 
-MIT © Keane Feng
+[MIT License](LICENSE) — Copyright (c) 2025 Jason Young.
+
+CC-Gateway-Pro underhålls av [KeaneFeng](https://github.com/KeaneFeng). Uppströms upphovsrätts- och licensmeddelanden bevaras; se [projekthistorik](docs/project-history.md).
+
+## Utveckling och projektunderlag
+
+- [Kommandon för utveckling, bygge och test](CONTRIBUTING.md)
+- [Säkerhetsrapporter](SECURITY.md) · [Ärendemallar](https://github.com/KeaneFeng/cc-gateway-pro/issues/new/choose)
+- [Projekthistorik och attribution](docs/project-history.md)
+- [Verifierbara bidrag och releasestatus](docs/original-contributions.md)
+- [Prioriteringar för underhåll](docs/roadmap.md)
+- [Daterad granskning av arkivet](docs/jetbrains-application-audit.md)
+
+SVG-förhandsvisningarna ovan använder demonstrationsdata; de är illustrationer och visar inte faktisk produktionsanvändning.

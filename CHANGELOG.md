@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Isolate Codex replay-cache tests sharing global state to prevent parallel CI cache-count failures; production usage calculations are unchanged.
+
+### Maintenance
+
+- Align CI/release toolchains, pin pnpm, inventory third-party licenses, and include collected license notices in future Tauri bundles.
+
+### Documentation
+
+- Clarify upstream attribution, contribution evidence, installation assets and development commands.
+
+## [4.0.17] - 2026-10-20
+
+Reconstructed from the published tag on 2026-10-23; see [release notes and validation limitations](docs/release-notes/v4.0.17-en.md).
+
+### Fixed (upstream ports)
+
+- Correct Kimi K3 / Step 5 Preview pricing and seed new Qwen models.
+- Preserve contiguous Chat tool outputs across hoisted developer notices.
+- Avoid inherited Unix process environment variables being reported as conflicts.
+
+Intermediate releases after 3.19.1 are not fully summarized here. Consult [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) and the associated tag comparisons. Older entries below include inherited upstream release history and statistics, not an independent contribution count for CC-Gateway-Pro.
+
 ## [3.19.1] - 2026-08-05
 
 This release ports the complete CC Switch v3.19.1 feature and security set while preserving CC-Gateway-Pro's local gateway, project routing, Vision Model routing, Session Traces, provider catalog, storage paths, schema v17, and release identity.
@@ -277,7 +301,7 @@ Development since v3.13.0 focuses on onboarding Hermes Agent as a first-class ma
 - **Skills Import Sync**: Imported Skills are now immediately synced into enabled app directories instead of only being recorded in the database, so the UI no longer shows "installed" while the target app directory is missing the skill.
 - **Ghostty Session Restore**: Fixed Ghostty session restore launch by using shell execution with `--working-directory`, avoiding `cwd` escaping issues when the path contains spaces or special characters.
 - **Hermes Health Check Borrowing OpenClaw Schema**: Hermes providers were routed through `check_additive_app_stream` (the OpenClaw dispatcher), which reads camelCase `baseUrl` / `apiKey` / `api` and surfaced "OpenClaw provider is missing baseUrl" even when every Hermes field was filled. Introduced `check_hermes_stream` with Hermes-specific extractors that map `api_mode` (`chat_completions` / `anthropic_messages` / `codex_responses`) to the matching `check_claude_stream` `api_format`, and returns `bedrock_converse` as unsupported. `api_mode` is now resolved before URL / API key extraction, so `bedrock_converse` users see the real cause rather than a misleading "missing base_url".
-- **Usage Query Modal for Hermes & OpenClaw**: `getProviderCredentials` now reads flat `settingsConfig` fields for Hermes (snake_case `base_url` / `api_key`) and OpenClaw (camelCase `baseUrl` / `apiKey`), so the "official balance" template auto-selects for matching providers like SiliconFlow. Also refactored the BALANCE and TOKEN_PLAN test paths to reuse the precomputed `providerCredentials` instead of re-reading `env.ANTHROPIC_*` directly, fixing the "empty key" error for non-Claude apps even when the key was configured.
+- **Usage Query Modal for Hermes & OpenClaw**: `getProviderCredentials` now reads flat `settingsConfig` fields for Hermes (snake*case `base_url` / `api_key`) and OpenClaw (camelCase `baseUrl` / `apiKey`), so the "official balance" template auto-selects for matching providers like SiliconFlow. Also refactored the BALANCE and TOKEN_PLAN test paths to reuse the precomputed `providerCredentials` instead of re-reading `env.ANTHROPIC*\*` directly, fixing the "empty key" error for non-Claude apps even when the key was configured.
 
 ### Docs
 
@@ -1078,23 +1102,28 @@ Third beta release with important bug fixes for Windows compatibility, UI improv
 ### Fixed
 
 #### Windows
+
 - Wrap npx/npm commands with `cmd /c` for MCP export
 - Prevent terminal windows from appearing during version check
 
 #### macOS
+
 - Use .app bundle path for autostart to prevent terminal window popup
 
 #### UI
+
 - Resolve Dialog/Modal not opening on first click (#492)
 - Improve dark mode text contrast for form labels
 - Reduce header spacing and fix layout shift on view switch
 - Prevent header layout shift when switching views
 
 #### Database & Schema
+
 - Add missing base columns migration for proxy_config
 - Add backward compatibility check for proxy_config seed insert
 
 #### Other
+
 - Use local timezone and robust DST handling in usage stats (#500)
 - Remove deprecated `sync_enabled_to_codex` call
 - Gracefully handle invalid Codex config.toml during MCP sync
@@ -1153,28 +1182,33 @@ This beta release introduces the **Local API Proxy** feature, along with Skills 
 ### Major Features
 
 #### Local Proxy Server
+
 - **Local HTTP Proxy** - High-performance proxy server built on Axum framework
 - **Multi-app Support** - Unified proxy for Claude Code, Codex, and Gemini CLI API requests
 - **Per-app Takeover** - Independent control over which apps route through the proxy
 - **Live Config Takeover** - Automatically backs up and redirects CLI configurations to local proxy
 
 #### Auto Failover
+
 - **Circuit Breaker** - Automatically detects provider failures and triggers protection
 - **Smart Failover** - Automatically switches to backup provider when current one is unavailable
 - **Health Tracking** - Real-time monitoring of provider availability
 - **Independent Failover Queues** - Each app maintains its own failover queue
 
 #### Monitoring
+
 - **Request Logging** - Detailed logging of all proxy requests
 - **Usage Statistics** - Token consumption, latency, success rate metrics
 - **Real-time Status** - Frontend displays proxy status and statistics
 
 #### Skills Multi-App Support
+
 - **Multi-app Support** - Skills now support both Claude and Codex (#365)
 - **Multi-app Migration** - Existing Skills auto-migrate to multi-app structure (#378)
 - **Installation Path Fix** - Use directory basename for skill installation path (#358)
 
 ### Added
+
 - **Provider Icon Colors** - Customize provider icon colors (#385)
 - **Deeplink Usage Config** - Import usage query config via deeplink (#400)
 - **Error Request Logging** - Detailed logging for proxy requests (#401)
@@ -1184,6 +1218,7 @@ This beta release introduces the **Local API Proxy** feature, along with Skills 
 ### Fixed
 
 #### Proxy Related
+
 - Takeover Codex base_url via model_provider
 - Harden crash recovery with fallback detection
 - Sync UI when active provider differs from current setting
@@ -1201,17 +1236,20 @@ This beta release introduces the **Local API Proxy** feature, along with Skills 
 - Resolve 404 error and auto-setup proxy targets
 
 #### MCP Related
+
 - Skip sync when target CLI app is not installed
 - Improve upsert and import robustness
 - Use browser-compatible platform detection for MCP presets
 
 #### UI Related
+
 - Restore fade transition for Skills button
 - Add close button to all success toasts
 - Prevent card jitter when health badge appears
 - Update SettingsPage tab styles (#342)
 
 #### Other
+
 - Fix Azure website link (#407)
 - Add fallback to provider config for usage credentials (#360)
 - Fix Windows black screen on startup (use system titlebar)
@@ -1220,11 +1258,13 @@ This beta release introduces the **Local API Proxy** feature, along with Skills 
 - Security fixes for JavaScript executor and usage script (#151)
 
 ### Improved
+
 - **Proxy Active Theme** - Apply emerald theme when proxy takeover is active
 - **Card Animation** - Improved provider card hover animation
 - **Remove Restart Prompt** - No longer prompts restart when switching providers
 
 ### Technical
+
 - Implement per-app takeover mode
 - Proxy module contains 20+ Rust files with complete layered architecture
 - Add 5 new database tables for proxy functionality
@@ -1232,6 +1272,7 @@ This beta release introduces the **Local API Proxy** feature, along with Skills 
 - Remove is_proxy_target in favor of failover_queue
 
 ### Stats
+
 - 55 commits since v3.8.2
 - 164 files changed
 - +22,164 / -570 lines

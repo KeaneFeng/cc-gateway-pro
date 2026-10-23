@@ -20,15 +20,15 @@ There are many ways to contribute:
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm 8+
-- Rust 1.85+ and Cargo
+- Node.js 22.12+ (`.node-version`) and pnpm 10.12.3
+- Rust 1.95 (`rust-toolchain.toml`) and Cargo
 - [Tauri 2.0 prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ### Quick Start
 
 ```bash
 # Install dependencies
-pnpm install
+pnpm install --frozen-lockfile
 
 # Start development server with hot reload
 pnpm dev
@@ -36,15 +36,14 @@ pnpm dev
 
 ### Useful Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server (hot reload) |
-| `pnpm build` | Production build |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm test:unit` | Run unit tests |
-| `pnpm lint` | ESLint check |
-| `pnpm format` | Format code (Prettier) |
-| `pnpm format:check` | Check code formatting |
+| Command             | Description                   |
+| ------------------- | ----------------------------- |
+| `pnpm dev`          | Start dev server (hot reload) |
+| `pnpm build`        | Production build              |
+| `pnpm typecheck`    | TypeScript type checking      |
+| `pnpm test:unit`    | Run unit tests                |
+| `pnpm format`       | Format code (Prettier)        |
+| `pnpm format:check` | Check code formatting         |
 
 For Rust backend:
 
@@ -57,7 +56,7 @@ cargo test       # Run tests
 
 ## Code Style
 
-- **Frontend**: Prettier for formatting, ESLint for linting, strict TypeScript (`pnpm typecheck`)
+- **Frontend**: Prettier for formatting, strict TypeScript (`pnpm typecheck`)
 - **Backend**: `cargo fmt` for formatting, `cargo clippy` for linting
 - **Tauri 2.0**: Command names must use camelCase
 
@@ -110,12 +109,13 @@ By submitting a PR, you agree to the following:
 
 ## Internationalization (i18n)
 
-CC-Gateway-Pro supports three languages. When modifying user-facing text:
+CC-Gateway-Pro supports four UI locales. When modifying user-facing text:
 
-1. Update **all three** locale files:
-   - `src/locales/en/translation.json`
-   - `src/locales/zh/translation.json`
-   - `src/locales/ja/translation.json`
+1. Update **all four** locale files:
+   - `src/i18n/locales/en.json`
+   - `src/i18n/locales/zh.json`
+   - `src/i18n/locales/ja.json`
+   - `src/i18n/locales/zh-TW.json`
 2. Use the `t()` function from i18next for all UI text.
 3. Never hardcode user-facing strings.
 
@@ -148,15 +148,15 @@ CC-Gateway-Pro supports three languages. When modifying user-facing text:
 
 ### 前提条件
 
-- Node.js 18+ 和 pnpm 8+
-- Rust 1.85+ 和 Cargo
+- Node.js 22.12+（`.node-version`）和 pnpm 10.12.3
+- Rust 1.95 (`rust-toolchain.toml`) 和 Cargo
 - [Tauri 2.0 开发环境](https://v2.tauri.app/start/prerequisites/)
 
 ### 快速开始
 
 ```bash
 # 安装依赖
-pnpm install
+pnpm install --frozen-lockfile
 
 # 启动开发服务器（热重载）
 pnpm dev
@@ -164,15 +164,14 @@ pnpm dev
 
 ### 常用命令
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动开发服务器（热重载） |
-| `pnpm build` | 构建生产版本 |
-| `pnpm typecheck` | TypeScript 类型检查 |
-| `pnpm test:unit` | 运行单元测试 |
-| `pnpm lint` | ESLint 检查 |
-| `pnpm format` | 格式化代码（Prettier） |
-| `pnpm format:check` | 检查代码格式 |
+| 命令                | 说明                     |
+| ------------------- | ------------------------ |
+| `pnpm dev`          | 启动开发服务器（热重载） |
+| `pnpm build`        | 构建生产版本             |
+| `pnpm typecheck`    | TypeScript 类型检查      |
+| `pnpm test:unit`    | 运行单元测试             |
+| `pnpm format`       | 格式化代码（Prettier）   |
+| `pnpm format:check` | 检查代码格式             |
 
 Rust 后端命令：
 
@@ -185,7 +184,7 @@ cargo test       # 运行测试
 
 ## 代码规范
 
-- **前端**：使用 Prettier 格式化、ESLint 检查、严格 TypeScript（`pnpm typecheck`）
+- **前端**：使用 Prettier 格式化、严格 TypeScript（`pnpm typecheck`）
 - **后端**：使用 `cargo fmt` 格式化、`cargo clippy` 检查
 - **Tauri 2.0**：命令名必须使用 camelCase
 
@@ -238,12 +237,13 @@ chore(deps): update dependencies
 
 ## 国际化（i18n）
 
-CC-Gateway-Pro 支持三种语言。修改用户可见文本时：
+CC-Gateway-Pro 支持四种界面语言。修改用户可见文本时：
 
-1. **同时更新三个**语言文件：
-   - `src/locales/en/translation.json`
-   - `src/locales/zh/translation.json`
-   - `src/locales/ja/translation.json`
+1. **同时更新四个**语言文件：
+   - `src/i18n/locales/en.json`
+   - `src/i18n/locales/zh.json`
+   - `src/i18n/locales/ja.json`
+   - `src/i18n/locales/zh-TW.json`
 2. 所有 UI 文本使用 i18next 的 `t()` 函数。
 3. 不要硬编码用户可见的字符串。
 
@@ -251,3 +251,15 @@ CC-Gateway-Pro 支持三种语言。修改用户可见文本时：
 
 - [提问](https://github.com/KeaneFeng/cc-gateway-pro/issues/new?template=question.yml)
 - [GitHub 讨论区](https://github.com/KeaneFeng/cc-gateway-pro/discussions)
+
+## Reproducibility and release verification / 可复现与发行验证
+
+Use the checked-in lockfiles and `.node-version` / `rust-toolchain.toml`. Install the [Tauri platform dependencies](https://v2.tauri.app/start/prerequisites/) before building. `pnpm dev:renderer` and `pnpm build:renderer` run the renderer alone; they do not validate native IPC or desktop packaging.
+
+CI definitions are in `.github/workflows/ci.yml`; release packaging is in `.github/workflows/release.yml`. A successful packaging job does not imply a passing test job. See the [dated audit](docs/jetbrains-application-audit.md) for the last observed results and toolchain differences. Signed updater releases require maintainer-managed secrets; never include credentials, real request bodies, or local user paths in issues.
+
+For upstream ports, preserve original authorship and record the upstream commit in the commit message or PR. Describe project-specific changes separately. See [project history](docs/project-history.md).
+
+## Third-party notices / 第三方声明
+
+When changing dependency versions, regenerate and review the [license inventory](docs/legal/third-party-license-audit.md). CI verifies the checked-in inventory input hashes; this is a freshness check, not legal approval. Keep original copyright notices and establish permissions before adding brand assets. Future Tauri bundles include the collected notices as resources.

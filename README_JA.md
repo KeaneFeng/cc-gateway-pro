@@ -7,7 +7,6 @@
 [![Version](https://img.shields.io/github/v/release/KeaneFeng/cc-gateway-pro?color=blue&label=version)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
 [English](README.md) | [中文](README_ZH.md) | 日本語 | [Svenska](README_SV.md) | [Español](README_ES.md) | [Changelog](CHANGELOG.md)
 
@@ -17,7 +16,7 @@
 
 CC-Gateway-Pro は、AI コーディングツール向けのデスクトップ管理画面兼ローカル AI Provider Gateway です。プロバイダープロファイルを管理し、各ツールのネイティブ設定ファイルを書き込み、ローカルプロキシ経由で実リクエストをルーティングして、リクエストログ、Session Traces、フェイルオーバー、モデル変換、プロジェクト単位の Provider バインド、Vision Model ルーティングを実現します。
 
-このプロジェクトは [farion1231/cc-switch](https://github.com/farion1231/cc-switch) から fork して開発されています。オリジナルのビジュアルなプロバイダー切り替えを引き継ぎつつ、Rust/Tauri のローカルゲートウェイ、複数アプリの設定管理、リクエストルーティング、使用量分析、同期機能、プロバイダー別の連携を追加しています。
+CC-Gateway-Pro はローカルプロバイダー管理、プロジェクト別ルーティング、Vision Model ルーティング、リクエスト分析を提供します。[cc-switch](https://github.com/farion1231/cc-switch) を参照しており、コードの再利用と上流の貢献はプロジェクト履歴に記載しています。[プロジェクト履歴](docs/project-history.md)と[検証可能な変更](docs/original-contributions.md)を参照してください。
 
 ## 対応アプリ
 
@@ -72,8 +71,8 @@ CC-Gateway-Pro は、AI コーディングツール向けのデスクトップ�
 | :--------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: |
 | ![プロジェクトルーティング画面](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model 設定画面](assets/screenshots/vision-model-config-preview-zh.svg) |
 
-|                                  Session Traces 設定                                  |                                  Session Traces 分析                                  |
-| :-----------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: |
+|                                Session Traces 設定                                 |                                Session Traces 分析                                 |
+| :--------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------: |
 | ![Session Traces 設定画面](assets/screenshots/session-traces-settings-preview.svg) | ![Session Traces 分析画面](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## ダウンロードとインストール
@@ -84,7 +83,7 @@ CC-Gateway-Pro は、AI コーディングツール向けのデスクトップ�
 
 - macOS 12 以降
 - Windows 10 以降
-- Ubuntu 22.04+、Debian 11+、Fedora 34+ など、最新の WebKitGTK ランタイムを備えた Linux ディストリビューション
+- Linux：WebKitGTK 4.1 / libsoup 3 が必要です。リリースのビルド環境は Ubuntu 22.04 です。他の環境では互換性の検証が必要です。
 
 ### macOS Homebrew
 
@@ -105,17 +104,17 @@ brew upgrade --cask cc-gateway-pro
 
 ### 手動ダウンロード
 
-- Windows：[Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) から `.msi` インストーラーまたはポータブル `.zip` をダウンロード。
+- Windows: `.msi` / `.exe` — [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest).
 - macOS：[Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) から `.dmg` をダウンロード。
 - Linux：[Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) から `.deb`、`.rpm`、`.AppImage` をダウンロード。
-- Arch Linux：`paru -S cc-gateway-pro-bin` でインストール。
+- その他の配布経路は提供元に確認してください。正式なダウンロード元は GitHub Releases です。
 
 ## ソースからビルド
 
-必要なもの：Node.js 22+、pnpm、Rust stable。
+必要なもの：Node.js 22.12+、pnpm 10.12.3、Rust 1.95 (rust-toolchain.toml)。
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm tauri dev
 pnpm tauri build
 ```
@@ -138,7 +137,7 @@ pnpm tauri build
 - [ユーザーマニュアル](docs/user-manual/ja/README.md)
 - [Architecture and flows](docs/architecture-and-flows-zh.md)
 - [Proxy guide](docs/proxy-guide-zh.md)
-- [Release notes](docs/release-notes/v3.19.1-ja.md)
+- [Release notes](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest)
 
 ## データ保存場所
 
@@ -151,9 +150,22 @@ pnpm tauri build
 
 ## クレジット
 
-- [farion1231/cc-switch](https://github.com/farion1231/cc-switch) から fork して開発
+- 参照：[farion1231/cc-switch](https://github.com/farion1231/cc-switch)
 - Tauri、Rust、React、TypeScript、Tailwind CSS で構築
 
 ## License
 
-MIT © Keane Feng
+[MIT License](LICENSE) — Copyright (c) 2025 Jason Young.
+
+CC-Gateway-Pro のメンテナーは [KeaneFeng](https://github.com/KeaneFeng) です。上流の著作権と許諾表示を保持しています。[履歴](docs/project-history.md)を参照してください。
+
+## 開発とプロジェクトの根拠
+
+- [開発・ビルド・テストのコマンド](CONTRIBUTING.md)
+- [セキュリティ報告](SECURITY.md) · [Issue テンプレート](https://github.com/KeaneFeng/cc-gateway-pro/issues/new/choose)
+- [履歴と帰属](docs/project-history.md)
+- [検証可能な変更とリリース状況](docs/original-contributions.md)
+- [メンテナンスの優先事項](docs/roadmap.md)
+- [リポジトリ監査の記録](docs/jetbrains-application-audit.md)
+
+上記の SVG プレビューはデモデータによる説明図であり、実際の利用実績を示すものではありません。

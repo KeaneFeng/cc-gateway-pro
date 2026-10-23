@@ -7,7 +7,6 @@
 [![Version](https://img.shields.io/github/v/release/KeaneFeng/cc-gateway-pro?color=blue&label=version)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
 English | [中文](README_ZH.md) | [日本語](README_JA.md) | [Svenska](README_SV.md) | [Español](README_ES.md) | [Changelog](CHANGELOG.md)
 
@@ -17,7 +16,7 @@ English | [中文](README_ZH.md) | [日本語](README_JA.md) | [Svenska](README_
 
 CC-Gateway-Pro is a desktop control plane and local AI Provider Gateway for AI coding tools. It manages provider profiles, writes each tool's native configuration files, and can route live requests through a local proxy for request logging, session traces, failover, model transformation, project-level provider binding, and Vision Model routing.
 
-This project is forked from [farion1231/cc-switch](https://github.com/farion1231/cc-switch). It keeps the original visual provider-switching idea, then extends it with a Rust/Tauri local gateway, multi-app configuration management, request routing, usage analytics, synchronization, and provider-specific integrations.
+CC-Gateway-Pro manages local providers, project-level routing, Vision Model routing and request observability for AI coding tools. It references [cc-switch](https://github.com/farion1231/cc-switch); reused code and upstream contributions are documented in the project history. See [Project history and attribution](docs/project-history.md) and [verified contributions](docs/original-contributions.md).
 
 ## Supported Apps
 
@@ -27,7 +26,7 @@ This project is forked from [farion1231/cc-switch](https://github.com/farion1231
 | Claude Desktop | Official and third-party profiles, direct mode, local routed mode, model route mapping                           |
 | Codex          | Provider switching, local proxy takeover, project routing, OAuth/Copilot helpers, MCP, prompts, skills, sessions |
 | Gemini CLI     | Provider switching, local proxy takeover, MCP, prompts, skills, sessions                                         |
-| Grok Build     | Provider switching, local proxy takeover, quota, failover, MCP, prompts, skills, sessions                       |
+| Grok Build     | Provider switching, local proxy takeover, quota, failover, MCP, prompts, skills, sessions                        |
 | OpenCode       | Provider presets, common config snippets, MCP, prompts, skills, sessions                                         |
 | OpenClaw       | Provider presets, workspace files, agent defaults, tool and environment panels                                   |
 | Hermes Agent   | Provider presets, memory panel, MCP and skills management                                                        |
@@ -72,8 +71,8 @@ More diagrams for failover, usage logging, MCP/Prompts/Skills synchronization an
 | :---------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
 | ![Project routing preview](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model configuration preview](assets/screenshots/vision-model-config-preview-zh.svg) |
 
-|                                  Session Traces settings                                  |                                  Session Traces analysis                                  |
-| :---------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: |
+|                                  Session Traces settings                                   |                                  Session Traces analysis                                   |
+| :----------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------: |
 | ![Session Traces settings preview](assets/screenshots/session-traces-settings-preview.svg) | ![Session Traces analysis preview](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## Installation
@@ -84,7 +83,7 @@ System requirements:
 
 - macOS 12 or later
 - Windows 10 or later
-- Linux distributions with a modern WebKitGTK runtime, such as Ubuntu 22.04+, Debian 11+ or Fedora 34+
+- Linux: WebKitGTK 4.1 / libsoup 3; release builds use Ubuntu 22.04. Other distributions require local compatibility verification.
 
 ### macOS Homebrew
 
@@ -105,17 +104,17 @@ brew upgrade --cask cc-gateway-pro
 
 ### Manual Download
 
-- Windows: download the `.msi` installer or portable `.zip` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
+- Windows: `.msi` / `.exe` — [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest).
 - macOS: download the `.dmg` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
 - Linux: download the `.deb`, `.rpm` or `.AppImage` from [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases).
-- Arch Linux: install with `paru -S cc-gateway-pro-bin`.
+- Additional package channels: verify availability with the distributor; GitHub Releases is the authoritative download source.
 
 ## Build From Source
 
-Prerequisites: Node.js 22+, pnpm and Rust stable.
+Prerequisites: Node.js 22.12+, pnpm 10.12.3 and Rust 1.95 (rust-toolchain.toml).
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm tauri dev
 pnpm tauri build
 ```
@@ -138,7 +137,7 @@ The repository also includes a helper:
 - [User manual](docs/user-manual/zh/README.md)
 - [Architecture and flows](docs/architecture-and-flows-zh.md)
 - [Proxy guide](docs/proxy-guide-zh.md)
-- [Release notes](docs/release-notes/v3.19.1-en.md)
+- [Release notes](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest)
 
 ## Data Locations
 
@@ -151,9 +150,22 @@ The storage directory can be moved to Dropbox, OneDrive, iCloud, NAS or another 
 
 ## Credits
 
-- Forked from [farion1231/cc-switch](https://github.com/farion1231/cc-switch)
+- Reference: [farion1231/cc-switch](https://github.com/farion1231/cc-switch)
 - Built with Tauri, Rust, React, TypeScript and Tailwind CSS
 
 ## License
 
-MIT © Keane Feng
+[MIT License](LICENSE) — Copyright (c) 2025 Jason Young.
+
+CC-Gateway-Pro is maintained by [KeaneFeng](https://github.com/KeaneFeng). Upstream copyright and permission notices are retained; see [project history](docs/project-history.md).
+
+## Development and project evidence
+
+- [Development, build and test commands](CONTRIBUTING.md)
+- [Security reports](SECURITY.md) · [Issue templates](https://github.com/KeaneFeng/cc-gateway-pro/issues/new/choose)
+- [Project history and attribution](docs/project-history.md)
+- [Verified contributions and release status](docs/original-contributions.md)
+- [Maintenance priorities](docs/roadmap.md)
+- [Dated repository audit](docs/jetbrains-application-audit.md)
+
+The SVG interface previews above use demonstration data; they are illustrations, not evidence of production usage.

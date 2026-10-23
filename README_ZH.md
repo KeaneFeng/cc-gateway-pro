@@ -7,7 +7,6 @@
 [![Version](https://img.shields.io/github/v/release/KeaneFeng/cc-gateway-pro?color=blue&label=version)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/KeaneFeng/cc-gateway-pro/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
-[![Fork of cc-switch](https://img.shields.io/badge/fork%20of-farion1231%2Fcc--switch-blue.svg)](https://github.com/farion1231/cc-switch)
 
 [English](README.md) | 中文 | [日本語](README_JA.md) | [Svenska](README_SV.md) | [Español](README_ES.md) | [更新日志](CHANGELOG.md)
 
@@ -17,7 +16,7 @@
 
 CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以管理不同 AI 编程工具的 Provider 配置，写入各工具原生配置文件，也可以通过本地代理接管实时请求，实现请求日志、Session Traces、故障转移、模型转换、项目级 Provider 绑定和 Vision Model 自动路由。
 
-本项目基于 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) fork 后继续开发。CC-Gateway-Pro 保留了原项目“可视化切换供应商”的核心思路，并扩展出 Rust/Tauri 本地网关、多应用配置管理、请求路由、用量统计、同步能力和更多 Provider 适配。
+CC-Gateway-Pro 为 AI 编程工具提供本地供应商管理、项目级路由、Vision Model 路由和请求观测能力。项目参考 [cc-switch](https://github.com/farion1231/cc-switch)，代码复用与上游贡献详见项目历史。参阅[项目历史与署名](docs/project-history.md)及[可核实贡献](docs/original-contributions.md)。
 
 ## 支持的应用
 
@@ -72,8 +71,8 @@ CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以
 | :--------------------------------------------------------------------: | :---------------------------------------------------------------------------------: |
 | ![项目路由界面预览](assets/screenshots/project-routing-preview-zh.svg) | ![Vision Model 配置界面预览](assets/screenshots/vision-model-config-preview-zh.svg) |
 
-|                                  Session Traces 设置                                  |                                  Session Traces 分析                                  |
-| :-----------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: |
+|                                  Session Traces 设置                                   |                                  Session Traces 分析                                   |
+| :------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
 | ![Session Traces 设置界面预览](assets/screenshots/session-traces-settings-preview.svg) | ![Session Traces 分析界面预览](assets/screenshots/session-traces-analysis-preview.svg) |
 
 ## 下载安装
@@ -84,7 +83,7 @@ CC-Gateway-Pro 是一个桌面控制台和本地 AI Provider Gateway。它可以
 
 - macOS 12 及以上
 - Windows 10 及以上
-- Linux 需要较新的 WebKitGTK 运行时，例如 Ubuntu 22.04+、Debian 11+ 或 Fedora 34+
+- Linux：需要 WebKitGTK 4.1 / libsoup 3；发行构建使用 Ubuntu 22.04。其他发行版需要验证兼容性。
 
 ### macOS Homebrew
 
@@ -105,17 +104,17 @@ brew upgrade --cask cc-gateway-pro
 
 ### 手动下载
 
-- Windows：从 [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) 下载 `.msi` 安装包或便携版 `.zip`。
+- Windows: `.msi` / `.exe` — [GitHub Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest).
 - macOS：从 [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) 下载 `.dmg`。
 - Linux：从 [Releases](https://github.com/KeaneFeng/cc-gateway-pro/releases) 下载 `.deb`、`.rpm` 或 `.AppImage`。
-- Arch Linux：使用 `paru -S cc-gateway-pro-bin` 安装。
+- 其他软件包渠道：请向分发方核实可用性；以 GitHub Releases 为正式下载来源。
 
 ## 从源码构建
 
-需要 Node.js 22+、pnpm 和 Rust stable。
+需要 Node.js 22.12+、pnpm 10.12.3 和 Rust 1.95 (rust-toolchain.toml)。
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm tauri dev
 pnpm tauri build
 ```
@@ -138,7 +137,7 @@ pnpm tauri build
 - [用户手册](docs/user-manual/zh/README.md)
 - [架构与核心流程](docs/architecture-and-flows-zh.md)
 - [代理使用指南](docs/proxy-guide-zh.md)
-- [发布说明](docs/release-notes/v3.19.1-zh.md)
+- [发布说明](https://github.com/KeaneFeng/cc-gateway-pro/releases/latest)
 
 ## 数据位置
 
@@ -151,9 +150,22 @@ pnpm tauri build
 
 ## 致谢
 
-- 基于 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) fork 后继续开发
+- 参考：[farion1231/cc-switch](https://github.com/farion1231/cc-switch)；代码来源见[项目历史](docs/project-history.md)
 - 使用 Tauri、Rust、React、TypeScript 和 Tailwind CSS 构建
 
 ## License
 
-MIT © Keane Feng
+[MIT License](LICENSE) — Copyright (c) 2025 Jason Young.
+
+CC-Gateway-Pro 由 [KeaneFeng](https://github.com/KeaneFeng) 维护。保留上游版权与许可声明，详见[项目历史](docs/project-history.md)。
+
+## 开发与项目证据
+
+- [开发、构建及测试命令](CONTRIBUTING.md)
+- [安全报告](SECURITY.md) · [问题模板](https://github.com/KeaneFeng/cc-gateway-pro/issues/new/choose)
+- [项目历史与署名](docs/project-history.md)
+- [可核实贡献与发布状态](docs/original-contributions.md)
+- [维护优先级](docs/roadmap.md)
+- [仓库审计快照](docs/jetbrains-application-audit.md)
+
+上述 SVG 界面预览使用演示数据，仅用于说明界面，不作为真实用户使用的证据。
