@@ -2222,6 +2222,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_unchanged_incomplete_tail_is_skipped_after_cursor_reload() -> Result<(), AppError> {
         use std::io::Write;
         for has_usage in [false, true] {
@@ -2253,6 +2254,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_append_with_unchanged_mtime_survives_reload_without_duplicates() -> Result<(), AppError>
     {
         use std::io::Write;
@@ -2288,6 +2290,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_legacy_cursor_catches_up_with_unchanged_mtime() -> Result<(), AppError> {
         let db = Database::memory()?;
         let dir = tempdir().unwrap();
@@ -2315,6 +2318,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_complete_final_record_without_newline_is_imported_once() -> Result<(), AppError> {
         use std::io::Write;
         let db = Database::memory()?;
@@ -2344,6 +2348,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_partial_live_record_is_retried_after_append() -> Result<(), AppError> {
         use std::io::Write;
         let db = Database::memory()?;
@@ -2383,6 +2388,7 @@ mod tests {
     /// 旧校验只认末尾 UUID，会把这类文件永久 deferred，其后 resume 追加
     /// 的用量全部丢失。
     #[test]
+    #[serial_test::serial]
     fn test_resumed_rollout_meta_id_matching_leading_uuid_is_not_deferred() -> Result<(), AppError>
     {
         let dir = tempdir().unwrap();
@@ -2414,6 +2420,9 @@ mod tests {
     /// 分支线程翻页产生的双段文件名带有残留的 forked_from_id，
     /// 解析时应被识别为本线程延续（Continuation），并恢复上一页基线计算增量。
     #[test]
+    #[serial_test::serial]
+    // Continuation baseline lookup populates the same global replay cache as
+    // the cache-size and poison-recovery tests; it must share their serial lock.
     fn test_parse_codex_file_recognizes_branch_thread_paginated_continuation(
     ) -> Result<(), AppError> {
         let dir = tempdir().unwrap();
@@ -2465,6 +2474,7 @@ mod tests {
     /// rollout ID（event_index 按物理文件计数，去重键不能换），库里
     /// session_id 记前置线程 ID，与会话管理器侧的会话身份同口径。
     #[test]
+    #[serial_test::serial]
     fn test_resumed_rollout_session_id_uses_leading_thread_id() -> Result<(), AppError> {
         let db = Database::memory()?;
         let temp = tempdir().unwrap();
@@ -2501,6 +2511,7 @@ mod tests {
 
     /// 单段文件名的不一致仍要拒收。
     #[test]
+    #[serial_test::serial]
     fn test_single_uuid_filename_meta_mismatch_still_deferred() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2634,6 +2645,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_interleaved_counter_lanes_use_exact_last_usage() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2705,6 +2717,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_cross_limit_snapshot_replay_is_not_double_counted() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2740,6 +2753,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_adjacent_replay_burst_across_multiple_sources_is_deduped() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2785,6 +2799,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_cross_source_replay_remains_adjacent_across_non_token_events() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2821,6 +2836,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_same_source_repeat_is_deduped_after_another_source_advances() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2859,6 +2875,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_stale_cross_source_signature_does_not_swallow_reset() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2901,6 +2918,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_full_snapshot_dedupe_allows_counter_reset() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2942,6 +2960,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_empty_last_usage_falls_back_to_total() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -2983,6 +3002,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_empty_total_does_not_enable_snapshot_deduplication() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -3031,6 +3051,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_total_fallback_uses_session_baseline_across_model_switch() -> Result<(), AppError> {
         let dir = tempdir().unwrap();
         let file = rollout_path(dir.path(), PARENT_ID);
@@ -4503,6 +4524,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_archived_log_inherits_cursor_and_only_imports_appended_usage() -> Result<(), AppError> {
         let db = Database::memory()?;
         let temp = tempdir().unwrap();
@@ -4820,6 +4842,7 @@ mod tests {
     ///   cargo test --release replay_real_codex_corpus -- --ignored --nocapture
     /// ```
     #[test]
+    #[serial_test::serial]
     #[ignore]
     fn replay_real_codex_corpus() -> Result<(), AppError> {
         let Some(real_home) = dirs::home_dir() else {
