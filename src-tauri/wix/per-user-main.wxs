@@ -148,6 +148,20 @@
                 <RegistryKey Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}">
                     <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
                 </RegistryKey>
+                <!-- Change the Root to HKCU for perUser installations -->
+                {{#each deep_link_protocols as |protocol| ~}}
+                <RegistryKey Root="HKCU" Key="Software\Classes\\{{protocol}}">
+                    <RegistryValue Type="string" Name="URL Protocol" Value=""/>
+                    <RegistryValue Type="string" Value="URL:{{bundle_id}} protocol"/>
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[!Path]&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell\open\command">
+                        <RegistryValue Type="string" Value="&quot;[!Path]&quot; &quot;%1&quot;" />
+                    </RegistryKey>
+                </RegistryKey>
+                {{/each~}}
+            </Component>
             <Component Id="LegalNoticesFiles" Guid="*">
                 <!-- 合规/许可文件随包分发。bundler 生成的资源组件用文件 KeyPath，
                      在 per-user 安装下触发 ICE38（LGHT0204）；这里用 HKCU 注册表
@@ -164,20 +178,6 @@
                 <File Id="LegalDependencyFollowUpJson" Source="$(var.SourceDir)legal\dependency-follow-up.json" KeyPath="no" />
                 <File Id="LegalBrandAssetSources" Source="$(var.SourceDir)legal\brand-asset-sources.md" KeyPath="no" />
                 <RegistryValue Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}" Name="LegalNotices" Type="integer" Value="1" KeyPath="yes" />
-            </Component>
-                <!-- Change the Root to HKCU for perUser installations -->
-                {{#each deep_link_protocols as |protocol| ~}}
-                <RegistryKey Root="HKCU" Key="Software\Classes\\{{protocol}}">
-                    <RegistryValue Type="string" Name="URL Protocol" Value=""/>
-                    <RegistryValue Type="string" Value="URL:{{bundle_id}} protocol"/>
-                    <RegistryKey Key="DefaultIcon">
-                        <RegistryValue Type="string" Value="&quot;[!Path]&quot;,0" />
-                    </RegistryKey>
-                    <RegistryKey Key="shell\open\command">
-                        <RegistryValue Type="string" Value="&quot;[!Path]&quot; &quot;%1&quot;" />
-                    </RegistryKey>
-                </RegistryKey>
-                {{/each~}}
             </Component>
             <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">
                 <File Id="Path" Source="{{main_binary_path}}" KeyPath="no" Checksum="yes"/>
