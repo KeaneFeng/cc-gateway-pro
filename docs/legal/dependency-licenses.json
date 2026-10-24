@@ -1,7 +1,7 @@
 {
   "scope": "All pnpm v9 package entries and cargo metadata resolved packages, including dev/build/optional/platform dependencies; not a binary SBOM.",
   "lockfiles": {
-    "pnpm-lock.yaml": "990a8434a1f76ab74ed0a8e92778c3635bbcb1010111ca5ba96739cf2a90c72d",
+    "pnpm-lock.yaml": "d4487aa329cd0ea79545aaf74745869589b900964f674b2091d10d781a26e0fb",
     "src-tauri/Cargo.lock": "bc5451e577f48cb70329195e6fa36435fa8602ebfc76fd17838dc9c936627e3f",
     "LICENSE": "912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755",
     "docs/legal/supplemental-notices.json": "95df42ebbb27c3a3333d7b6a2fcb63b8a23b512038f2476cb24a88009cb01269",
@@ -3227,16 +3227,16 @@
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli/2.8.1",
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli/2.12.4",
       "notice_files": [
         {
-          "path": "LICENSE_APACHE-2.0",
+          "path": "LICENSE-APACHE-2.0",
           "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
         },
         {
-          "path": "LICENSE_MIT",
+          "path": "LICENSE-MIT",
           "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
         }
       ],
@@ -3246,233 +3246,112 @@
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-darwin-arm64",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-arm64/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-arm64/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-darwin-x64",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-x64/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-x64/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-arm-gnueabihf",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm-gnueabihf/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm-gnueabihf/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-arm64-gnu",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-gnu/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-gnu/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-arm64-musl",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-musl/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-musl/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-riscv64-gnu",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-riscv64-gnu/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-riscv64-gnu/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-x64-gnu",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-gnu/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-gnu/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-linux-x64-musl",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-musl/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-musl/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-win32-arm64-msvc",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-arm64-msvc/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-arm64-msvc/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-win32-ia32-msvc",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-ia32-msvc/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-ia32-msvc/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/cli-win32-x64-msvc",
-      "version": "2.8.1",
+      "version": "2.12.4",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.8.1",
-      "notice_files": [
-        {
-          "path": "upstream/LICENSE_APACHE-2.0",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_APACHE-2.0",
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "upstream/LICENSE_MIT",
-          "source": "https://raw.githubusercontent.com/tauri-apps/tauri/8d869717da74bf64b1168a336dd01676fa52cf1e/LICENSE_MIT",
-          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
-        }
-      ],
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.12.4",
+      "notice_files": [],
       "metadata_error": null,
-      "review_required": false
+      "review_required": true
     },
     {
       "ecosystem": "npm",
@@ -22238,5 +22117,5 @@
       "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
     }
   ],
-  "notices_sha256": "f6c00b84e93b3ae9e4d0beb59a35520707c16d0a280e068cac27a354adf258f0"
+  "notices_sha256": "f2c6292b4321d11cb5145a3e31d62513a61283c463ec074c32d24cba7738c6fd"
 }

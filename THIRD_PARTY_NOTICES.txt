@@ -442,42 +442,31 @@ npm:@tanstack/virtual-core@3.13.23 | MIT | https://registry.npmjs.org/%40tanstac
 npm:@tauri-apps/api@2.8.0 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fapi/2.8.0
   LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
   LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli/2.8.1
-  LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-darwin-arm64@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-arm64/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-darwin-x64@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-x64/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-arm-gnueabihf@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm-gnueabihf/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-arm64-gnu@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-gnu/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-arm64-musl@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-musl/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-riscv64-gnu@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-riscv64-gnu/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-x64-gnu@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-gnu/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-linux-x64-musl@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-musl/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-win32-arm64-msvc@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-arm64-msvc/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-win32-ia32-msvc@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-ia32-msvc/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
-npm:@tauri-apps/cli-win32-x64-msvc@2.8.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.8.1
-  upstream/LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
-  upstream/LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
+npm:@tauri-apps/cli@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli/2.12.4
+  LICENSE-APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+  LICENSE-MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
+npm:@tauri-apps/cli-darwin-arm64@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-arm64/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-darwin-x64@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-darwin-x64/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-arm-gnueabihf@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm-gnueabihf/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-arm64-gnu@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-gnu/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-arm64-musl@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-arm64-musl/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-riscv64-gnu@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-riscv64-gnu/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-x64-gnu@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-gnu/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-linux-x64-musl@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-linux-x64-musl/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-win32-arm64-msvc@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-arm64-msvc/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-win32-ia32-msvc@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-ia32-msvc/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
+npm:@tauri-apps/cli-win32-x64-msvc@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.12.4
+  NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
 npm:@tauri-apps/plugin-dialog@2.4.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-dialog/2.4.0
   LICENSE.spdx => SHA256 eb8a6c84630461b352badcab1dbe5d0168c56d377358b2b8c86b51003272d5ef
 npm:@tauri-apps/plugin-log@2.8.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-log/2.8.0
