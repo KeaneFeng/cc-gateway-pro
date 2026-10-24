@@ -1,6 +1,6 @@
 {
   "name": "cc-gateway-pro",
-  "version": "4.0.24",
+  "version": "4.0.25",
   "description": "All-in-One Assistant for Claude Code, Codex & Gemini CLI",
   "type": "module",
   "packageManager": "pnpm@10.12.3",
