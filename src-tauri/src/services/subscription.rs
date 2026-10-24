@@ -9,6 +9,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::collections::HashMap;
 
 use crate::config;
+/// `security` CLI 的"条目不存在"退出码（上游 34ca45930）：Keychain 按账户
+/// 选择凭据时，跳过不存在于该账户的条目而不是中断整个查询。
+const SECURITY_ITEM_NOT_FOUND: i32 = 44;
 
 // ── 数据类型 ──────────────────────────────────────────────
 

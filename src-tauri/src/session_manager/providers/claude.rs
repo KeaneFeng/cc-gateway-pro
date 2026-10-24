@@ -1,6 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::marker::PhantomData;
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -166,7 +165,7 @@ fn last_relocated_cwd(path: &Path) -> Option<String> {
 /// 读到了但不是会话返回 `Ok(None)`，可以缓存。
 fn scan_session_file(path: &Path) -> std::io::Result<Option<SessionMeta>> {
     if is_agent_session(path) {
-        return None;
+        return Ok(None);
     }
     let (head, tail) = read_head_tail_lines(path, 10, 30)?;
     let relocated_cwd = last_relocated_cwd(path);

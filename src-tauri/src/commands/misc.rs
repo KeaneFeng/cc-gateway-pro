@@ -1132,21 +1132,15 @@ fn try_get_version(tool: &str) -> ShellProbe {
             .filter(|s| is_valid_shell(s))
             .unwrap_or_else(|| "sh".to_string());
         let flag = default_flag_for_shell(&shell);
-        let mut cmd = Command::new(shell);
-        cmd.arg(flag)
+        // 与 `resolve_path_default` 相同：交互式 shell（-lic）不能读到继承来的
+        // stdin，也不能因持有控制终端被 SIGTTIN 停住（从终端启动时整个应用卡死）。
+        // fork 未移植 isolate_child_process_group/CommandDeadline 基建（上游
+        // 6226f5c46 系列），用 output() + stdin(null) 保留本修复的核心保护。
+        Command::new(shell)
+            .arg(flag)
             .arg(format!("{tool} --version"))
-            // 与 `resolve_path_default` 相同：交互式 shell（-lic）不能读到继承来的
-            // stdin，也不能因持有控制终端被 SIGTTIN 停住（从终端启动时整个应用卡死）。
             .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        isolate_child_process_group(&mut cmd);
-        cmd.spawn().map_err(|e| e.to_string()).and_then(|child| {
-            wait_child_output(
-                child,
-                CommandDeadline::from_timeout(Some(INSTALL_PROBE_TIMEOUT)),
-            )
-        })
+            .output()
     };
 
     match output {
