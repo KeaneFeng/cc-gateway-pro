@@ -2,7 +2,7 @@
   "scope": "All pnpm v9 package entries and cargo metadata resolved packages, including dev/build/optional/platform dependencies; not a binary SBOM.",
   "lockfiles": {
     "pnpm-lock.yaml": "990a8434a1f76ab74ed0a8e92778c3635bbcb1010111ca5ba96739cf2a90c72d",
-    "src-tauri/Cargo.lock": "685888281c9fd450a195f8182e75ae70c2f3faf08aa3f7609ac3336ffe60c162",
+    "src-tauri/Cargo.lock": "bc5451e577f48cb70329195e6fa36435fa8602ebfc76fd17838dc9c936627e3f",
     "LICENSE": "912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755",
     "docs/legal/supplemental-notices.json": "95df42ebbb27c3a3333d7b6a2fcb63b8a23b512038f2476cb24a88009cb01269",
     "docs/legal/asset-license-notices.json": "67c7e6629403fdb93cd62186b2881cc1e05316cf5652c675ab2fdfc9aff70d93",
