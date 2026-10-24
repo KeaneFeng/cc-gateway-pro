@@ -162,24 +162,6 @@
                 </RegistryKey>
                 {{/each~}}
             </Component>
-            <!-- 显式 GUID：WiX 自动 GUID 不支持注册表 keypath + 多文件混合组件（CNDL0230）。 -->
-            <Component Id="LegalNoticesFiles" Guid="7E4A21C9-5B3F-4E8D-9A6B-2C7D81F0A543">
-                <!-- 合规/许可文件随包分发。bundler 生成的资源组件用文件 KeyPath，
-                     在 per-user 安装下触发 ICE38（LGHT0204）；这里用 HKCU 注册表
-                     KeyPath 的组件承载同一批文件（源由 beforeBuildCommand 的
-                     copy:legal 脚本放进 $(var.SourceDir)legal\）。 -->
-                <File Id="LegalLicense" Source="$(var.SourceDir)legal\LICENSE" KeyPath="no" />
-                <File Id="LegalThirdPartyNotices" Source="$(var.SourceDir)legal\THIRD_PARTY_NOTICES.txt" KeyPath="no" />
-                <File Id="LegalDependencyLicenses" Source="$(var.SourceDir)legal\dependency-licenses.json" KeyPath="no" />
-                <File Id="LegalSupplementalNotices" Source="$(var.SourceDir)legal\supplemental-notices.json" KeyPath="no" />
-                <File Id="LegalAssetProvenance" Source="$(var.SourceDir)legal\asset-provenance.json" KeyPath="no" />
-                <File Id="LegalAssetLicenseNotices" Source="$(var.SourceDir)legal\asset-license-notices.json" KeyPath="no" />
-                <File Id="LegalThirdPartyAudit" Source="$(var.SourceDir)legal\third-party-license-audit.md" KeyPath="no" />
-                <File Id="LegalDependencyFollowUpMd" Source="$(var.SourceDir)legal\dependency-follow-up.md" KeyPath="no" />
-                <File Id="LegalDependencyFollowUpJson" Source="$(var.SourceDir)legal\dependency-follow-up.json" KeyPath="no" />
-                <File Id="LegalBrandAssetSources" Source="$(var.SourceDir)legal\brand-asset-sources.md" KeyPath="no" />
-                <RegistryValue Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}" Name="LegalNotices" Type="integer" Value="1" KeyPath="yes" />
-            </Component>
             <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">
                 <File Id="Path" Source="{{main_binary_path}}" KeyPath="no" Checksum="yes"/>
                 <RegistryValue Root="HKCU" Key="Software\{{manufacturer}}\{{product_name}}" Name="PathComponent" Type="integer" Value="1" KeyPath="yes" />

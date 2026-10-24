@@ -1,13 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CC Gateway Pro",
-  "version": "4.0.25",
+  "version": "4.0.26",
   "identifier": "com.ccgatewaypro.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm run dev:renderer",
-    "beforeBuildCommand": "pnpm run copy:legal && pnpm run build:renderer"
+    "beforeBuildCommand": "pnpm run build:renderer"
   },
   "app": {
     "windows": [

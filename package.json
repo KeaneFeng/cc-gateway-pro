@@ -1,6 +1,6 @@
 {
   "name": "cc-gateway-pro",
-  "version": "4.0.25",
+  "version": "4.0.26",
   "description": "All-in-One Assistant for Claude Code, Codex & Gemini CLI",
   "type": "module",
   "packageManager": "pnpm@10.12.3",
@@ -14,8 +14,7 @@
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "test:unit": "vitest run",
-    "test:unit:watch": "vitest watch",
-    "copy:legal": "node scripts/copy-legal.mjs"
+    "test:unit:watch": "vitest watch"
   },
   "keywords": [],
   "author": "Jason Young",
