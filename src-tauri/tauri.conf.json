@@ -1,13 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CC Gateway Pro",
-  "version": "4.0.21",
+  "version": "4.0.23",
   "identifier": "com.ccgatewaypro.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm run dev:renderer",
-    "beforeBuildCommand": "pnpm run build:renderer"
+    "beforeBuildCommand": "pnpm run copy:legal && pnpm run build:renderer"
   },
   "app": {
     "windows": [
@@ -37,18 +37,6 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "resources": {
-      "../LICENSE": "LICENSE",
-      "../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",
-      "../docs/legal/dependency-licenses.json": "docs/legal/dependency-licenses.json",
-      "../docs/legal/supplemental-notices.json": "docs/legal/supplemental-notices.json",
-      "../docs/legal/asset-provenance.json": "docs/legal/asset-provenance.json",
-      "../docs/legal/asset-license-notices.json": "docs/legal/asset-license-notices.json",
-      "../docs/legal/third-party-license-audit.md": "docs/legal/third-party-license-audit.md",
-      "../docs/legal/dependency-follow-up.md": "docs/legal/dependency-follow-up.md",
-      "../docs/legal/dependency-follow-up.json": "docs/legal/dependency-follow-up.json",
-      "../docs/legal/brand-asset-sources.md": "docs/legal/brand-asset-sources.md"
-    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -68,7 +56,9 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["ccgatewaypro"]
+        "schemes": [
+          "ccgatewaypro"
+        ]
       }
     },
     "updater": {

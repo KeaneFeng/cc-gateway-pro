@@ -148,6 +148,23 @@
                 <RegistryKey Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}">
                     <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
                 </RegistryKey>
+            <Component Id="LegalNoticesFiles" Guid="*">
+                <!-- 合规/许可文件随包分发。bundler 生成的资源组件用文件 KeyPath，
+                     在 per-user 安装下触发 ICE38（LGHT0204）；这里用 HKCU 注册表
+                     KeyPath 的组件承载同一批文件（源由 beforeBuildCommand 的
+                     copy:legal 脚本放进 $(var.SourceDir)legal\）。 -->
+                <File Id="LegalLicense" Source="$(var.SourceDir)legal\LICENSE" KeyPath="no" />
+                <File Id="LegalThirdPartyNotices" Source="$(var.SourceDir)legal\THIRD_PARTY_NOTICES.txt" KeyPath="no" />
+                <File Id="LegalDependencyLicenses" Source="$(var.SourceDir)legal\dependency-licenses.json" KeyPath="no" />
+                <File Id="LegalSupplementalNotices" Source="$(var.SourceDir)legal\supplemental-notices.json" KeyPath="no" />
+                <File Id="LegalAssetProvenance" Source="$(var.SourceDir)legal\asset-provenance.json" KeyPath="no" />
+                <File Id="LegalAssetLicenseNotices" Source="$(var.SourceDir)legal\asset-license-notices.json" KeyPath="no" />
+                <File Id="LegalThirdPartyAudit" Source="$(var.SourceDir)legal\third-party-license-audit.md" KeyPath="no" />
+                <File Id="LegalDependencyFollowUpMd" Source="$(var.SourceDir)legal\dependency-follow-up.md" KeyPath="no" />
+                <File Id="LegalDependencyFollowUpJson" Source="$(var.SourceDir)legal\dependency-follow-up.json" KeyPath="no" />
+                <File Id="LegalBrandAssetSources" Source="$(var.SourceDir)legal\brand-asset-sources.md" KeyPath="no" />
+                <RegistryValue Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}" Name="LegalNotices" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
                 <!-- Change the Root to HKCU for perUser installations -->
                 {{#each deep_link_protocols as |protocol| ~}}
                 <RegistryKey Root="HKCU" Key="Software\Classes\\{{protocol}}">
