@@ -162,7 +162,8 @@
                 </RegistryKey>
                 {{/each~}}
             </Component>
-            <Component Id="LegalNoticesFiles" Guid="*">
+            <!-- 显式 GUID：WiX 自动 GUID 不支持注册表 keypath + 多文件混合组件（CNDL0230）。 -->
+            <Component Id="LegalNoticesFiles" Guid="7E4A21C9-5B3F-4E8D-9A6B-2C7D81F0A543">
                 <!-- 合规/许可文件随包分发。bundler 生成的资源组件用文件 KeyPath，
                      在 per-user 安装下触发 ICE38（LGHT0204）；这里用 HKCU 注册表
                      KeyPath 的组件承载同一批文件（源由 beforeBuildCommand 的
