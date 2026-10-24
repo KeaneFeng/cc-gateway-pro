@@ -107,10 +107,12 @@ async fn query_deepseek(api_key: &str) -> Result<UsageResult, String> {
         Err(e) => return Ok(make_error(format!("Failed to parse response: {e}"))),
     };
 
-    let is_available = body
-        .get("is_available")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+    Ok(parse_deepseek_balance(&body))
+}
+
+// `is_available` 只表示余额够不够调用，不代表 Key 失效（失效是 401/403，上面已处理），
+// 所以不拿它判 is_valid，否则零余额 / 欠费会被显示成「套餐已过期」；交给 UI 按余额红字显示（#8812）。
+fn parse_deepseek_balance(body: &serde_json::Value) -> UsageResult {
     let mut data = Vec::new();
 
     if let Some(infos) = body.get("balance_infos").and_then(|v| v.as_array()) {
@@ -127,12 +129,8 @@ async fn query_deepseek(api_key: &str) -> Result<UsageResult, String> {
                 total: None,
                 used: None,
                 unit: Some(currency.to_string()),
-                is_valid: Some(is_available),
-                invalid_message: if !is_available {
-                    Some("Insufficient balance".to_string())
-                } else {
-                    None
-                },
+                is_valid: Some(true),
+                invalid_message: None,
                 extra: None,
             });
         }
@@ -534,6 +532,56 @@ mod tests {
             assert!(!result.success, "unexpected success for {body}");
             assert!(result.data.is_none());
             assert!(result.error.is_some());
+        }
+    }
+
+    #[test]
+    fn deepseek_balance_hides_empty_wallets_when_another_has_funds() {
+        let result = parse_deepseek_balance(&json!({
+            "is_available": true,
+            "balance_infos": [
+                { "currency": "CNY", "total_balance": "0.00" },
+                { "currency": "USD", "total_balance": "12.34" }
+            ]
+        }));
+        assert!(result.success);
+        let data = result.data.unwrap();
+        assert_eq!(data.len(), 1);
+        assert_eq!(data[0].unit.as_deref(), Some("USD"));
+        assert_eq!(data[0].remaining, Some(12.34));
+    }
+
+    #[test]
+    fn deepseek_balance_keeps_every_wallet_when_none_or_all_have_funds() {
+        for (cny, usd, expected) in [("0.00", "0.00", 2), ("5.00", "1.00", 2)] {
+            let result = parse_deepseek_balance(&json!({
+                "is_available": cny != "0.00",
+                "balance_infos": [
+                    { "currency": "CNY", "total_balance": cny },
+                    { "currency": "USD", "total_balance": usd }
+                ]
+            }));
+            assert_eq!(result.data.unwrap().len(), expected);
+        }
+
+        let result = parse_deepseek_balance(&json!({
+            "balance_infos": [{ "currency": "CNY", "total_balance": "0.00" }]
+        }));
+        assert_eq!(result.data.unwrap()[0].remaining, Some(0.0));
+    }
+
+    #[test]
+    fn deepseek_unavailable_balance_does_not_determine_key_validity() {
+        for (raw, expected) in [("-24.96", -24.96), ("-0.00", 0.0)] {
+            let result = parse_deepseek_balance(&json!({
+                "is_available": false,
+                "balance_infos": [{ "currency": "CNY", "total_balance": raw }]
+            }));
+            assert!(result.success);
+            let balance = result.data.unwrap().remove(0);
+            assert_eq!(balance.remaining, Some(expected));
+            assert_eq!(balance.is_valid, Some(true));
+            assert!(balance.invalid_message.is_none());
         }
     }
 
