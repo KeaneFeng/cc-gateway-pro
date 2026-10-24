@@ -1,7 +1,7 @@
 {
   "scope": "All pnpm v9 package entries and cargo metadata resolved packages, including dev/build/optional/platform dependencies; not a binary SBOM.",
   "lockfiles": {
-    "pnpm-lock.yaml": "d4487aa329cd0ea79545aaf74745869589b900964f674b2091d10d781a26e0fb",
+    "pnpm-lock.yaml": "dfcb79428d323ce7f6db98dd13042bec02db1c322639cb3ab636ac700d9a8a03",
     "src-tauri/Cargo.lock": "bc5451e577f48cb70329195e6fa36435fa8602ebfc76fd17838dc9c936627e3f",
     "LICENSE": "912b6a597d10c43b40a0909349ed95b052b17efb6502b4898e1b35dafb896755",
     "docs/legal/supplemental-notices.json": "95df42ebbb27c3a3333d7b6a2fcb63b8a23b512038f2476cb24a88009cb01269",
@@ -3208,9 +3208,9 @@
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/api",
-      "version": "2.8.0",
+      "version": "2.10.1",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fapi/2.8.0",
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fapi/2.10.1",
       "notice_files": [
         {
           "path": "LICENSE_APACHE-2.0",
@@ -3219,6 +3219,29 @@
         {
           "path": "LICENSE_MIT",
           "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
+        }
+      ],
+      "metadata_error": null,
+      "review_required": false
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tauri-apps/api",
+      "version": "2.12.4",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fapi/2.12.4",
+      "notice_files": [
+        {
+          "path": "LICENSE-APACHE-2.0",
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
+        },
+        {
+          "path": "LICENSE.spdx",
+          "sha256": "5e834fe9788c524210deda859c46a550ffa5aa0cba9ea0572f0d81120e97c008"
         }
       ],
       "metadata_error": null,
@@ -3356,9 +3379,9 @@
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/plugin-dialog",
-      "version": "2.4.0",
+      "version": "2.6.0",
       "license": "MIT OR Apache-2.0",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fplugin-dialog/2.4.0",
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fplugin-dialog/2.6.0",
       "notice_files": [
         {
           "path": "LICENSE.spdx",
@@ -3401,9 +3424,9 @@
     {
       "ecosystem": "npm",
       "name": "@tauri-apps/plugin-updater",
-      "version": "2.9.0",
+      "version": "2.10.1",
       "license": "MIT OR Apache-2.0",
-      "source": "https://registry.npmjs.org/%40tauri-apps%2Fplugin-updater/2.9.0",
+      "source": "https://registry.npmjs.org/%40tauri-apps%2Fplugin-updater/2.10.1",
       "notice_files": [
         {
           "path": "LICENSE.spdx",
@@ -22117,5 +22140,5 @@
       "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
     }
   ],
-  "notices_sha256": "f2c6292b4321d11cb5145a3e31d62513a61283c463ec074c32d24cba7738c6fd"
+  "notices_sha256": "11588a7019d4b1044967456160570dc4596c96afb533973966dbff84666c780f"
 }

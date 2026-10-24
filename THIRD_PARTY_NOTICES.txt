@@ -439,9 +439,13 @@ npm:@tanstack/react-virtual@3.13.23 | MIT | https://registry.npmjs.org/%40tansta
   LICENSE => SHA256 a405ee70c632bb938acb7ac5f210e814409b3760ea9d2329d8ed8ffcfd11a0e7
 npm:@tanstack/virtual-core@3.13.23 | MIT | https://registry.npmjs.org/%40tanstack%2Fvirtual-core/3.13.23
   LICENSE => SHA256 a405ee70c632bb938acb7ac5f210e814409b3760ea9d2329d8ed8ffcfd11a0e7
-npm:@tauri-apps/api@2.8.0 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fapi/2.8.0
+npm:@tauri-apps/api@2.10.1 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fapi/2.10.1
   LICENSE_APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
   LICENSE_MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
+npm:@tauri-apps/api@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fapi/2.12.4
+  LICENSE-APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+  LICENSE-MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
+  LICENSE.spdx => SHA256 5e834fe9788c524210deda859c46a550ffa5aa0cba9ea0572f0d81120e97c008
 npm:@tauri-apps/cli@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli/2.12.4
   LICENSE-APACHE-2.0 => SHA256 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
   LICENSE-MIT => SHA256 9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d
@@ -467,13 +471,13 @@ npm:@tauri-apps/cli-win32-ia32-msvc@2.12.4 | Apache-2.0 OR MIT | https://registr
   NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
 npm:@tauri-apps/cli-win32-x64-msvc@2.12.4 | Apache-2.0 OR MIT | https://registry.npmjs.org/%40tauri-apps%2Fcli-win32-x64-msvc/2.12.4
   NOTICE TEXT NOT COLLECTED: review required; metadata is not a substitute.
-npm:@tauri-apps/plugin-dialog@2.4.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-dialog/2.4.0
+npm:@tauri-apps/plugin-dialog@2.6.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-dialog/2.6.0
   LICENSE.spdx => SHA256 eb8a6c84630461b352badcab1dbe5d0168c56d377358b2b8c86b51003272d5ef
 npm:@tauri-apps/plugin-log@2.8.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-log/2.8.0
   LICENSE.spdx => SHA256 eb8a6c84630461b352badcab1dbe5d0168c56d377358b2b8c86b51003272d5ef
 npm:@tauri-apps/plugin-process@2.3.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-process/2.3.0
   LICENSE.spdx => SHA256 eb8a6c84630461b352badcab1dbe5d0168c56d377358b2b8c86b51003272d5ef
-npm:@tauri-apps/plugin-updater@2.9.0 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-updater/2.9.0
+npm:@tauri-apps/plugin-updater@2.10.1 | MIT OR Apache-2.0 | https://registry.npmjs.org/%40tauri-apps%2Fplugin-updater/2.10.1
   LICENSE.spdx => SHA256 eb8a6c84630461b352badcab1dbe5d0168c56d377358b2b8c86b51003272d5ef
 npm:@testing-library/dom@10.4.1 | MIT | https://registry.npmjs.org/%40testing-library%2Fdom/10.4.1
   LICENSE => SHA256 bf8fd38056b7606deccfcadb4d8ca1c210082d8ef5513426d2650daedc30bed3
