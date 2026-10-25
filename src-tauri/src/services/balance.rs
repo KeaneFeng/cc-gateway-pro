@@ -136,11 +136,17 @@ fn parse_deepseek_balance(body: &serde_json::Value) -> UsageResult {
         }
     }
 
-    Ok(UsageResult {
+    // 同一账号会列出 CNY / USD 两个币种钱包，扣费走有钱的那个。只要还有币种有余额，
+    // 就不再列出空钱包：否则空的那一行会显示一条红字余额，两行还会让卡片自动展开（#8170）。
+    if data.iter().any(|d| d.remaining.is_some_and(|v| v > 0.0)) {
+        data.retain(|d| d.remaining.is_none_or(|v| v > 0.0));
+    }
+
+    UsageResult {
         success: true,
         data: if data.is_empty() { None } else { Some(data) },
         error: None,
-    })
+    }
 }
 
 // ── StepFun ─────────────────────────────────────────────────
