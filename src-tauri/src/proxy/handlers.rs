@@ -3025,6 +3025,9 @@ mod tests {
     };
     use crate::database::Database;
     use crate::proxy::ProxyError;
+    use axum::http::{header::AUTHORIZATION, HeaderMap, HeaderValue, StatusCode};
+    use axum::response::IntoResponse;
+    use http_body_util::BodyExt;
 
     const TEST_GATEWAY_TOKEN: &str = "ccs-0123456789abcdef0123456789abcdef";
 

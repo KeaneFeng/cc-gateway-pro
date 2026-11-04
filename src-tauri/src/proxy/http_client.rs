@@ -334,6 +334,34 @@ pub fn mask_url(url: &str) -> String {
     }
 }
 
+/// 地址的主机是不是本机：`localhost`、`*.localhost`、`127.0.0.0/8`、`::1`
+/// （上游 8598 系列：upstream_guard 用它拒绝回环到代理自身的上游地址）。
+pub fn is_loopback_url(url: &str) -> bool {
+    let Ok(parsed) = url::Url::parse(url.trim()) else {
+        return false;
+    };
+    match parsed.host() {
+        Some(url::Host::Domain(domain)) => upstream_guard_host_is_loopback(domain),
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => {
+            ip.is_loopback() || ip.to_ipv4_mapped().is_some_and(|v4| v4.is_loopback())
+        }
+        None => false,
+    }
+}
+
+fn upstream_guard_host_is_loopback(host: &str) -> bool {
+    let host = host.trim_end_matches('.');
+    if host.eq_ignore_ascii_case("localhost") || host.to_ascii_lowercase().ends_with(".localhost") {
+        return true;
+    }
+    host.trim_start_matches('[')
+        .trim_end_matches(']')
+        .parse::<std::net::IpAddr>()
+        .map(|ip| ip.is_loopback())
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

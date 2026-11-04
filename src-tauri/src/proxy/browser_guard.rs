@@ -32,7 +32,10 @@ pub(super) async fn reject_browser_requests(
     next: Next,
 ) -> Response {
     let listen_address = state.config.read().await.listen_address.clone();
-    let client_host = crate::settings::get_proxy_client_host();
+    // 上游这里读 settings::get_proxy_client_host()（用户可配的客户端主机白名单）。
+    // fork 未移植该设置字段；传 None 只损失白名单放行能力，Origin 拒绝与
+    // rebinding Host 校验不受影响。
+    let client_host: Option<String> = None;
     match check_request(
         request.uri().path(),
         request.headers(),
