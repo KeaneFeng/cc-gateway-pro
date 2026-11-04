@@ -427,11 +427,7 @@ async fn send_raw_request(
     let stream = if let Some(proxy) = proxy_url {
         connect_via_proxy(proxy, host, port).await?
     } else {
-        ProxyStream::Tcp(
-            tokio::net::TcpStream::connect((host, port))
-                .await
-                .map_err(|e| ProxyError::ForwardFailed(format!("TCP connect failed: {e}")))?,
-        )
+        ProxyStream::Tcp(connect_direct(host, port).await?)
     };
 
     if scheme == "https" {
@@ -468,6 +464,36 @@ async fn send_raw_request(
         let filtered = WriteFilter::new(stream);
         do_hyper_response(filtered, method.clone()).await
     }
+}
+
+/// Open a direct TCP connection to `host:port` with Happy Eyeballs.
+///
+/// `TcpStream::connect` tries every resolved address one after another and only
+/// moves on when the OS gives up on the current one (about 75s per address on
+/// macOS, about 21s on Windows). Hosts that publish AAAA records unreachable from
+/// the user's network (e.g. two dead IPv6 addresses in front of a working IPv4)
+/// then stall every request for minutes before the first byte goes out. Reuse
+/// hyper-util's connector, which races the other address family after 300ms the
+/// same way curl and browsers do.
+async fn connect_direct(host: &str, port: u16) -> Result<tokio::net::TcpStream, ProxyError> {
+    use tower::Service;
+
+    // `host` comes from `http::Uri::host()`, which keeps IPv6 literals bracketed.
+    let dst: http::Uri = format!("http://{host}:{port}/")
+        .parse()
+        .map_err(|e| ProxyError::ForwardFailed(format!("Invalid upstream address: {e}")))?;
+    let mut connector = hyper_util::client::legacy::connect::HttpConnector::new();
+    connector.enforce_http(false);
+    std::future::poll_fn(|cx| connector.poll_ready(cx))
+        .await
+        .map_err(|e| ProxyError::ForwardFailed(format!("TCP connect failed: {e}")))?;
+    let io = connector.call(dst).await.map_err(|e| {
+        ProxyError::ForwardFailed(format!(
+            "TCP connect failed: {}",
+            super::error::describe_error_chain(&e)
+        ))
+    })?;
+    Ok(io.into_inner())
 }
 
 /// Establish a connection through an HTTP CONNECT proxy tunnel.
