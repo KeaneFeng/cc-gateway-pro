@@ -402,6 +402,18 @@ impl RequestForwarder {
         extensions: Extensions,
         providers: Vec<Provider>,
     ) -> Result<ForwardResult, ForwardError> {
+        if matches!(app_type, AppType::Claude | AppType::ClaudeDesktop)
+            && super::classifier_guard::classifier_retry_loop(body)
+        {
+            let error = ProxyError::InvalidRequest(
+                super::classifier_guard::CLASSIFIER_LOOP_MESSAGE.to_string(),
+            );
+            self.record_failed_request(error.to_string()).await;
+            return Err(ForwardError {
+                error,
+                provider: providers.first().cloned(),
+            });
+        }
         // 获取适配器
         let adapter = get_adapter(app_type);
         let app_type_str = app_type.as_str();
