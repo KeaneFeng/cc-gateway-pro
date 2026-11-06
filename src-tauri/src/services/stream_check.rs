@@ -143,7 +143,10 @@ impl StreamCheckService {
             None => Self::resolve_base_url(app_type, provider)?,
         };
 
-        let client = crate::proxy::http_client::get();
+        // 探测不跟随重定向：3xx 本身就是 HTTP 响应，已证明可达。跟随反而会被
+        // `/v1` ↔ `/v1/` 互跳之类的服务端配置拖进重定向循环，误判为不可达（#5747）。
+        let client =
+            crate::proxy::http_client::no_redirect_for_url(&base_url).map_err(AppError::Message)?;
         let timeout = std::time::Duration::from_secs(config.timeout_secs);
         let ua = Self::custom_user_agent(provider);
 
@@ -195,6 +198,8 @@ impl StreamCheckService {
     /// - `send()` 在收到响应头时即返回，故计时天然是 TTFB；不读 body。
     /// - reqwest 对任何 HTTP 状态码都返回 `Ok`，只有网络级错误进 `Err`——
     ///   这正是"任何响应都算可达、只有连不上才算失败"的语义。
+    /// - `client` 必须不跟随重定向，否则重定向循环会在 `send()` 阶段变成 `Err`，
+    ///   把一个明明返回了 3xx 的供应商判为不可达。
     async fn probe_reachability(
         client: &Client,
         base_url: &str,
