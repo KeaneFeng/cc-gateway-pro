@@ -758,7 +758,7 @@ dependencies = [
 
 [[package]]
 name = "cc-gateway-pro"
-version = "4.0.31"
+version = "4.0.32"
 dependencies = [
  "anyhow",
  "arboard",
