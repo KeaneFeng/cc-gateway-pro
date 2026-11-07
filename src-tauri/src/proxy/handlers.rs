@@ -222,6 +222,9 @@ async fn handle_messages_for_app(
             if let Some(provider) = err.provider.take() {
                 ctx.provider = provider;
             }
+            // 失败路径也带上实际出站模型（上游 44c7fa9bc）：错误日志/用量归因
+            // 看到的是映射后的真值，而不是客户端别名。
+            ctx.outbound_model = err.outbound_model.take().or(ctx.outbound_model.take());
             log_forward_error(&state, &ctx, is_stream, &err.error);
             return Err(err.error);
         }
@@ -2323,6 +2326,9 @@ pub async fn handle_gemini(
             if let Some(provider) = err.provider.take() {
                 ctx.provider = provider;
             }
+            // 失败路径也带上实际出站模型（上游 44c7fa9bc）：错误日志/用量归因
+            // 看到的是映射后的真值，而不是客户端别名。
+            ctx.outbound_model = err.outbound_model.take().or(ctx.outbound_model.take());
             log_forward_error(&state, &ctx, is_stream, &err.error);
             return Err(err.error);
         }

@@ -81,6 +81,9 @@ pub struct ForwardResult {
 pub struct ForwardError {
     pub error: ProxyError,
     pub provider: Option<Provider>,
+    /// 最后一次尝试发往上游的模型名（映射之后）。错误行记这个，不记客户端别名
+    /// （上游 44c7fa9bc：路由下记别名会被当成调错了模型）。
+    pub outbound_model: Option<String>,
 }
 
 /// 活跃连接 RAII guard
@@ -157,6 +160,14 @@ pub struct RequestForwarder {
 }
 
 impl RequestForwarder {
+    /// 分类器循环等"请求未真正发出"的失败也要计入失败统计（上游 9201 系列；
+    /// fork 无 routing_state_enabled 门控，直接更新 status）。
+    async fn record_failed_request(&self, last_error: String) {
+        let mut status = self.status.write().await;
+        status.failed_requests += 1;
+        status.last_error = Some(last_error);
+    }
+
     /// 预防式 media 降级：发送前对 text-only 模型把图片块替换为标记。
     ///
     /// 受 `enabled && request_media_fallback` 管辖；其中"启发式模型名单预测"
@@ -340,6 +351,7 @@ impl RequestForwarder {
                 (status.success_requests as f32 / status.total_requests as f32) * 100.0;
         }
         Some(ForwardError {
+            outbound_model: None,
             error: retry_err,
             provider: Some(provider.clone()),
         })
@@ -403,7 +415,7 @@ impl RequestForwarder {
         providers: Vec<Provider>,
     ) -> Result<ForwardResult, ForwardError> {
         if matches!(app_type, AppType::Claude | AppType::ClaudeDesktop)
-            && super::classifier_guard::classifier_retry_loop(body)
+            && super::classifier_guard::classifier_retry_loop(&body)
         {
             let error = ProxyError::InvalidRequest(
                 super::classifier_guard::CLASSIFIER_LOOP_MESSAGE.to_string(),
@@ -421,6 +433,7 @@ impl RequestForwarder {
 
         if providers.is_empty() {
             return Err(ForwardError {
+                outbound_model: None,
                 error: ProxyError::NoAvailableProvider,
                 provider: None,
             });
@@ -716,6 +729,7 @@ impl RequestForwarder {
                                         * 100.0;
                                 }
                                 return Err(ForwardError {
+                                    outbound_model: None,
                                     error: e,
                                     provider: Some(provider.clone()),
                                 });
@@ -868,6 +882,7 @@ impl RequestForwarder {
                                         * 100.0;
                                 }
                                 return Err(ForwardError {
+                                    outbound_model: None,
                                     error: e,
                                     provider: Some(provider.clone()),
                                 });
@@ -894,6 +909,7 @@ impl RequestForwarder {
                                         * 100.0;
                                 }
                                 return Err(ForwardError {
+                                    outbound_model: None,
                                     error: e,
                                     provider: Some(provider.clone()),
                                 });
@@ -1016,6 +1032,7 @@ impl RequestForwarder {
                                 * 100.0;
                         }
                         return Err(ForwardError {
+                            outbound_model: None,
                             error: e,
                             provider: Some(provider.clone()),
                         });
@@ -1079,6 +1096,7 @@ impl RequestForwarder {
                                 }
                             }
                             return Err(ForwardError {
+                                outbound_model: None,
                                 error: e,
                                 provider: Some(provider.clone()),
                             });
@@ -1100,6 +1118,7 @@ impl RequestForwarder {
                 }
             }
             return Err(ForwardError {
+                outbound_model: None,
                 error: ProxyError::NoAvailableProvider,
                 provider: None,
             });
@@ -1125,6 +1144,7 @@ impl RequestForwarder {
         Err(ForwardError {
             error: last_error.unwrap_or(ProxyError::MaxRetriesExceeded),
             provider: last_provider,
+            outbound_model: None,
         })
     }
 
