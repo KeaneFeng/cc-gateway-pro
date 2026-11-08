@@ -1782,6 +1782,21 @@ fn build_tool_search_paths(tool: &str) -> Vec<std::path::PathBuf> {
 }
 
 #[cfg(target_os = "windows")]
+/// 规范化 Windows 路径里的 verbatim 前缀：canonical 化产生的 `\\?\` / `\\?\UNC\`
+/// 会被 `cmd /C call` 拒绝，仅在 shell 边界剥掉，身份比较仍用 canonical 原值。
+#[cfg(target_os = "windows")]
+fn windows_shell_compatible_path(path: &Path) -> std::path::PathBuf {
+    let raw = path.to_string_lossy();
+    if let Some(unc) = raw.strip_prefix(r"\\?\UNC\") {
+        std::path::PathBuf::from(format!(r"\\{unc}"))
+    } else if let Some(local) = raw.strip_prefix(r"\\?\") {
+        std::path::PathBuf::from(local)
+    } else {
+        path.to_path_buf()
+    }
+}
+
+#[cfg(target_os = "windows")]
 fn is_windows_command_script(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
