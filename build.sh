@@ -98,6 +98,19 @@ show_version() {
 # 同步更新三个版本文件
 set_version() {
     local ver="$1"
+    # 版本号参与 Cargo 产物 hash：改版本后本项目旧版本的 debug/release 产物不再被使用，Cargo 也不会删除，
+    # 会在 src-tauri/target 越积越多（debug 每个版本约 2G）。主 crate 改版本后本来就要全量重编，
+    # 所以改版本前先清掉它不增加编译时间；第三方依赖缓存和 Tauri 打包产物（bundle/）保留。
+    # 版本没变时跳过，免得白白重编。
+    local cargo_ver profile
+    cargo_ver=$(grep -m1 '^version = ' "$CARGO_TOML" | cut -d'"' -f2)
+    if [ "$ver" != "$cargo_ver" ]; then
+        for profile in dev release; do
+            log "清理本项目旧版本的 $profile 编译缓存..."
+            cargo clean -p cc-gateway-pro --profile "$profile" --offline --manifest-path "$CARGO_TOML" \
+                || warn "清理旧版本 $profile 编译缓存失败，不影响版本更新"
+        done
+    fi
     python3 -c "
 import json, re
 
