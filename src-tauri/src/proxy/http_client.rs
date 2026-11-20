@@ -238,6 +238,28 @@ pub fn no_redirect() -> Result<Client, String> {
 }
 
 /// 不跟随重定向、按目标地址选代理的客户端：本机地址直连，其余同 [`no_redirect`]。
+static DIRECT_CLIENT: std::sync::OnceLock<Client> = std::sync::OnceLock::new();
+
+fn direct_client() -> Client {
+    DIRECT_CLIENT
+        .get_or_init(|| {
+            base_builder().no_proxy().build().unwrap_or_else(|e| {
+                log::warn!("[GlobalProxy] Failed to build direct client: {e}");
+                Client::new()
+            })
+        })
+        .clone()
+}
+
+/// 按目标地址选客户端：本机地址直连（全局代理不认本机推理服务），其余走全局代理。
+pub fn get_for_url(url: &str) -> Client {
+    if is_loopback_url(url) {
+        direct_client()
+    } else {
+        get()
+    }
+}
+
 pub fn no_redirect_for_url(url: &str) -> Result<Client, String> {
     if is_loopback_url(url) {
         base_builder()

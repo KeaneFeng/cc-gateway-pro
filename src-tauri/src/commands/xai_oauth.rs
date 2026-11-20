@@ -29,6 +29,8 @@ pub struct XaiOAuthState(pub Arc<RwLock<XaiOAuthManager>>);
 pub(crate) async fn query_xai_oauth_quota_for(
     state: &XaiOAuthState,
     account_id: Option<String>,
+    // 上游此参数控制附带订阅计划查询；fork 无该基建，接受并忽略以保持调用方兼容。
+    _with_plan: bool,
 ) -> Result<SubscriptionQuota, String> {
     let manager = state.0.read().await;
 
@@ -76,7 +78,7 @@ pub async fn get_xai_oauth_quota(
     account_id: Option<String>,
     state: State<'_, XaiOAuthState>,
 ) -> Result<SubscriptionQuota, String> {
-    query_xai_oauth_quota_for(&state, account_id).await
+    query_xai_oauth_quota_for(&state, account_id, false).await
 }
 
 #[derive(Debug, Deserialize)]
