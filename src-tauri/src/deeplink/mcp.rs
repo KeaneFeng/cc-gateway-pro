@@ -397,7 +397,7 @@ mod tests {
         use base64::prelude::*;
         use std::sync::Arc;
 
-        let _home = crate::test_support::TempUserHome::new();
+        let _home = crate::deeplink::tests::TestHomeGuard::new();
         let db = Arc::new(crate::database::Database::memory().unwrap());
         let state = AppState::new(db.clone());
 

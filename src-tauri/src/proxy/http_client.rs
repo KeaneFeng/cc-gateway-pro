@@ -20,7 +20,7 @@ static CURRENT_PROXY_URL: OnceCell<RwLock<Option<String>>> = OnceCell::new();
 static CC_SWITCH_PROXY_PORT: OnceCell<RwLock<u16>> = OnceCell::new();
 
 /// 当前活跃的 CC Switch 代理监听地址与端口（用于防止内部请求回打自身代理）
-static ACTIVE_PROXY_LISTENERS: OnceLock<RwLock<Vec<(String, u16)>>> = OnceLock::new();
+static ACTIVE_PROXY_LISTENERS: OnceCell<RwLock<Vec<(String, u16)>>> = OnceCell::new();
 
 /// 活跃代理监听器的 RAII 注册句柄，释放时自动反注册
 pub(crate) struct ActiveProxyListenerGuard {
