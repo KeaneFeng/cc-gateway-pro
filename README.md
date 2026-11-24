@@ -41,7 +41,7 @@ CC-Gateway-Pro manages local providers, project-level routing, Vision Model rout
 - **High availability**: per-app failover queues, circuit breakers, retries, health state, stream and non-stream timeout controls.
 - **Proxy request logs**: View the last 7 days of proxy request logs in your preferred terminal with real-time scrolling.
 - **Usage analytics**: request logs, token usage, cost estimation, trends, provider/model breakdowns and custom pricing.
-- **Session Traces**: opt-in local context analysis for new requests, with Summary capture for extracted fields and Full capture for redacted request/response JSON.
+- **Session Traces**: opt-in local context analysis for new requests, with Summary capture for extracted fields and Full capture for redacted request/response JSON. Trace rows stay out of WebDAV/S3 sync; full local backups and manual SQL exports still contain them.
 - **MCP, prompts and skills**: unified management, sync across supported apps, deep links, repository/ZIP skill installation.
 - **Data safety**: SQLite storage, atomic config writes, automatic backups, configurable storage directory and WebDAV sync.
 
