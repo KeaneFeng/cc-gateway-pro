@@ -517,5 +517,4 @@ mod host_guard_tests {
 
         proxy.stop().await.expect("stop wildcard proxy");
     }
-
 }
