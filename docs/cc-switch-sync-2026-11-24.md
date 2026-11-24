@@ -170,7 +170,7 @@ Counts: 5 ported, 37 skipped, 68 deferred.
 - `pnpm typecheck`, `pnpm format:check`, renderer production build: passed. Build retains existing >500 kB bundle warning.
 - `git diff --check`: passed; no net changes to SSE parser/response collector after reverting the unsafe ring port.
 - `cargo clippy --all-targets --offline -- -D warnings` and `cargo fmt --all -- --check`: passed.
-- Integration binaries (`cargo test --tests --offline`) still building at this checkpoint; final result appended below.
+- `cargo test --tests --offline`: all passed; 2636 library tests + 122 integration tests, 3 ignored library tests. Test homes are isolated; no real user config mutation.
 - Tested code commit: `a1bc7a0bf870295aff0288ff9ba04d9cb3aaaa18`. Later ledger-only changes do not alter tested code.
 - Real desktop packaged app, OS permission behavior on Windows/Linux, actual cloud sync services, OAuth accounts, and production API routes not exercised.
 
