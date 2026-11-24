@@ -130,7 +130,9 @@ export function McpConfirmation({
           : "";
     return (
       <div className="grid grid-cols-[minmax(4rem,auto)_1fr] gap-2 text-xs">
-        <span className={`break-all ${riskClass || "text-muted-foreground"}`}>{label}</span>
+        <span className={`break-all ${riskClass || "text-muted-foreground"}`}>
+          {label}
+        </span>
         <span className={`font-mono break-all ${riskClass}`}>
           {risk && <span aria-hidden="true">⚠ </span>}
           {value}
