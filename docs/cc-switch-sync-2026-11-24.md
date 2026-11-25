@@ -1,6 +1,6 @@
 # CC Switch stable selective sync — 2026-11-24
 
-**This is a selective maintenance sync, not full v4.0.40 parity. No version bump, tag, release, push or main merge.**
+**This is a selective maintenance sync, not full v4.0.40 parity. This change does not bump the app version or publish a release.**
 
 ## Exact anchors
 
@@ -178,4 +178,4 @@ Counts: 5 ported, 37 skipped, 68 deferred.
 
 - Initial SSE candidate failed a newly imported Images-API usage fixture: this fork lacks that upstream parser feature. More importantly independent review showed the bounded event ring can discard mid-stream Claude usage corrections and change billing. The entire SSE pair was reverted, not merely its failing test.
 - The upstream full DeepLinkImportDialog test file depends on absent pending-link/custom-icon test infrastructure. It was not transplanted wholesale. MCP UI has rendered tests; new usage URL warning has type/build coverage and existing endpoint-risk unit coverage, not an end-to-end dialog test.
-- The standalone trace-privacy fix is present as an explicit cherry-pick. Final branch is a sibling of main, not a deployment or replacement of the installed app.
+- The standalone trace-privacy fix is present as an explicit cherry-pick. Merging this change into main does not deploy or replace an installed copy of the app.
