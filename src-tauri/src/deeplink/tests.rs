@@ -11,7 +11,7 @@ use crate::{store::AppState, Database};
 use base64::prelude::*;
 use std::{env, ffi::OsString, sync::Arc};
 
-struct TestHomeGuard {
+pub(super) struct TestHomeGuard {
     _dir: tempfile::TempDir,
     original_home: Option<OsString>,
     original_userprofile: Option<OsString>,
@@ -19,7 +19,7 @@ struct TestHomeGuard {
 }
 
 impl TestHomeGuard {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let dir = tempfile::tempdir().expect("create isolated test home");
         let original_home = env::var_os("HOME");
         let original_userprofile = env::var_os("USERPROFILE");

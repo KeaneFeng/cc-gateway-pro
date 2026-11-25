@@ -41,7 +41,7 @@ CC-Gateway-Pro 为 AI 编程工具提供本地供应商管理、项目级路由�
 - **高可用策略**：应用级故障转移队列、熔断、重试、健康状态、流式与非流式超时控制。
 - **代理请求日志**：点击 View Logs，即可在偏好的终端中实时滚动查看最近 7 天的代理请求日志。
 - **用量统计**：请求日志、Token 用量、成本估算、趋势、Provider/模型拆分和自定义计价。
-- **Session Traces**：默认关闭，开启后才会记录新的上下文摘要、工具调用和每轮 usage；Summary 保存提取字段，Full 保存脱敏后的 request/response JSON。
+- **Session Traces**：默认关闭，开启后才会记录新的上下文摘要、工具调用和每轮 usage；Summary 保存提取字段，Full 保存脱敏后的 request/response JSON。追踪记录不参与 WebDAV/S3 同步；完整本地备份和手动 SQL 导出仍包含这些记录。
 - **MCP、Prompts、Skills**：统一管理并同步到支持的应用，支持 Deep Link、仓库和 ZIP 技能安装。
 - **数据安全**：SQLite 存储、原子写入、自动备份、可迁移数据目录和 WebDAV 同步。
 

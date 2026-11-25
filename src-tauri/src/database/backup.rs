@@ -66,22 +66,24 @@ fn import_authorizer(context: rusqlite::hooks::AuthContext<'_>) -> rusqlite::hoo
     }
 }
 
-/// Tables whose data rows are skipped when exporting for WebDAV sync.
+/// Tables whose data rows are skipped when exporting a remote sync snapshot.
 const SYNC_SKIP_TABLES: &[&str] = &[
     "proxy_request_logs",
     "stream_check_logs",
     "provider_health",
     "proxy_live_backup",
     "usage_daily_rollups",
+    "session_traces",
 ];
 
-/// Tables whose local data is preserved (restored from local snapshot) during WebDAV import.
+/// Tables whose data comes only from the destination when importing a remote sync snapshot.
 /// Excludes ephemeral tables like provider_health that can safely rebuild at runtime.
 const SYNC_PRESERVE_TABLES: &[&str] = &[
     "proxy_request_logs",
     "stream_check_logs",
     "proxy_live_backup",
     "usage_daily_rollups",
+    "session_traces",
 ];
 
 /// A database backup entry for the UI
@@ -100,7 +102,7 @@ impl Database {
         Self::dump_sql(&snapshot, &[])
     }
 
-    /// Export SQL for sync (WebDAV), skipping local-only tables' data
+    /// Export SQL for WebDAV and S3 sync, skipping local-only tables' data
     pub fn export_sql_string_for_sync(&self) -> Result<String, AppError> {
         let snapshot = self.snapshot_to_memory()?;
         Self::dump_sql(&snapshot, SYNC_SKIP_TABLES)
@@ -153,12 +155,6 @@ impl Database {
         // 导入前备份现有数据库
         let backup_path = self.backup_database_file()?;
 
-        let local_snapshot = if preserve_tables.is_empty() {
-            None
-        } else {
-            Some(self.snapshot_to_memory()?)
-        };
-
         // 在临时数据库执行导入，确保失败不会污染主库
         let temp_file = NamedTempFile::new().map_err(|e| AppError::IoContext {
             context: "创建临时数据库文件失败".to_string(),
@@ -167,6 +163,14 @@ impl Database {
         let temp_path = temp_file.path().to_path_buf();
         let temp_conn =
             Connection::open(&temp_path).map_err(|e| AppError::Database(e.to_string()))?;
+
+        if !preserve_tables.is_empty() {
+            // The final SQLite backup copies pages, not just live rows. Wipe
+            // removed remote payloads from staged pages before that copy.
+            temp_conn
+                .pragma_update(None, "secure_delete", true)
+                .map_err(|e| AppError::Database(e.to_string()))?;
+        }
 
         // authorizer 只覆盖外部 SQL，执行完立刻摘掉：紧随其后的
         // `create_tables_on_conn` / `apply_schema_migrations_on_conn` 是本程序自己的
@@ -182,25 +186,35 @@ impl Database {
         Self::create_tables_on_conn(&temp_conn)?;
         Self::apply_schema_migrations_on_conn(&temp_conn)?;
         Self::validate_basic_state(&temp_conn)?;
-        if let Some(local_snapshot) = local_snapshot.as_ref() {
-            Self::restore_tables(local_snapshot, &temp_conn, preserve_tables)?;
-        }
-
-        // 使用 Backup 将临时库原子写回主库
-        {
-            let mut main_conn = lock_conn!(self.conn);
-            let backup = Backup::new(&temp_conn, &mut main_conn)
-                .map_err(|e| AppError::Database(e.to_string()))?;
-            backup
-                .step(-1)
-                .map_err(|e| AppError::Database(e.to_string()))?;
-        }
+        self.replace_with_staged_import(&temp_conn, preserve_tables)?;
 
         let backup_id = backup_path
             .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
             .unwrap_or_default();
 
         Ok(backup_id)
+    }
+
+    fn replace_with_staged_import(
+        &self,
+        staged_conn: &Connection,
+        preserve_tables: &[&str],
+    ) -> Result<(), AppError> {
+        let mut main_conn = lock_conn!(self.conn);
+        if !preserve_tables.is_empty() {
+            // Read local-only rows after staging, under the same lock as the final
+            // replacement, so writes committed while staging are not lost.
+            Self::in_savepoint(staged_conn, "restore_sync_local_tables", || {
+                Self::restore_tables(&main_conn, staged_conn, preserve_tables)
+            })?;
+        }
+
+        let backup = Backup::new(staged_conn, &mut main_conn)
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        backup
+            .step(-1)
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(())
     }
 
     /// 创建内存快照以避免长时间持有数据库锁
@@ -241,19 +255,23 @@ impl Database {
         tables: &[&str],
     ) -> Result<(), AppError> {
         for table in tables {
-            if !Self::table_exists(source_conn, table)? || !Self::table_exists(target_conn, table)?
-            {
+            if !Self::table_exists(target_conn, table)? {
                 continue;
             }
 
+            // Never adopt incoming rows for a device-local table, even if
+            // the local database has no such table (or no local rows).
+            target_conn
+                .execute(&format!("DELETE FROM \"{table}\""), [])
+                .map_err(|e| AppError::Database(format!("清空表 {table} 失败: {e}")))?;
+
+            if !Self::table_exists(source_conn, table)? {
+                continue;
+            }
             let columns = Self::get_table_columns(source_conn, table)?;
             if columns.is_empty() {
                 continue;
             }
-
-            target_conn
-                .execute(&format!("DELETE FROM \"{table}\""), [])
-                .map_err(|e| AppError::Database(format!("清空表 {table} 失败: {e}")))?;
 
             let placeholders = (1..=columns.len())
                 .map(|idx| format!("?{idx}"))
@@ -273,6 +291,9 @@ impl Database {
                 .query([])
                 .map_err(|e| AppError::Database(format!("查询表 {table} 数据失败: {e}")))?;
 
+            let mut insert = target_conn
+                .prepare(&insert_sql)
+                .map_err(|e| AppError::Database(format!("准备恢复表 {table} 失败: {e}")))?;
             while let Some(row) = rows.next().map_err(|e| AppError::Database(e.to_string()))? {
                 let mut values = Vec::with_capacity(columns.len());
                 for idx in 0..columns.len() {
@@ -282,8 +303,8 @@ impl Database {
                     );
                 }
 
-                target_conn
-                    .execute(&insert_sql, rusqlite::params_from_iter(values.iter()))
+                insert
+                    .execute(rusqlite::params_from_iter(values.iter()))
                     .map_err(|e| AppError::Database(format!("恢复表 {table} 数据失败: {e}")))?;
             }
         }
@@ -907,6 +928,130 @@ mod tests {
             "local stream check logs should be preserved"
         );
 
+        Ok(())
+    }
+
+    fn trace_db(provider_id: &str) -> Result<Database, AppError> {
+        let db = Database::memory()?;
+        db.apply_schema_migrations()?;
+        {
+            let conn = crate::database::lock_conn!(db.conn);
+            conn.execute(
+                "INSERT INTO providers (id, app_type, name, settings_config, meta)
+                 VALUES (?1, 'claude', ?1, '{}', '{}')",
+                [provider_id],
+            )?;
+        }
+        Ok(db)
+    }
+
+    fn insert_synthetic_trace(db: &Database, id: &str, mode: &str) -> Result<(), AppError> {
+        let conn = crate::database::lock_conn!(db.conn);
+        let content = format!("{{\"synthetic\": \"{}\"}}", id.repeat(400));
+        conn.execute(
+            "INSERT INTO session_traces
+                (trace_id, session_id, app_type, trace_mode, request_summary_json, request_json, created_at, updated_at)
+             VALUES (?1, 'test-session', 'claude', ?2, ?3, CASE WHEN ?2 = 'full' THEN ?3 END, 1, 1)",
+            rusqlite::params![id, mode, content],
+        )?;
+        Ok(())
+    }
+
+    fn trace_ids(db: &Database) -> Result<Vec<String>, AppError> {
+        let conn = crate::database::lock_conn!(db.conn);
+        let mut stmt = conn.prepare("SELECT trace_id FROM session_traces ORDER BY trace_id")?;
+        let ids = stmt
+            .query_map([], |row| row.get(0))?
+            .collect::<Result<Vec<String>, _>>()?;
+        Ok(ids)
+    }
+
+    #[test]
+    fn sync_export_omits_both_trace_modes_but_manual_backup_restores_them() -> Result<(), AppError>
+    {
+        let db = trace_db("syncable-provider")?;
+        insert_synthetic_trace(&db, "summary-trace-id", "summary")?;
+        insert_synthetic_trace(&db, "full-trace-id", "full")?;
+
+        let sync_sql = db.export_sql_string_for_sync()?;
+        assert!(sync_sql.contains("CREATE TABLE session_traces"));
+        assert!(sync_sql.contains("syncable-provider"));
+        assert!(!sync_sql.contains("INSERT INTO \"session_traces\""));
+        assert!(!sync_sql.contains("summary-trace-id"));
+        assert!(!sync_sql.contains("full-trace-id"));
+
+        let manual_sql = db.export_sql_string()?;
+        let restored = Database::memory()?;
+        restored.import_sql_string(&manual_sql)?;
+        assert_eq!(trace_ids(&restored)?, ["full-trace-id", "summary-trace-id"]);
+        let conn = crate::database::lock_conn!(restored.conn);
+        let full_payload: String = conn.query_row(
+            "SELECT request_json FROM session_traces WHERE trace_id = 'full-trace-id'",
+            [],
+            |r| r.get(0),
+        )?;
+        assert!(full_payload.contains("full-trace-id"));
+        Ok(())
+    }
+
+    #[test]
+    fn sync_import_keeps_only_local_traces_even_with_older_snapshots() -> Result<(), AppError> {
+        let remote = trace_db("remote-provider")?;
+        insert_synthetic_trace(&remote, "remote-trace-marker-123", "full")?;
+        let local = trace_db("local-provider")?;
+        insert_synthetic_trace(&local, "local-trace", "summary")?;
+
+        // Older clients shipped complete trace rows in their sync SQL.
+        let old_sql = remote.export_sql_string()?;
+        assert!(old_sql.contains("remote-trace-marker-123"));
+        local.import_sql_string_for_sync(&old_sql)?;
+        assert_eq!(trace_ids(&local)?, ["local-trace"]);
+        {
+            let conn = crate::database::lock_conn!(local.conn);
+            let provider_exists: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM providers WHERE id = 'remote-provider')",
+                [],
+                |r| r.get(0),
+            )?;
+            assert!(provider_exists);
+
+            // The SQLite backup copies pages. Check the removed trace does
+            // not remain in the destination's free pages either.
+            let file = tempfile::NamedTempFile::new().expect("temporary DB");
+            let mut output = rusqlite::Connection::open(file.path())?;
+            rusqlite::backup::Backup::new(&conn, &mut output)?.step(-1)?;
+            let bytes = std::fs::read(file.path()).expect("read temporary DB");
+            let marker = b"remote-trace-marker-123";
+            assert!(!bytes.windows(marker.len()).any(|part| part == marker));
+        }
+
+        let fresh_device = Database::memory()?;
+        fresh_device.import_sql_string_for_sync(&old_sql)?;
+        assert!(trace_ids(&fresh_device)?.is_empty());
+
+        // Another legacy snapshot can pre-date the trace table altogether.
+        {
+            let conn = crate::database::lock_conn!(remote.conn);
+            conn.execute("DROP TABLE session_traces", [])?;
+            conn.pragma_update(None, "user_version", 10)?;
+        }
+        let no_table_sql = remote.export_sql_string_for_sync()?;
+        assert!(!no_table_sql.contains("session_traces"));
+        local.import_sql_string_for_sync(&no_table_sql)?;
+        assert_eq!(trace_ids(&local)?, ["local-trace"]);
+        Ok(())
+    }
+
+    #[test]
+    fn sync_swap_preserves_traces_written_after_staging() -> Result<(), AppError> {
+        let remote = trace_db("remote-provider")?;
+        insert_synthetic_trace(&remote, "remote-trace", "full")?;
+        let staged = remote.snapshot_to_memory()?;
+        let local = trace_db("local-provider")?;
+        insert_synthetic_trace(&local, "written-after-stage", "summary")?;
+
+        local.replace_with_staged_import(&staged, super::SYNC_PRESERVE_TABLES)?;
+        assert_eq!(trace_ids(&local)?, ["written-after-stage"]);
         Ok(())
     }
 

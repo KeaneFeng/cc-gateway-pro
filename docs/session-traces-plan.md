@@ -310,7 +310,7 @@ v1 可以把它作为 `context_stats_json` 存在 `session_traces` 中；后续�
    - `get_session_trace`
    - `delete_session_traces_for_session`
    - `prune_session_traces`
-6. 让 WebDAV auto sync 知道这张表是否需要同步；建议 v1 不自动同步完整 trace，除非 trace mode 明确允许。
+6. WebDAV/S3 自动及手动同步都不传输 trace 行；恢复旧快照时忽略其 trace 并保留本机记录。此变更不会删除已上传的旧快照；完整本地备份和手动 SQL 导出仍包含 trace。
 
 ### Phase 2：请求摘要提取
 
